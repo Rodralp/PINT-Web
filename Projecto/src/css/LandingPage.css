@@ -127,7 +127,8 @@
    ===================== */
 .lp-hero {
   position: relative;
-  margin-top: 60px;
+  /* Espaçamento superior igual à altura da navbar (60px) para não se sobreporem ou gerarem buracos brancos */
+  padding-top: 60px;
   background: transparent;
   display: flex;
   justify-content: center;
