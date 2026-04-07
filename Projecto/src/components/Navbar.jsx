@@ -30,21 +30,34 @@ function Navbar() {
   const navigate = useNavigate();
 
   return (
-    <nav className="lp-navbar">
-      <div className="lp-navbar-logo" onClick={() => navigate('/')}>
-        <img src="/SoftinsaLogo.png" alt="Softinsa Logo" className="lp-logo-img" />
-      </div>
-      <div className="lp-navbar-links">
-        <a href="https://www.softinsa.pt" className="lp-nav-link" target="_blank" rel="noreferrer">
-          <IconLink /> www.softinsa.pt
+    <nav className="navbar navbar-expand-md navbar-light bg-white shadow-sm fixed-top px-3" style={{ height: '60px' }}>
+      <div className="container-fluid">
+        <a className="navbar-brand d-flex align-items-center" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+          <img src="/SoftinsaLogo.png" alt="Softinsa Logo" height="24" className="d-inline-block align-text-top" />
         </a>
-        <a href="#galeria" className="lp-nav-link">
-          <IconSearch /> Galeria Pública
-        </a>
-        <button className="lp-btn lp-btn-entrar" onClick={() => navigate('/entrar')}>Entrar</button>
-        <button className="lp-btn lp-btn-registar" onClick={() => navigate('/criar')}>Registar</button>
-        <div className="lp-lang">
-          Português <IconGlobe />
+        
+        <button className="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span className="navbar-toggler-icon"></span>
+        </button>
+
+        <div className="collapse navbar-collapse bg-white" id="navbarContent">
+          <div className="navbar-nav ms-auto mb-2 mb-md-0 d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3 gap-md-4 mt-3 mt-md-0 pb-3 pb-md-0 px-2 px-md-0">
+            <a href="https://www.softinsa.pt" className="nav-link text-dark fw-medium d-flex align-items-center gap-1 p-0" target="_blank" rel="noreferrer">
+              <IconLink /> www.softinsa.pt
+            </a>
+            <a href="#galeria" className="nav-link text-dark fw-medium d-flex align-items-center gap-1 p-0">
+              <IconSearch /> Galeria Pública
+            </a>
+            <button className="btn btn-primary rounded-pill px-4 fw-semibold border-0" style={{ backgroundColor: '#0088FF' }} onClick={() => navigate('/entrar')}>
+              Entrar
+            </button>
+            <button className="btn btn-dark rounded-pill px-4 fw-semibold" onClick={() => navigate('/criar')}>
+              Registar
+            </button>
+            <div className="nav-link text-dark fw-medium d-flex align-items-center gap-1 p-0 pb-2 pb-md-0" style={{ cursor: 'pointer' }}>
+              Português <IconGlobe />
+            </div>
+          </div>
         </div>
       </div>
     </nav>
