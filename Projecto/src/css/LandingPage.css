@@ -131,6 +131,7 @@
   background: transparent;
   display: flex;
   justify-content: center;
+  width: 100%;
 }
 
 .lp-hero-inner {

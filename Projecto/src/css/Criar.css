@@ -1,0 +1,325 @@
+/* Criar Conta - Página de registro */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.criar-root {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #0a0a0a;
+  background: linear-gradient(to bottom, #0088FF, #002F59);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+.criar-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 40px 20px;
+  width: 100%;
+  margin-top: 60px;
+  box-sizing: border-box;
+}
+
+.criar-form-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  padding: 60px 40px;
+  max-width: 480px;
+  width: 100%;
+}
+
+.criar-logo {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.criar-logo img {
+  height: 60px;
+  object-fit: contain;
+}
+
+.criar-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.criar-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 15px 0;
+}
+
+.criar-header p {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+}
+
+.criar-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.criar-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.criar-input {
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  background: #f9f9f9;
+}
+
+.criar-input:focus {
+  outline: none;
+  border-color: #0066cc;
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+  background: white;
+}
+
+.criar-input.erro {
+  border-color: #dc3545;
+  background: #fff5f5;
+}
+
+.criar-input.erro:focus {
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+.criar-password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.criar-password-wrapper .criar-input {
+  width: 100%;
+  padding-right: 45px;
+}
+
+.criar-eye-icon {
+  position: absolute;
+  right: 12px;
+  cursor: pointer;
+  color: #999;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+
+.criar-eye-icon:hover {
+  color: #333;
+}
+
+.criar-erro {
+  font-size: 12px;
+  color: #dc3545;
+  margin-top: 3px;
+}
+
+.criar-btn-continuar {
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-top: 10px;
+}
+
+.criar-btn-continuar:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 102, 204, 0.3);
+}
+
+.criar-btn-continuar:active {
+  transform: translateY(0);
+}
+
+.criar-login-link {
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 14px;
+}
+
+.criar-login-link span {
+  color: #666;
+}
+
+.criar-login-link a {
+  color: #0066cc;
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 3px;
+  transition: color 0.2s;
+}
+
+.criar-login-link a:hover {
+  color: #0052a3;
+  text-decoration: underline;
+}
+
+.criar-footer-links {
+  text-align: center;
+  font-size: 12px;
+  color: #999;
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+}
+
+.criar-footer-links p {
+  margin: 0 0 8px 0;
+}
+
+.criar-links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.criar-links a {
+  color: #0066cc;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.criar-links a:hover {
+  color: #0052a3;
+  text-decoration: underline;
+}
+
+/* Responsivo */
+@media (max-width: 480px) {
+  .criar-container {
+    padding: 40px 24px;
+  }
+
+  .criar-header h1 {
+    font-size: 24px;
+  }
+
+  .criar-header p {
+    font-size: 14px;
+  }
+
+  .criar-logo img {
+    height: 50px;
+  }
+}
+
+/* SUCCESS MODAL */
+.criar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.criar-success-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 60px 40px;
+  max-width: 480px;
+  width: 90%;
+  text-align: center;
+  animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.criar-success-icon {
+  color: #28a745;
+  margin-bottom: 20px;
+  animation: scaleIn 0.5s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.criar-success-modal h2 {
+  font-size: 28px;
+  color: #1a1a1a;
+  margin: 20px 0 15px 0;
+  font-weight: 700;
+}
+
+.criar-success-modal p {
+  font-size: 16px;
+  color: #666;
+  margin: 0 0 30px 0;
+  line-height: 1.5;
+}
+
+.criar-success-btn {
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.criar-success-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+}
+
+.criar-success-btn:active {
+  transform: translateY(0);
+}
