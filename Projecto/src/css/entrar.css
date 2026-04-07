@@ -1,0 +1,362 @@
+/* Entrar na Conta - Página de login */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.entrar-root {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #0a0a0a;
+  background: linear-gradient(to bottom, #0088FF, #002F59);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+.entrar-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 40px 20px;
+  width: 100%;
+  margin-top: 60px;
+  box-sizing: border-box;
+}
+
+.entrar-form-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  padding: 60px 40px;
+  max-width: 480px;
+  width: 100%;
+}
+
+.entrar-logo {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.entrar-logo img {
+  height: 60px;
+  object-fit: contain;
+}
+
+.entrar-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.entrar-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 15px 0;
+}
+
+.entrar-header p {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+}
+
+.entrar-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.entrar-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.entrar-checkbox-group {
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+}
+
+.entrar-checkbox-group input {
+  width: auto;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.entrar-checkbox-group label {
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+}
+
+.entrar-input {
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  background: #f9f9f9;
+}
+
+.entrar-input:focus {
+  outline: none;
+  border-color: #0088FF;
+  box-shadow: 0 0 0 3px rgba(0, 136, 255, 0.1);
+  background: white;
+}
+
+.entrar-input.erro {
+  border-color: #dc3545;
+  background: #fff5f5;
+}
+
+.entrar-input.erro:focus {
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+.entrar-password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.entrar-password-wrapper .entrar-input {
+  width: 100%;
+  padding-right: 45px;
+}
+
+.entrar-eye-icon {
+  position: absolute;
+  right: 12px;
+  cursor: pointer;
+  color: #999;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+
+.entrar-eye-icon:hover {
+  color: #333;
+}
+
+.entrar-erro {
+  font-size: 12px;
+  color: #dc3545;
+  margin-top: 3px;
+}
+
+.entrar-btn-continuar {
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #0088FF 0%, #0066CC 100%);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-top: 10px;
+}
+
+.entrar-btn-continuar:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 136, 255, 0.3);
+}
+
+.entrar-btn-continuar:active {
+  transform: translateY(0);
+}
+
+.entrar-forgot-link {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.entrar-forgot-link a {
+  color: #0088FF;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.entrar-forgot-link a:hover {
+  color: #0066CC;
+  text-decoration: underline;
+}
+
+.entrar-signup-link {
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 14px;
+}
+
+.entrar-signup-link span {
+  color: #666;
+}
+
+.entrar-signup-link a {
+  color: #0088FF;
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 3px;
+  transition: color 0.2s;
+}
+
+.entrar-signup-link a:hover {
+  color: #0066CC;
+  text-decoration: underline;
+}
+
+.entrar-footer-links {
+  text-align: center;
+  font-size: 12px;
+  color: #999;
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+}
+
+.entrar-footer-links p {
+  margin: 0 0 8px 0;
+}
+
+.entrar-links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.entrar-links a {
+  color: #0088FF;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.entrar-links a:hover {
+  color: #0066CC;
+  text-decoration: underline;
+}
+
+/* SUCCESS MODAL */
+.entrar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.entrar-success-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 60px 40px;
+  max-width: 480px;
+  width: 90%;
+  text-align: center;
+  animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.entrar-success-icon {
+  color: #28a745;
+  margin-bottom: 20px;
+  animation: scaleIn 0.5s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.entrar-success-modal h2 {
+  font-size: 28px;
+  color: #1a1a1a;
+  margin: 20px 0 15px 0;
+  font-weight: 700;
+}
+
+.entrar-success-modal p {
+  font-size: 16px;
+  color: #666;
+  margin: 0 0 30px 0;
+  line-height: 1.5;
+}
+
+.entrar-success-btn {
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.entrar-success-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+}
+
+.entrar-success-btn:active {
+  transform: translateY(0);
+}
+
+/* Responsivo */
+@media (max-width: 480px) {
+  .entrar-form-container {
+    padding: 40px 24px;
+  }
+
+  .entrar-header h1 {
+    font-size: 24px;
+  }
+
+  .entrar-header p {
+    font-size: 14px;
+  }
+
+  .entrar-logo img {
+    height: 50px;
+  }
+}
