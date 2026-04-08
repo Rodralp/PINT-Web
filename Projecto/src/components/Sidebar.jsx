@@ -31,6 +31,9 @@ const sidebarConfig = [
 ];
 
 function Sidebar() {
+  const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
+  const loginData = storedLoginData ? JSON.parse(storedLoginData) : null;
+  const userName = loginData?.nome || 'Usuário';
   // Guardamos o estado das secções expandidas (por default todas abertas, ou apenas a primeira)
   const [expandedSections, setExpandedSections] = useState({
     'Consultor': true
@@ -48,11 +51,11 @@ function Sidebar() {
       <div className="sidebar-profile">
         <img 
           src="https://i.pravatar.cc/150?u=a042581f4e29026704f" 
-          alt="João Gomes" 
+          alt="Usuário" 
           className="sidebar-avatar" 
         />
         <div className="sidebar-profile-info">
-          <span className="sidebar-name">João Gomes</span>
+          <span className="sidebar-name">{userName}</span>
           <span className="sidebar-points">2450 pontos</span>
         </div>
       </div>

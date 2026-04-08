@@ -55,10 +55,33 @@ function Entrar() {
     return Object.keys(novosErros).length === 0;
   };
 
+  const valodarExistenciaConta = () => {
+    // Comparar dados do formulário com localStorage ContasCriadas enquanto não tiver base de dados
+    const contasCriadas = JSON.parse(localStorage.getItem('contasCriadas')) || [];
+    const contaEncontrada = contasCriadas.find(conta => conta.email === formData.email && conta.senha === formData.senha);
+
+    if (contaEncontrada) {
+      return contaEncontrada;
+    }
+
+    setErros(prev => ({
+      ...prev,
+      email: 'Email ou palavra-passe incorretos',
+      senha: 'Email ou palavra-passe incorretos'
+    }));
+    return null;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
     if (!validarFormulario()) {
+      return;
+    }
+
+    const contaEncontrada = valodarExistenciaConta();
+
+    if (!contaEncontrada) {
       return;
     }
 
@@ -67,19 +90,17 @@ function Entrar() {
     setShowSuccess(true);
 
     // Guardar dados de login no localStorage ou sessionStorage se a checkbox estiver marcada
+    const dadosLogin = {
+      ...formData,
+      nome: contaEncontrada.nome
+    };
+
     if (formData.guardarDados) {
-      localStorage.setItem('loginData', JSON.stringify(formData));
+      localStorage.setItem('loginData', JSON.stringify(dadosLogin));
     } else {
       localStorage.removeItem('loginData');
-      sessionStorage.setItem('loginData', JSON.stringify(formData));
+      sessionStorage.setItem('loginData', JSON.stringify(dadosLogin));
     }
-    
-    // Limpar formulário --> acho que nã é necessário limpar o formulário, pois o utilizador vai ser redirecionado para a dashboard. Se quiser limpar, basta descomentar o código abaixo.
-    /*setFormData({
-      email: '',
-      senha: '',
-      guardarDados: false
-    });*/
   };
 
   const handleCloseSuccess = () => {

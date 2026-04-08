@@ -7,6 +7,9 @@ function Topbar({ onToggleSidebar }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
+  const loginData = storedLoginData ? JSON.parse(storedLoginData) : null;
+  const userName = loginData?.nome || 'Usuário';
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -48,7 +51,7 @@ function Topbar({ onToggleSidebar }) {
           <MessageSquare size={20} strokeWidth={2} />
         </button>
         <div className="topbar-user-info">
-          <span className="topbar-user-name">João Gomes</span>
+          <span className="topbar-user-name">{userName}</span>
           <img src="https://i.pravatar.cc/150?u=a042581f4e29026704f" alt="User Avatar" className="topbar-avatar" />
         </div>
         
