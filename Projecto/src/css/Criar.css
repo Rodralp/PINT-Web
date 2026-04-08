@@ -136,7 +136,7 @@
 
 .criar-btn-continuar {
   padding: 14px 16px;
-  background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+  background: linear-gradient(135deg, #0088FF 0%, #0066CC 100%);
   color: white;
   border: none;
   border-radius: 4px;
@@ -149,7 +149,7 @@
 
 .criar-btn-continuar:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 102, 204, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 136, 255, 0.3);
 }
 
 .criar-btn-continuar:active {
@@ -167,7 +167,7 @@
 }
 
 .criar-login-link a {
-  color: #0066cc;
+  color: #0088FF;
   text-decoration: none;
   font-weight: 600;
   margin-left: 3px;
@@ -175,7 +175,7 @@
 }
 
 .criar-login-link a:hover {
-  color: #0052a3;
+  color: #0066CC;
   text-decoration: underline;
 }
 
@@ -199,13 +199,13 @@
 }
 
 .criar-links a {
-  color: #0066cc;
+  color: #0088FF;
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .criar-links a:hover {
-  color: #0052a3;
+  color: #0066CC;
   text-decoration: underline;
 }
 
@@ -305,7 +305,7 @@
 
 .criar-success-btn {
   padding: 14px 32px;
-  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  background: linear-gradient(135deg, #0066CC 0%, #0088FF 100%);
   color: white;
   border: none;
   border-radius: 4px;
@@ -317,7 +317,7 @@
 
 .criar-success-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 136, 255, 0.3);
 }
 
 .criar-success-btn:active {

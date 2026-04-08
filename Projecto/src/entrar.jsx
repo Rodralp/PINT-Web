@@ -5,12 +5,15 @@ import './css/entrar.css';
 
 function Entrar() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
+  // Preencher ou limpar campos de dados caso o utilizador tenha escolhido "Guardar dados de login" usando o localStorage
+  const savedLoginData = localStorage.getItem('loginData');
+  const initialFormData = savedLoginData ? JSON.parse(savedLoginData) : {
     email: '',
     senha: '',
     guardarDados: false
-  });
+  };
 
+  const [formData, setFormData] = useState(initialFormData);
   const [erros, setErros] = useState({});
   const [mostraSenha, setMostraSenha] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -62,18 +65,26 @@ function Entrar() {
     // TODO: Quando tiver base de dados, enviar os dados para o backend
     console.log('Dados do login:', formData);
     setShowSuccess(true);
+
+    // Guardar dados de login no localStorage ou sessionStorage se a checkbox estiver marcada
+    if (formData.guardarDados) {
+      localStorage.setItem('loginData', JSON.stringify(formData));
+    } else {
+      localStorage.removeItem('loginData');
+      sessionStorage.setItem('loginData', JSON.stringify(formData));
+    }
     
-    // Limpar formulário
-    setFormData({
+    // Limpar formulário --> acho que nã é necessário limpar o formulário, pois o utilizador vai ser redirecionado para a dashboard. Se quiser limpar, basta descomentar o código abaixo.
+    /*setFormData({
       email: '',
       senha: '',
       guardarDados: false
-    });
+    });*/
   };
 
   const handleCloseSuccess = () => {
     setShowSuccess(false);
-    navigate('/');
+    navigate('/dashboard');
   };
 
   return (
@@ -84,13 +95,13 @@ function Entrar() {
       {showSuccess && (
         <div className="entrar-overlay">
           <div className="entrar-success-modal">
-            <svg className="entrar-success-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="entrar-success-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0088FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
             <h2>Login Realizado com Sucesso!</h2>
             <p>Bem-vindo ao sistema Softinsa.</p>
             <button onClick={handleCloseSuccess} className="entrar-success-btn">
-              Voltar para Home
+              Ir para Dashboard
             </button>
           </div>
         </div>

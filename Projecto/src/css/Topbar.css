@@ -119,7 +119,7 @@
 /* Responsivo para telemóveis */
 @media (max-width: 767.98px) {
   .topbar-logo-img {
-    height: 24px; /* Imagem mais pequena em tablets/telemóveis */
+    height: 30px; /* Imagem mais pequena em tablets/telemóveis */
   }
 }
 

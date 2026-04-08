@@ -74,6 +74,16 @@ function CriarConta() {
     // TODO: Quando tiver base de dados, enviar os dados para o backend
     console.log('Dados do formulário:', formData);
     setShowSuccess(true);
+
+    // Criar conta e guardar em localStorage (remover quando tiver backend)
+    const contas = JSON.parse(localStorage.getItem('contasCriadas')) || [];
+    contas.push({
+      nome: formData.nome,
+      email: formData.email,
+      senha: formData.senha,
+      status: 'pendente' // Indica que a conta está aguardando verificação
+    });
+    localStorage.setItem('contasCriadas', JSON.stringify(contas));
     
     // Limpar formulário
     setFormData({
@@ -97,7 +107,7 @@ function CriarConta() {
       {showSuccess && (
         <div className="criar-overlay">
           <div className="criar-success-modal">
-            <svg className="criar-success-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="criar-success-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0088FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
             <h2>Conta Criada com Sucesso!</h2>

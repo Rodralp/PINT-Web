@@ -33,7 +33,7 @@ function Navbar() {
     <nav className="navbar navbar-expand-md navbar-light bg-white shadow-sm fixed-top px-3" style={{ height: '60px' }}>
       <div className="container-fluid">
         <a className="navbar-brand d-flex align-items-center" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-          <img src="/SoftinsaLogo.png" alt="Softinsa Logo" height="24" className="d-inline-block align-text-top" />
+          <img src="/SoftinsaLogo.png" alt="Softinsa Logo" height="35" className="d-inline-block align-text-center" />
         </a>
         
         <button className="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
