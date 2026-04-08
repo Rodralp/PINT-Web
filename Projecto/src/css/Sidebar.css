@@ -63,7 +63,7 @@
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  padding: 0 12px 24px 12px;
+  padding: 0px 12px;
 }
 
 .sidebar-section {

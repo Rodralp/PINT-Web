@@ -52,7 +52,7 @@ function Topbar({ onToggleSidebar }) {
         </button>
         <div className="topbar-user-info">
           <span className="topbar-user-name">{userName}</span>
-          <img src="https://i.pravatar.cc/150?u=a042581f4e29026704f" alt="User Avatar" className="topbar-avatar" />
+          <img src={`https://i.pravatar.cc/150?u=${loginData?.nome}`} alt="User Avatar" className="topbar-avatar" />
         </div>
         
         <div className="topbar-dropdown-container" ref={dropdownRef}>

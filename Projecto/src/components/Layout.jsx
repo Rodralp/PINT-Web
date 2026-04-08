@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import Topbar from './Topbar';
 import Sidebar from './Sidebar';
-import '../css/DashboardLayout.css';
+import '../css/Layout.css';
 
-function DashboardLayout({ children }) {
+function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const toggleSidebar = () => {
@@ -14,7 +14,6 @@ function DashboardLayout({ children }) {
     <div className="dashboard-layout">
       <Topbar onToggleSidebar={toggleSidebar} />
       <div className="dashboard-container">
-        {/* Usar col-md-auto ou similar mas vamos injetar classes dinâmicas para responsividade */}
         <div className={`sidebar-wrapper ${sidebarOpen ? 'd-block' : 'd-none d-md-block'}`}>
           <Sidebar />
         </div>
@@ -22,17 +21,16 @@ function DashboardLayout({ children }) {
           {children}
         </main>
       </div>
-      
-      {/* Overlay para fechar sidebar no telemóvel quando se clica fora */}
+
       {sidebarOpen && (
-        <div 
-          className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-md-none" 
-          style={{ zIndex: 35 }} 
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-md-none"
+          style={{ zIndex: 35 }}
           onClick={() => setSidebarOpen(false)}
-        ></div>
+        />
       )}
     </div>
   );
 }
 
-export default DashboardLayout;
+export default Layout;

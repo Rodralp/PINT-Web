@@ -11,7 +11,11 @@ import {
   Pin,
   ArrowDownToLine,
   FilePenLine,
-  History
+  History,
+  CircleUserRound,
+  UsersRound,
+  Megaphone,
+  Settings
 } from 'lucide-react';
 import '../css/Sidebar.css';
 
@@ -53,15 +57,15 @@ const sidebarConfig = [
     title: 'Administrador / Gestor',
     items: [
       { id: 'dashboard_AG', label: 'Dashboard', icon: Home },
+      { id: 'utilizadores_AG', label: 'Utilizadores', icon: CircleUserRound },
       { id: 'catalogo_AG', label: 'Catálogo de Badges', icon: Medal },
-      { id: 'learning_paths_AG', label: 'Meu Learning Path', icon: BookOpen },
-      { id: 'ranking_AG', label: 'Ranking da Service Line', icon: BarChart2 },
+      { id: 'equipas_AG', label: 'Equipas e SLA', icon: UsersRound },
+      { id: 'comunicados_AG', label: 'Comunicados e Avisos', icon: Megaphone },
       { id: 'pedidos_AG', label: 'Gestão de Pedidos', icon: FilePenLine },
-      { id: 'historico_AG', label: 'Histórico', icon: History },
-      { id: 'exportacoes_AG', label: 'Exportações AG', icon: ArrowDownToLine },
+      { id: 'exportacoes_AG', label: 'Exportações Admin', icon: ArrowDownToLine },
+      { id: 'gestao_AG', label: 'Gestão Geral', icon: Settings },
     ],
   },
-  // Pode adicionar mais secções aqui facilmente no futuro
 ];
 
 function Sidebar() {
@@ -87,7 +91,7 @@ function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-profile">
         <img 
-          src="https://i.pravatar.cc/150?u=a042581f4e29026704f" 
+          src={`https://i.pravatar.cc/150?u=${loginData?.nome}`} 
           alt="Usuário" 
           className="sidebar-avatar" 
         />
