@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { 
-  ChevronDown, 
-  ChevronUp, 
-  Home, 
-  Medal, 
-  Trophy, 
-  BookOpen, 
-  Clock, 
-  BarChart2, 
-  Pin, 
-  ArrowDownToLine 
+  ChevronDown,
+  ChevronUp,
+  Home,
+  Medal,
+  Trophy,
+  BookOpen,
+  Clock,
+  BarChart2,
+  Pin,
+  ArrowDownToLine,
+  FilePenLine,
+  History
 } from 'lucide-react';
 import '../css/Sidebar.css';
 
@@ -17,14 +19,46 @@ const sidebarConfig = [
   {
     title: 'Consultor',
     items: [
-      { id: 'dashboard', label: 'Dashboard', icon: Home, isActive: true },
-      { id: 'catalogo', label: 'Catálogo de Badges', icon: Medal },
-      { id: 'meus_badges', label: 'Meus Badges', icon: Trophy },
-      { id: 'learning_paths', label: 'Learning Paths', icon: BookOpen },
-      { id: 'pedidos', label: 'Meus Pedidos', icon: Clock },
-      { id: 'ranking', label: 'Ranking', icon: BarChart2 },
-      { id: 'lembretes', label: 'Lembretes', icon: Pin },
-      { id: 'exportacoes', label: 'Exportações', icon: ArrowDownToLine },
+      { id: 'dashboard_C', label: 'Dashboard', icon: Home, isActive: true },
+      { id: 'catalogo_C', label: 'Catálogo de Badges', icon: Medal },
+      { id: 'meus_badges_C', label: 'Meus Badges', icon: Trophy },
+      { id: 'learning_paths_C', label: 'Learning Paths', icon: BookOpen },
+      { id: 'pedidos_C', label: 'Meus Pedidos', icon: Clock },
+      { id: 'ranking_C', label: 'Ranking', icon: BarChart2 },
+      { id: 'lembretes_C', label: 'Lembretes', icon: Pin },
+      { id: 'exportacoes_C', label: 'Exportações', icon: ArrowDownToLine },
+    ],
+  },
+  {
+    title: 'Talent Manager',
+    items: [
+      { id: 'dashboard_TM', label: 'Dashboard', icon: Home },
+      { id: 'pedidos_TM', label: 'Gestão de Pedidos', icon: FilePenLine },
+      { id: 'historico_TM', label: 'Histórico', icon: History },
+      { id: 'exportacoes_TM', label: 'Exportações TM', icon: ArrowDownToLine },
+    ],
+  },
+  {
+    title: 'Service Line Leader',
+    items: [
+      { id: 'dashboard_SLL', label: 'Dashboard', icon: Home },
+      { id: 'learning_paths_SLL', label: 'Meu Learning Path', icon: BookOpen },
+      { id: 'ranking_SLL', label: 'Ranking da Service Line', icon: BarChart2 },
+      { id: 'pedidos_SLL', label: 'Gestão de Pedidos', icon: FilePenLine },
+      { id: 'historico_SLL', label: 'Histórico', icon: History },
+      { id: 'exportacoes_SLL', label: 'Exportações SLL', icon: ArrowDownToLine },
+    ],
+  },
+  {
+    title: 'Administrador / Gestor',
+    items: [
+      { id: 'dashboard_AG', label: 'Dashboard', icon: Home },
+      { id: 'catalogo_AG', label: 'Catálogo de Badges', icon: Medal },
+      { id: 'learning_paths_AG', label: 'Meu Learning Path', icon: BookOpen },
+      { id: 'ranking_AG', label: 'Ranking da Service Line', icon: BarChart2 },
+      { id: 'pedidos_AG', label: 'Gestão de Pedidos', icon: FilePenLine },
+      { id: 'historico_AG', label: 'Histórico', icon: History },
+      { id: 'exportacoes_AG', label: 'Exportações AG', icon: ArrowDownToLine },
     ],
   },
   // Pode adicionar mais secções aqui facilmente no futuro
@@ -36,7 +70,10 @@ function Sidebar() {
   const userName = loginData?.nome || 'Usuário';
   // Guardamos o estado das secções expandidas (por default todas abertas, ou apenas a primeira)
   const [expandedSections, setExpandedSections] = useState({
-    'Consultor': true
+    'Consultor': true,
+    'Talent Manager': false,
+    'Service Line Leader': false,
+    'Administrador / Gestor': false
   });
 
   const toggleSection = (sectionTitle) => {
