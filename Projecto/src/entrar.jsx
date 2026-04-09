@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import TermsModal from './components/TermsModal';
+import PrivacyModal from './components/PrivacyModal';
+import ForgotPasswordModal from './components/ForgotPasswordModal';
 import './css/entrar.css';
 
 function Entrar() {
@@ -17,6 +20,9 @@ function Entrar() {
   const [erros, setErros] = useState({});
   const [mostraSenha, setMostraSenha] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -112,6 +118,15 @@ function Entrar() {
     <div className="entrar-root">
       <Navbar />
 
+      {/* TERMS MODAL */}
+      <TermsModal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} />
+
+      {/* PRIVACY MODAL */}
+      <PrivacyModal isOpen={showPrivacyModal} onClose={() => setShowPrivacyModal(false)} />
+
+      {/* FORGOT PASSWORD MODAL */}
+      <ForgotPasswordModal isOpen={showForgotPasswordModal} onClose={() => setShowForgotPasswordModal(false)} />
+
       {/* SUCCESS MODAL */}
       {showSuccess && (
         <div className="entrar-overlay">
@@ -130,11 +145,6 @@ function Entrar() {
 
       <div className="entrar-container">
         <div className="entrar-form-container">
-          {/* Logo */}
-          <div className="entrar-logo">
-            <img src="/SoftinsaLogo.png" alt="Softinsa Logo" />
-          </div>
-
           {/* Título e subtítulo */}
           <div className="entrar-header">
             <h1>Entrar na conta</h1>
@@ -212,7 +222,7 @@ function Entrar() {
 
           {/* Forgot password link */}
           <div className="entrar-forgot-link">
-            <a href="#esquecer">Esqueceu a senha?</a>
+            <a href="#esquecer" onClick={(e) => { e.preventDefault(); setShowForgotPasswordModal(true); }}>Esqueceu a senha?</a>
           </div>
 
           {/* Signup link */}
@@ -225,9 +235,9 @@ function Entrar() {
           <div className="entrar-footer-links">
             <p>Ao clicar em continuar, você concorda com os nossos</p>
             <div className="entrar-links">
-              <a href="#termos">Termos de Serviço</a>
+              <a href="#termos" onClick={(e) => { e.preventDefault(); setShowTermsModal(true); }}>Termos de Serviço</a>
               <span> e com a </span>
-              <a href="#privacidade">Política de Privacidade</a>
+              <a href="#privacidade" onClick={(e) => { e.preventDefault(); setShowPrivacyModal(true); }}>Política de Privacidade</a>
             </div>
           </div>
         </div>

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import TermsModal from './components/TermsModal';
+import PrivacyModal from './components/PrivacyModal';
 import './css/Criar.css';
 
 function CriarConta() {
@@ -16,6 +18,8 @@ function CriarConta() {
   const [mostraSenha, setMostraSenha] = useState(false);
   const [mostraConfirmaSenha, setMostraConfirmaSenha] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -103,6 +107,12 @@ function CriarConta() {
     <div className="criar-root">
       <Navbar />
 
+      {/* TERMS MODAL */}
+      <TermsModal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} />
+
+      {/* PRIVACY MODAL */}
+      <PrivacyModal isOpen={showPrivacyModal} onClose={() => setShowPrivacyModal(false)} />
+
       {/* SUCCESS MODAL */}
       {showSuccess && (
         <div className="criar-overlay">
@@ -121,11 +131,6 @@ function CriarConta() {
 
       <div className="criar-container">
         <div className="criar-form-container">
-        {/* Logo */}
-        <div className="criar-logo">
-          <img src="/SoftinsaLogo.png" alt="Softinsa Logo" />
-        </div>
-
         {/* Título e subtítulo */}
         <div className="criar-header">
           <h1>Criar conta</h1>
@@ -251,9 +256,9 @@ function CriarConta() {
         <div className="criar-footer-links">
           <p>Ao clicar em continuar, você concorda com os nossos</p>
           <div className="criar-links">
-            <a href="#termos">Termos de Serviço</a>
+            <a href="#termos" onClick={(e) => { e.preventDefault(); setShowTermsModal(true); }}>Termos de Serviço</a>
             <span> e com a </span>
-            <a href="#privacidade">Política de Privacidade</a>
+            <a href="#privacidade" onClick={(e) => { e.preventDefault(); setShowPrivacyModal(true); }}>Política de Privacidade</a>
           </div>
         </div>
         </div>

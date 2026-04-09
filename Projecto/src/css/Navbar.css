@@ -1,5 +1,23 @@
 /* Navbar */
 
+.main-navbar {
+  padding: 0 12px !important;
+}
+
+.main-navbar .container-fluid {
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.main-navbar .navbar-brand {
+  margin-right: 0;
+}
+
+.main-navbar .navbar-toggler {
+  margin-left: auto;
+}
+
 .lp-navbar {
   position: fixed;
   top: 0;
@@ -9,7 +27,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 32px;
+  padding: 0 16px;
   height: 60px;
   background: rgba(255, 255, 255, 0.97);
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.08);
@@ -101,28 +119,66 @@
 
 /* Responsivo */
 @media (max-width: 768px) {
-  .lp-navbar {
-    padding: 0 20px;
+  .main-navbar {
+    padding: 0 12px !important;
   }
 
-  .lp-logo-img {
-    height: 40px;
+  .main-navbar .navbar-brand {
+    padding: 0;
+    margin: 0;
   }
 
-  .lp-navbar-links {
-    gap: 12px;
+  .main-navbar .navbar-brand img {
+    height: 34px;
   }
 
-  .lp-nav-link {
-    font-size: 0.8rem;
+  .main-navbar .navbar-toggler {
+    padding: 0.25rem 0.35rem !important;
+    margin-left: auto;
+    margin-right: 0;
   }
 
-  .lp-btn {
-    padding: 6px 16px;
-    font-size: 0.8rem;
+  .main-navbar .navbar-collapse {
+    position: fixed;
+    top: 60px;
+    left: auto !important;
+    right: 0 !important;
+    width: fit-content !important;
+    min-width: 0;
+    max-width: calc(100vw - 8px);
+    margin-top: 0 !important;
+    padding: 10px 12px;
+    border-radius: 0;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    z-index: 101;
+    background: #fff;
   }
 
-  .lp-lang {
-    font-size: 0.8rem;
+  .main-navbar .navbar-menu-panel.show,
+  .main-navbar .navbar-menu-panel.collapsing {
+    left: auto !important;
+    right: 0 !important;
+    width: fit-content !important;
+    min-width: 0;
+    max-width: calc(100vw - 8px);
+  }
+
+  .main-navbar .navbar-nav {
+    gap: 12px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .main-navbar .navbar-nav .btn {
+    align-self: flex-start;
+  }
+
+  .main-navbar .navbar-nav .nav-link {
+    padding: 0 !important;
+  }
+
+  .main-navbar .navbar-nav > :last-child {
+    margin-bottom: 0;
+    padding-bottom: 0 !important;
   }
 }
