@@ -1,7 +1,11 @@
 import Navbar from './components/Navbar';
 import './css/LandingPage.css';
+import { useTranslation } from 'react-i18next';
 
 function LandingPage() {
+  const { t, i18n } = useTranslation();
+  
+
   return (
     <div className="lp-root">
       <Navbar />
@@ -16,7 +20,7 @@ function LandingPage() {
       <section className="lp-info">
         <div className="lp-info-inner">
           <div className="lp-info-col">
-            <h2 className="lp-info-title">Quem Somos?</h2>
+            <h2 className="lp-info-title">{t("about_title")}</h2>
             <p className="lp-info-lead">Especialistas em serviços de gestão aplicacional e de infraestruturas.</p>
             <p className="lp-info-body">
               O sucesso da Softinsa tem como base a inovação e a capacidade de nos reinventarmos continuamente.
@@ -36,6 +40,9 @@ function LandingPage() {
       <footer className="lp-footer">
         <div className="lp-footer-inner">
           <div className="lp-footer-left">
+            <button onClick={() => i18n.changeLanguage("pt")}>PT</button>
+            <button onClick={() => i18n.changeLanguage("en")}>EN</button>
+            <button onClick={() => i18n.changeLanguage("es")}>ES</button>
             <h3 className="lp-footer-title">Vamos conversar?</h3>
             <a href="mailto:info@softinsa.pt" className="lp-footer-btn">
               Nos Envie Sua Mensagem →
