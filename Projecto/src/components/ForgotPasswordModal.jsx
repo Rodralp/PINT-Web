@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import '../css/ForgotPassword.css';
 import PuzzleCaptcha from './PuzzleCaptcha';
 
 function ForgotPasswordModal({ isOpen, onClose }) {
+  const { t } = useTranslation();
   const [step, setStep] = useState('email'); // email, captcha, success
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -10,11 +12,11 @@ function ForgotPasswordModal({ isOpen, onClose }) {
 
   const validateEmail = () => {
     if (!email.trim()) {
-      setEmailError('Email é obrigatório');
+      setEmailError(t('err_required_email'));
       return false;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setEmailError('Email inválido');
+      setEmailError(t('err_invalid_email'));
       return false;
     }
     setEmailError('');
@@ -31,7 +33,7 @@ function ForgotPasswordModal({ isOpen, onClose }) {
       if (contaEncontrada) {
         setStep('captcha');
       } else {
-        setEmailError('Nenhuma conta encontrada com este email');
+        setEmailError(t('forgot_email_not_found'));
       }
     }
   };
@@ -45,7 +47,7 @@ function ForgotPasswordModal({ isOpen, onClose }) {
       setRecoveredPassword(contaEncontrada.senha);
     } else {
       // Fallback se a conta não for encontrada
-      setRecoveredPassword('CONTA_NAO_ENCONTRADA');
+      setRecoveredPassword(t('forgot_account_not_found_fallback'));
     }
     setStep('success');
   };
@@ -69,14 +71,14 @@ function ForgotPasswordModal({ isOpen, onClose }) {
 
         {step === 'email' && (
           <div className="forgot-password-content">
-            <h2>Recuperar Senha</h2>
-            <p>Insira o email associado à sua conta</p>
+            <h2>{t('forgot_title')}</h2>
+            <p>{t('forgot_subtitle')}</p>
             
             <form onSubmit={handleEmailSubmit}>
               <div className="forgot-form-group">
                 <input
                   type="email"
-                  placeholder="seu.email@dominio.com"
+                  placeholder={t('login_placeholder_email')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={emailError ? 'forgot-input error' : 'forgot-input'}
@@ -84,7 +86,7 @@ function ForgotPasswordModal({ isOpen, onClose }) {
                 {emailError && <span className="forgot-error">{emailError}</span>}
               </div>
               <button type="submit" className="forgot-btn-continue">
-                Verificar Email
+                {t('forgot_verify_email')}
               </button>
             </form>
           </div>
@@ -92,8 +94,8 @@ function ForgotPasswordModal({ isOpen, onClose }) {
 
         {step === 'captcha' && (
           <div className="forgot-password-content">
-            <h2>Verificação de Segurança</h2>
-            <p>Complete o puzzle para continuar</p>
+            <h2>{t('forgot_security_title')}</h2>
+            <p>{t('forgot_security_subtitle')}</p>
             <PuzzleCaptcha onComplete={handleCaptchaComplete} />
           </div>
         )}
@@ -105,8 +107,8 @@ function ForgotPasswordModal({ isOpen, onClose }) {
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
             </div>
-            <h2>Senha Recuperada</h2>
-            <p>Aqui está sua senha temporária:</p>
+            <h2>{t('forgot_success_title')}</h2>
+            <p>{t('forgot_success_subtitle')}</p>
             
             <div className="forgot-password-display">
               <code>{recoveredPassword}</code>
@@ -115,19 +117,19 @@ function ForgotPasswordModal({ isOpen, onClose }) {
                 className="forgot-btn-copy"
                 onClick={() => {
                   navigator.clipboard.writeText(recoveredPassword);
-                  alert('Senha copiada para clipboard!');
+                  alert(t('forgot_copied_alert'));
                 }}
               >
-                Copiar
+                {t('forgot_copy')}
               </button>
             </div>
 
             <p className="forgot-info">
-              ⚠️ Esta é a sua senha original. Recomendamos que a altere após fazer login.
+              {t('forgot_warning_info')}
             </p>
 
             <button className="forgot-btn-close" onClick={handleReset}>
-              Fechar
+              {t('forgot_close')}
             </button>
           </div>
         )}

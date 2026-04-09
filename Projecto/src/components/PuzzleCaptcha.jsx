@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 function PuzzleCaptcha({ onComplete }) {
+  const { t } = useTranslation();
   const [positions, setPositions] = useState([]);
   const [targetPosition, setTargetPosition] = useState(null);
   const [userSelected, setUserSelected] = useState(false);
@@ -14,7 +16,7 @@ function PuzzleCaptcha({ onComplete }) {
   const generatePuzzle = () => {
     const puzzleSize = 9;
     const items = [];
-    const circleSize = 30;
+    const circleSize = 44;
     const padding = 10;
     const containerWidth = gridRef.current?.clientWidth || 250;
     const containerHeight = gridRef.current?.clientHeight || 250;
@@ -53,16 +55,16 @@ function PuzzleCaptcha({ onComplete }) {
       setFeedback('error');
       setTimeout(() => {
         generatePuzzle();
-      }, 600);
+      }, 700);
     }
   };
 
-  if (targetPosition === null) return <div>Carregando puzzle...</div>;
+  if (targetPosition === null) return <div>{t('captcha_loading')}</div>;
 
   return (
     <div className="puzzle-captcha-container">
       <div className="puzzle-instructions">
-        <p>Clique no círculo <span className="puzzle-highlight">destacado</span></p>
+        <p>{t('captcha_instruction_prefix')} <span className="puzzle-highlight">{t('captcha_instruction_highlight')}</span></p>
       </div>
 
       <div ref={gridRef} className={`puzzle-grid ${feedback}`}>
@@ -78,6 +80,7 @@ function PuzzleCaptcha({ onComplete }) {
             }}
             onClick={() => handlePuzzleClick(item.id)}
             disabled={userSelected}
+            aria-label={t('captcha_circle_aria_label')}
           >
             {item.id === targetPosition && <span className="circle-pulse">●</span>}
             {item.id !== targetPosition && <span>●</span>}
@@ -86,7 +89,7 @@ function PuzzleCaptcha({ onComplete }) {
       </div>
 
       {feedback === 'error' && (
-        <p className="puzzle-error-msg">Errado! Tente novamente.</p>
+        <p className="puzzle-error-msg">{t('captcha_error')}</p>
       )}
 
       <button 
@@ -94,7 +97,7 @@ function PuzzleCaptcha({ onComplete }) {
         className="puzzle-btn-retry"
         onClick={generatePuzzle}
       >
-        Novo Puzzle
+        {t('captcha_new_puzzle')}
       </button>
     </div>
   );

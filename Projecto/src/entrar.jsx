@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Navbar from './components/Navbar';
 import TermsModal from './components/TermsModal';
 import PrivacyModal from './components/PrivacyModal';
@@ -8,6 +9,7 @@ import './css/entrar.css';
 
 function Entrar() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   // Preencher ou limpar campos de dados caso o utilizador tenha escolhido "Guardar dados de login" usando o localStorage
   const savedLoginData = localStorage.getItem('loginData');
   const initialFormData = savedLoginData ? JSON.parse(savedLoginData) : {
@@ -48,13 +50,13 @@ function Entrar() {
     const novosErros = {};
 
     if (!formData.email.trim()) {
-      novosErros.email = 'Email é obrigatório';
+      novosErros.email = t('err_required_email');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      novosErros.email = 'Email inválido';
+      novosErros.email = t('err_invalid_email');
     }
 
     if (!formData.senha) {
-      novosErros.senha = 'Palavra-passe é obrigatória';
+      novosErros.senha = t('err_required_password');
     }
 
     setErros(novosErros);
@@ -72,8 +74,8 @@ function Entrar() {
 
     setErros(prev => ({
       ...prev,
-      email: 'Email ou palavra-passe incorretos',
-      senha: 'Email ou palavra-passe incorretos'
+      email: t('err_invalid_credentials'),
+      senha: t('err_invalid_credentials')
     }));
     return null;
   };
@@ -134,10 +136,10 @@ function Entrar() {
             <svg className="entrar-success-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0088FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
-            <h2>Login Realizado com Sucesso!</h2>
-            <p>Bem-vindo ao sistema Softinsa.</p>
+            <h2>{t('login_success_title')}</h2>
+            <p>{t('login_success_subtitle')}</p>
             <button onClick={handleCloseSuccess} className="entrar-success-btn">
-              Ir para Dashboard
+              {t('login_success_cta')}
             </button>
           </div>
         </div>
@@ -147,8 +149,8 @@ function Entrar() {
         <div className="entrar-form-container">
           {/* Título e subtítulo */}
           <div className="entrar-header">
-            <h1>Entrar na conta</h1>
-            <p>Insira seu e-mail para entrar neste aplicativo</p>
+            <h1>{t('login_title')}</h1>
+            <p>{t('login_subtitle')}</p>
           </div>
 
           {/* Formulário */}
@@ -157,7 +159,7 @@ function Entrar() {
               <input
                 type="email"
                 name="email"
-                placeholder="email@dominio.com"
+                placeholder={t('login_placeholder_email')}
                 value={formData.email}
                 onChange={handleChange}
                 className={erros.email ? 'entrar-input erro' : 'entrar-input'}
@@ -170,7 +172,7 @@ function Entrar() {
                 <input
                   type={mostraSenha ? 'text' : 'password'}
                   name="senha"
-                  placeholder="Palavra-passe"
+                  placeholder={t('login_placeholder_password')}
                   value={formData.senha}
                   onChange={handleChange}
                   className={erros.senha ? 'entrar-input erro' : 'entrar-input'}
@@ -212,32 +214,32 @@ function Entrar() {
                 checked={formData.guardarDados}
                 onChange={handleChange}
               />
-              <label htmlFor="guardarDados">Guardar dados de login</label>
+              <label htmlFor="guardarDados">{t('login_remember')}</label>
             </div>
 
             <button type="submit" className="entrar-btn-continuar">
-              Continuar
+              {t('login_continue')}
             </button>
           </form>
 
           {/* Forgot password link */}
           <div className="entrar-forgot-link">
-            <a href="#esquecer" onClick={(e) => { e.preventDefault(); setShowForgotPasswordModal(true); }}>Esqueceu a senha?</a>
+            <a href="#esquecer" onClick={(e) => { e.preventDefault(); setShowForgotPasswordModal(true); }}>{t('forgot_link')}</a>
           </div>
 
           {/* Signup link */}
           <div className="entrar-signup-link">
-            <span>Ainda não tem conta?</span>
-            <a href="#" onClick={(e) => { e.preventDefault(); navigate('/criar'); }}>Registar</a>
+            <span>{t('login_no_account')}</span>
+            <a href="#" onClick={(e) => { e.preventDefault(); navigate('/criar'); }}>{t('nav_register')}</a>
           </div>
 
           {/* Footer links */}
           <div className="entrar-footer-links">
-            <p>Ao clicar em continuar, você concorda com os nossos</p>
+            <p>{t('legal_agree_prefix')}</p>
             <div className="entrar-links">
-              <a href="#termos" onClick={(e) => { e.preventDefault(); setShowTermsModal(true); }}>Termos de Serviço</a>
-              <span> e com a </span>
-              <a href="#privacidade" onClick={(e) => { e.preventDefault(); setShowPrivacyModal(true); }}>Política de Privacidade</a>
+              <a href="#termos" onClick={(e) => { e.preventDefault(); setShowTermsModal(true); }}>{t('legal_terms')}</a>
+              <span>{` ${t('legal_and')} `}</span>
+              <a href="#privacidade" onClick={(e) => { e.preventDefault(); setShowPrivacyModal(true); }}>{t('legal_privacy')}</a>
             </div>
           </div>
         </div>

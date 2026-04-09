@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Navbar from './components/Navbar';
 import TermsModal from './components/TermsModal';
 import PrivacyModal from './components/PrivacyModal';
@@ -7,6 +8,7 @@ import './css/Criar.css';
 
 function CriarConta() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
@@ -43,25 +45,25 @@ function CriarConta() {
     const novosErros = {};
 
     if (!formData.nome.trim()) {
-      novosErros.nome = 'Nome é obrigatório';
+      novosErros.nome = t('err_required_name');
     }
 
     if (!formData.email.trim()) {
-      novosErros.email = 'Email é obrigatório';
+      novosErros.email = t('err_required_email');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      novosErros.email = 'Email inválido';
+      novosErros.email = t('err_invalid_email');
     }
 
     if (!formData.senha) {
-      novosErros.senha = 'Palavra-passe é obrigatória';
+      novosErros.senha = t('err_required_password');
     } else if (formData.senha.length < 8) {
-      novosErros.senha = 'Palavra-passe deve ter pelo menos 8 caracteres';
+      novosErros.senha = t('err_password_min');
     }
 
     if (!formData.confirmaSenha) {
-      novosErros.confirmaSenha = 'Confirmação é obrigatória';
+      novosErros.confirmaSenha = t('err_required_confirm_password');
     } else if (formData.senha !== formData.confirmaSenha) {
-      novosErros.confirmaSenha = 'Palavras-passe não correspondem';
+      novosErros.confirmaSenha = t('err_password_mismatch');
     }
 
     setErros(novosErros);
@@ -120,10 +122,10 @@ function CriarConta() {
             <svg className="criar-success-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0088FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
-            <h2>Conta Criada com Sucesso!</h2>
-            <p>Um administrador irá verificar seus dados e ativar sua conta em breve.</p>
+            <h2>{t('register_success_title')}</h2>
+            <p>{t('register_success_subtitle')}</p>
             <button onClick={handleCloseSuccess} className="criar-success-btn">
-              Voltar para Home
+              {t('register_success_cta')}
             </button>
           </div>
         </div>
@@ -133,8 +135,8 @@ function CriarConta() {
         <div className="criar-form-container">
         {/* Título e subtítulo */}
         <div className="criar-header">
-          <h1>Criar conta</h1>
-          <p>Insira seus dados e aguarde a verificação</p>
+          <h1>{t('register_title')}</h1>
+          <p>{t('register_subtitle')}</p>
         </div>
 
         {/* Formulário */}
@@ -143,7 +145,7 @@ function CriarConta() {
             <input
               type="text"
               name="nome"
-              placeholder="Nome"
+              placeholder={t('register_placeholder_name')}
               value={formData.nome}
               onChange={handleChange}
               className={erros.nome ? 'criar-input erro' : 'criar-input'}
@@ -155,7 +157,7 @@ function CriarConta() {
             <input
               type="email"
               name="email"
-              placeholder="email@dominio.com"
+              placeholder={t('login_placeholder_email')}
               value={formData.email}
               onChange={handleChange}
               className={erros.email ? 'criar-input erro' : 'criar-input'}
@@ -168,7 +170,7 @@ function CriarConta() {
               <input
                 type={mostraSenha ? 'text' : 'password'}
                 name="senha"
-                placeholder="Palavra-passe"
+                placeholder={t('login_placeholder_password')}
                 value={formData.senha}
                 onChange={handleChange}
                 className={erros.senha ? 'criar-input erro' : 'criar-input'}
@@ -207,7 +209,7 @@ function CriarConta() {
               <input
                 type={mostraConfirmaSenha ? 'text' : 'password'}
                 name="confirmaSenha"
-                placeholder="Confirmar Palavra-passe"
+                placeholder={t('register_placeholder_confirm_password')}
                 value={formData.confirmaSenha}
                 onChange={handleChange}
                 className={erros.confirmaSenha ? 'criar-input erro' : 'criar-input'}
@@ -242,23 +244,23 @@ function CriarConta() {
           </div>
 
           <button type="submit" className="criar-btn-continuar">
-            Continuar
+            {t('register_continue')}
           </button>
         </form>
 
         {/* Login link */}
         <div className="criar-login-link">
-          <span>Já tem conta?</span>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/entrar'); }}>Entre</a>
+          <span>{t('register_have_account')}</span>
+          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/entrar'); }}>{t('register_login_link')}</a>
         </div>
 
         {/* Footer links */}
         <div className="criar-footer-links">
-          <p>Ao clicar em continuar, você concorda com os nossos</p>
+          <p>{t('legal_agree_prefix')}</p>
           <div className="criar-links">
-            <a href="#termos" onClick={(e) => { e.preventDefault(); setShowTermsModal(true); }}>Termos de Serviço</a>
-            <span> e com a </span>
-            <a href="#privacidade" onClick={(e) => { e.preventDefault(); setShowPrivacyModal(true); }}>Política de Privacidade</a>
+            <a href="#termos" onClick={(e) => { e.preventDefault(); setShowTermsModal(true); }}>{t('legal_terms')}</a>
+            <span>{` ${t('legal_and')} `}</span>
+            <a href="#privacidade" onClick={(e) => { e.preventDefault(); setShowPrivacyModal(true); }}>{t('legal_privacy')}</a>
           </div>
         </div>
         </div>

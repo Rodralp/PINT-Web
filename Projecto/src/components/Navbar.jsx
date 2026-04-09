@@ -110,7 +110,7 @@ function Navbar() {
                   {languages.map(lang => (
                     <button
                       key={lang.code}
-                      className={`navbar-lang-option ${lang.code === i18n.language ? 'active' : ''}`}
+                      className={`navbar-lang-option ${i18n.language?.startsWith(lang.code) ? 'active' : ''}`}
                       onClick={() => handleLanguageChange(lang.code)}
                     >
                       <lang.flag />
@@ -137,7 +137,7 @@ function Navbar() {
               {languages.map(lang => (
                 <button
                   key={lang.code}
-                  className={`navbar-lang-option ${lang.code === i18n.language ? 'active' : ''}`}
+                  className={`navbar-lang-option ${i18n.language?.startsWith(lang.code) ? 'active' : ''}`}
                   onClick={() => handleLanguageChange(lang.code)}
                 >
                   <lang.flag />

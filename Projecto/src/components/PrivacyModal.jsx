@@ -1,7 +1,252 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import '../css/TermsModal.css';
 
 function PrivacyModal({ isOpen, onClose }) {
+  const { i18n } = useTranslation();
+
+  const language = (i18n.language || 'pt').startsWith('en')
+    ? 'en'
+    : (i18n.language || 'pt').startsWith('es')
+      ? 'es'
+      : 'pt';
+
+  const privacyContent = {
+    pt: {
+      title: 'Politica de Privacidade',
+      sections: [
+        { title: '1. Responsavel pelo tratamento dos dados', paragraphs: ['A Softinsa e a entidade responsavel pelo tratamento dos seus dados pessoais no ambito da plataforma.'] },
+        {
+          title: '2. Que dados recolhemos?',
+          paragraphs: ['Ao utilizar a plataforma, podemos recolher as seguintes categorias de dados:'],
+          bullets: [
+            'Dados profissionais: nome, email corporativo, area e funcao.',
+            'Dados de autenticacao e historico de acessos.',
+            'Evidencias submetidas para obtencao de badges.',
+            'Historico de badges, progresso e pontuacao.',
+            'Dados de notificacoes e preferencias de contacto.'
+          ]
+        },
+        {
+          title: '3. Como utilizamos os seus dados?',
+          bullets: [
+            'Gestao de conta e autenticacao.',
+            'Submissao, validacao e aprovacao de candidaturas.',
+            'Emissao/publicacao de badges digitais.',
+            'Notificacoes sobre pedidos e expiracoes.',
+            'Relatorios agregados para melhoria da plataforma.'
+          ]
+        },
+        {
+          title: '4. Fundamento legal',
+          bullets: [
+            'Execucao de relacao profissional e formacao.',
+            'Consentimento para partilha publica e integracoes.',
+            'Interesse legitimo na gestao de talento.',
+            'Cumprimento de obrigacoes legais aplicaveis.'
+          ]
+        },
+        {
+          title: '5. Com quem partilhamos os seus dados?',
+          bullets: [
+            'Talent Managers e Service Line Leaders.',
+            'Administradores da plataforma.',
+            'Fornecedores tecnicos sob obrigacoes contratuais.',
+            'Redes profissionais apenas com autorizacao do utilizador.',
+            'Autoridades publicas quando exigido por lei.'
+          ],
+          paragraphs: ['Os dados nao sao vendidos para fins de marketing.']
+        },
+        {
+          title: '6. Pagina publica de badges',
+          paragraphs: ['Cada badge aprovado pode ter pagina publica com nome, badge obtido, data e competencias certificadas. O utilizador pode solicitar remocao a qualquer momento.']
+        },
+        {
+          title: '7. Conservacao dos dados',
+          paragraphs: ['Os dados sao conservados apenas pelo tempo necessario a cada finalidade e obrigacao legal, sendo depois anonimizados ou eliminados de forma segura.']
+        },
+        {
+          title: '8. Direitos do titular',
+          bullets: [
+            'Acesso, retificacao e apagamento (quando aplicavel).',
+            'Limitacao e oposicao ao tratamento.',
+            'Portabilidade dos dados fornecidos.',
+            'Retirada de consentimento a qualquer momento.'
+          ]
+        },
+        {
+          title: '9. Seguranca dos dados',
+          bullets: [
+            'Comunicacao segura (HTTPS).',
+            'Armazenamento cifrado de passwords.',
+            'Controlo de acessos por perfil.',
+            'Registos de auditoria de acoes criticas.'
+          ]
+        },
+        {
+          title: '10. Dados de menores',
+          paragraphs: ['A plataforma destina-se a colaboradores com idade igual ou superior a 18 anos.']
+        }
+      ]
+    },
+    en: {
+      title: 'Privacy Policy',
+      sections: [
+        { title: '1. Data controller', paragraphs: ['Softinsa is the entity responsible for processing your personal data within this platform.'] },
+        {
+          title: '2. What data do we collect?',
+          paragraphs: ['When using the platform, we may collect:'],
+          bullets: [
+            'Professional data: name, corporate email, area and role.',
+            'Authentication data and access history.',
+            'Evidence submitted for badge applications.',
+            'Badge history, progress and scoring.',
+            'Notification data and contact preferences.'
+          ]
+        },
+        {
+          title: '3. How we use your data',
+          bullets: [
+            'Account management and authentication.',
+            'Submission, validation and approval workflows.',
+            'Digital badge issuance/publication.',
+            'Notifications about requests and expirations.',
+            'Aggregated reporting to improve the platform.'
+          ]
+        },
+        {
+          title: '4. Legal basis',
+          bullets: [
+            'Execution of professional/training relationship.',
+            'Consent for public sharing and integrations.',
+            'Legitimate interest in talent management.',
+            'Compliance with applicable legal obligations.'
+          ]
+        },
+        {
+          title: '5. Data sharing',
+          bullets: [
+            'Talent Managers and Service Line Leaders.',
+            'Platform administrators.',
+            'Technical providers under contractual obligations.',
+            'Professional networks only with user authorization.',
+            'Public authorities when legally required.'
+          ],
+          paragraphs: ['Data is not sold for marketing purposes.']
+        },
+        {
+          title: '6. Public badge page',
+          paragraphs: ['Approved badges may have a public page showing name, badge, issue date and certified skills. Users may request removal at any time.']
+        },
+        {
+          title: '7. Data retention',
+          paragraphs: ['Data is retained only for the period necessary for each purpose and legal obligation, then anonymized or securely deleted.']
+        },
+        {
+          title: '8. Data subject rights',
+          bullets: [
+            'Access, rectification and erasure (where applicable).',
+            'Restriction and objection to processing.',
+            'Portability of provided data.',
+            'Withdrawal of consent at any time.'
+          ]
+        },
+        {
+          title: '9. Data security',
+          bullets: [
+            'Secure communication (HTTPS).',
+            'Encrypted password storage.',
+            'Role-based access control.',
+            'Audit logs for critical actions.'
+          ]
+        },
+        {
+          title: '10. Minors data',
+          paragraphs: ['The platform is intended for collaborators aged 18 and over.']
+        }
+      ]
+    },
+    es: {
+      title: 'Politica de Privacidad',
+      sections: [
+        { title: '1. Responsable del tratamiento', paragraphs: ['Softinsa es la entidad responsable del tratamiento de sus datos personales en esta plataforma.'] },
+        {
+          title: '2. Que datos recogemos?',
+          paragraphs: ['Al utilizar la plataforma, podemos recoger:'],
+          bullets: [
+            'Datos profesionales: nombre, email corporativo, area y funcion.',
+            'Datos de autenticacion e historial de accesos.',
+            'Evidencias enviadas para candidaturas de badges.',
+            'Historial de badges, progreso y puntuacion.',
+            'Datos de notificaciones y preferencias de contacto.'
+          ]
+        },
+        {
+          title: '3. Como utilizamos sus datos',
+          bullets: [
+            'Gestion de cuenta y autenticacion.',
+            'Envio, validacion y aprobacion de candidaturas.',
+            'Emision/publicacion de badges digitales.',
+            'Notificaciones sobre solicitudes y expiraciones.',
+            'Informes agregados para mejorar la plataforma.'
+          ]
+        },
+        {
+          title: '4. Base legal',
+          bullets: [
+            'Ejecucion de relacion profesional/formativa.',
+            'Consentimiento para compartir publicamente e integraciones.',
+            'Interes legitimo en gestion del talento.',
+            'Cumplimiento de obligaciones legales aplicables.'
+          ]
+        },
+        {
+          title: '5. Con quien compartimos los datos?',
+          bullets: [
+            'Talent Managers y Service Line Leaders.',
+            'Administradores de la plataforma.',
+            'Proveedores tecnicos con obligaciones contractuales.',
+            'Redes profesionales solo con autorizacion del usuario.',
+            'Autoridades publicas cuando sea legalmente exigido.'
+          ],
+          paragraphs: ['Los datos no se venden con fines de marketing.']
+        },
+        {
+          title: '6. Pagina publica de badges',
+          paragraphs: ['Los badges aprobados pueden tener una pagina publica con nombre, badge, fecha de emision y competencias certificadas. El usuario puede solicitar su eliminacion.']
+        },
+        {
+          title: '7. Conservacion de datos',
+          paragraphs: ['Los datos se conservan solo durante el tiempo necesario para cada finalidad y obligacion legal, y despues se anonimizan o eliminan de forma segura.']
+        },
+        {
+          title: '8. Derechos del titular',
+          bullets: [
+            'Acceso, rectificacion y supresion (cuando proceda).',
+            'Limitacion y oposicion al tratamiento.',
+            'Portabilidad de los datos proporcionados.',
+            'Retirada del consentimiento en cualquier momento.'
+          ]
+        },
+        {
+          title: '9. Seguridad de los datos',
+          bullets: [
+            'Comunicacion segura (HTTPS).',
+            'Almacenamiento cifrado de contrasenas.',
+            'Control de accesos por perfiles.',
+            'Registros de auditoria para acciones criticas.'
+          ]
+        },
+        {
+          title: '10. Datos de menores',
+          paragraphs: ['La plataforma esta destinada a colaboradores de 18 anos o mas.']
+        }
+      ]
+    }
+  };
+
+  const currentContent = privacyContent[language] || privacyContent.pt;
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -26,123 +271,28 @@ function PrivacyModal({ isOpen, onClose }) {
     <div className="terms-modal-overlay" onClick={handleBackdropClick}>
       <div className="terms-modal-container">
         <div className="terms-modal-header">
-          <h1 className="terms-modal-title">Politica de Privacidade</h1>
+          <h1 className="terms-modal-title">{currentContent.title}</h1>
           <button className="terms-modal-close" onClick={onClose}>
             ✕
           </button>
         </div>
 
         <div className="terms-modal-content">
-          <section className="terms-section">
-            <h2>1. Responsável pelo tratamento dos dados</h2>
-            <p>A Softinsa é a entidade responsável pelo tratamento dos seus dados pessoais no âmbito da Plataforma de Badges.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>2. Que dados recolhemos?</h2>
-            <p>Ao utilizar a plataforma, podemos recolher as seguintes categorias de dados:</p>
-            <ul>
-              <li>Dados de identificação profissional: nome, email corporativo, área de atuação e função na empresa.</li>
-              <li>Dados de autenticação: password (armazenada de forma cifrada) e histórico de acessos.</li>
-              <li>Dados de evidências: certificados, diplomas, relatórios e outros documentos que o utilizador enviar para concorrer a badges.</li>
-              <li>Histórico de badges: badges obtidos, badges em processo de validação e progresso nos percursos de aprendizagem.</li>
-              <li>Dados de gamificação: pontuação atribuída, conquistas especiais e marcos alcançados.</li>
-              <li>Dados de comunicação: notificações enviadas, lembretes e preferências de contacto.</li>
-            </ul>
-          </section>
-
-          <section className="terms-section">
-            <h2>3. Como utilizamos os seus dados?</h2>
-            <p>Os seus dados são utilizados exclusivamente para as seguintes finalidades:</p>
-            <ul>
-              <li>Gestão da sua conta e autenticação na plataforma.</li>
-              <li>Submissão, validação e aprovação de candidaturas a badges.</li>
-              <li>Emissão e publicação de badges digitais.</li>
-              <li>Criação de rankings internos por área ou Service Line, para efeitos de reconhecimento profissional.</li>
-              <li>Envio de notificações sobre o estado dos seus pedidos, expiração de badges e lembretes de objetivos.</li>
-              <li>Geração de relatórios agregados e anónimos para melhoria da plataforma e gestão de talento.</li>
-              <li>Partilha pública apenas quando o utilizador autorizar expressamente.</li>
-            </ul>
-          </section>
-
-          <section className="terms-section">
-            <h2>4. Qual o fundamento legal para o tratamento?</h2>
-            <p>O tratamento dos seus dados baseia-se em:</p>
-            <ul>
-              <li>Execução do contrato de trabalho ou de formação profissional (gestão de competências e progressão).</li>
-              <li>Consentimento explícito do utilizador para partilha pública de badges ou integração com redes profissionais.</li>
-              <li>Interesse legítimo da Softinsa em gerir o talento interno, certificar competências e promover a aprendizagem contínua.</li>
-              <li>Obrigações legais aplicáveis, nomeadamente em matéria de arquivo e auditoria.</li>
-            </ul>
-          </section>
-
-          <section className="terms-section">
-            <h2>5. Com quem partilhamos os seus dados?</h2>
-            <p>Os seus dados podem ser acedidos ou partilhados com:</p>
-            <ul>
-              <li>Talent Managers e Service Line Leaders no âmbito do processo de validação de badges.</li>
-              <li>Administradores da plataforma para gestão técnica e configuração.</li>
-              <li>Fornecedores técnicos subcontratados (ex: alojamento da plataforma, serviço de email), que estão vinculados contratualmente ao RGPD.</li>
-              <li>Redes profissionais (ex: LinkedIn) apenas mediante autorização expressa do utilizador.</li>
-              <li>Autoridades públicas quando obrigatório por lei.</li>
-            </ul>
-            <p>Os seus dados não são vendidos nem cedidos a terceiros para fins de marketing.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>6. Página pública de badges</h2>
-            <p>Cada badge aprovado tem uma página pública acessível por um link único. Essa página contém apenas:</p>
-            <ul>
-              <li>Nome do consultor</li>
-              <li>Badge obtido</li>
-              <li>Data de atribuição</li>
-              <li>Competências certificadas</li>
-            </ul>
-            <p>O utilizador pode solicitar a remoção da página pública a qualquer momento, contactando o encarregado de proteção de dados.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>7. Por quanto tempo guardamos os seus dados?</h2>
-            <p>Tipo de dado e prazo de conservação:</p>
-            <ul>
-              <li>Evidências submetidas: Durante a validade do badge + 2 anos</li>
-              <li>Badges sem expiração: Indefinidamente (histórico profissional)</li>
-              <li>Histórico de acessos e decisões: 5 anos após a última interação</li>
-              <li>Dados de registo: Enquanto o utilizador estiver ativo na plataforma</li>
-            </ul>
-            <p>Após estes prazos, os dados serão anonimizados ou eliminados de forma segura.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>8. Quais são os seus direitos?</h2>
-            <p>Enquanto titular dos dados, tem direito a:</p>
-            <ul>
-              <li>Aceder aos seus dados pessoais que tratamos.</li>
-              <li>Retificar dados incompletos ou desatualizados.</li>
-              <li>Solicitar o apagamento dos seus dados, salvo obrigações legais de conservação.</li>
-              <li>Limitar o tratamento em certas circunstâncias.</li>
-              <li>Portabilidade dos dados que nos forneceu.</li>
-              <li>Opor-se à criação de rankings públicos ou à partilha de badges.</li>
-              <li>Retirar o consentimento a qualquer momento, sem comprometer a licitude do tratamento realizado até então.</li>
-            </ul>
-            <p>Pode exercer estes direitos através do contacto indicado no ponto 11.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>9. Como protegemos os seus dados?</h2>
-            <p>Adotamos medidas técnicas e organizativas adequadas, incluindo:</p>
-            <ul>
-              <li>Comunicação encriptada (HTTPS) entre o seu dispositivo e a plataforma.</li>
-              <li>Armazenamento cifrado de passwords.</li>
-              <li>Controlo de acessos baseado em perfis.</li>
-              <li>Registo de auditoria para todas as ações de validação e aprovação.</li>
-            </ul>
-          </section>
-
-          <section className="terms-section">
-            <h2>10. Dados de menores</h2>
-            <p>A plataforma destina-se exclusivamente a colaboradores da Softinsa, presumindo-se que todos têm idade igual ou superior a 18 anos.</p>
-          </section>
+          {currentContent.sections.map((section) => (
+            <section className="terms-section" key={section.title}>
+              <h2>{section.title}</h2>
+              {section.paragraphs && section.paragraphs.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
+              {section.bullets && (
+                <ul>
+                  {section.bullets.map((bullet) => (
+                    <li key={bullet}>{bullet}</li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          ))}
         </div>
       </div>
     </div>

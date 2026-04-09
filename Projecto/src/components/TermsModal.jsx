@@ -1,7 +1,75 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import '../css/TermsModal.css';
 
 function TermsModal({ isOpen, onClose }) {
+  const { i18n } = useTranslation();
+
+  const language = (i18n.language || 'pt').startsWith('en')
+    ? 'en'
+    : (i18n.language || 'pt').startsWith('es')
+      ? 'es'
+      : 'pt';
+
+  const termsContent = {
+    pt: {
+      title: 'Termos de Servico',
+      sections: [
+        { title: '1. Aceitacao dos termos', body: 'Ao aceder ou utilizar a plataforma, o utilizador declara ter lido, compreendido e aceitado estes Termos na integra.' },
+        { title: '2. Utilizadores abrangidos', body: 'A plataforma destina-se exclusivamente a colaboradores da Softinsa, Talent Managers e Service Line Leaders.' },
+        { title: '3. Criacao de conta e seguranca', body: 'O utilizador compromete-se a fornecer informacoes verdadeiras e a manter a password confidencial e intransmissivel.' },
+        { title: '4. Submissao de evidencias', body: 'As evidencias submetidas devem ser autenticas. A Softinsa pode solicitar documentos adicionais ou rejeitar evidencias insuficientes.' },
+        { title: '5. Validacao e aprovacao', body: 'As candidaturas sao analisadas por Talent Managers e Service Line Leaders, com notificacao de aprovacao, rejeicao ou correcao.' },
+        { title: '6. Obtencao e utilizacao de badges', body: 'Os badges sao atribuidos quando todos os requisitos sao cumpridos e nao podem ser adulterados, falsificados ou utilizados indevidamente.' },
+        { title: '7. Publicacao e partilha', body: 'O utilizador pode autorizar a exibicao de badges na galeria publica e partilhar badges em redes profissionais.' },
+        { title: '8. Pontuacao e gamificacao', body: 'A Softinsa pode atribuir pontuacao aos badges para apoiar reconhecimento e evolucao profissional.' },
+        { title: '9. Notificacoes', body: 'Ao aceitar estes Termos, o utilizador consente receber notificacoes sobre candidaturas, aprovacoes, rejeicoes, expiracoes e lembretes.' },
+        { title: '10. Conduta proibida', body: 'E proibido partilhar credenciais, submeter evidencias falsas, aceder a dados de terceiros sem permissao ou usar a plataforma para fins nao autorizados.' },
+        { title: '11. Suspensao ou cancelamento', body: 'A Softinsa pode suspender ou cancelar contas em caso de violacao destes Termos ou utilizacao indevida da plataforma.' },
+        { title: '12. Alteracoes aos termos', body: 'Estes Termos podem ser atualizados periodicamente e as alteracoes serao comunicadas aos utilizadores.' },
+        { title: '13. Legislacao aplicavel', body: 'Estes Termos regem-se pela legislacao portuguesa e eventuais litigios serao submetidos aos tribunais competentes.' }
+      ]
+    },
+    en: {
+      title: 'Terms of Service',
+      sections: [
+        { title: '1. Acceptance of terms', body: 'By accessing or using the platform, the user confirms they have read, understood, and accepted these Terms in full.' },
+        { title: '2. Eligible users', body: 'The platform is intended exclusively for Softinsa employees, Talent Managers, and Service Line Leaders.' },
+        { title: '3. Account creation and security', body: 'Users must provide accurate information and keep their password confidential and non-transferable.' },
+        { title: '4. Evidence submission', body: 'Submitted evidence must be authentic. Softinsa may request additional documentation or reject insufficient evidence.' },
+        { title: '5. Validation and approval', body: 'Applications are reviewed by Talent Managers and Service Line Leaders, with notification of approval, rejection, or correction requests.' },
+        { title: '6. Badge awarding and use', body: 'Badges are awarded once all requirements are met and must not be altered, forged, or misused.' },
+        { title: '7. Publication and sharing', body: 'Users may authorize badge display on the public gallery and share badges on professional networks.' },
+        { title: '8. Scoring and gamification', body: 'Softinsa may assign points to badges to support recognition and professional growth.' },
+        { title: '9. Notifications', body: 'By accepting these Terms, users consent to receiving notifications about applications, approvals, rejections, expirations, and reminders.' },
+        { title: '10. Prohibited conduct', body: 'Sharing credentials, submitting false evidence, accessing third-party data without permission, or unauthorized use is prohibited.' },
+        { title: '11. Suspension or cancellation', body: 'Softinsa may suspend or cancel accounts for Terms violations or improper use of the platform.' },
+        { title: '12. Changes to terms', body: 'These Terms may be updated periodically and users will be informed of relevant changes.' },
+        { title: '13. Governing law', body: 'These Terms are governed by Portuguese law, and any disputes will be handled by the competent courts.' }
+      ]
+    },
+    es: {
+      title: 'Terminos de Servicio',
+      sections: [
+        { title: '1. Aceptacion de los terminos', body: 'Al acceder o utilizar la plataforma, el usuario declara que ha leido, comprendido y aceptado estos Terminos en su totalidad.' },
+        { title: '2. Usuarios incluidos', body: 'La plataforma esta destinada exclusivamente a empleados de Softinsa, Talent Managers y Service Line Leaders.' },
+        { title: '3. Creacion de cuenta y seguridad', body: 'El usuario debe proporcionar informacion veraz y mantener la contrasena confidencial e intransferible.' },
+        { title: '4. Envio de evidencias', body: 'Las evidencias enviadas deben ser autenticas. Softinsa puede solicitar documentacion adicional o rechazar evidencias insuficientes.' },
+        { title: '5. Validacion y aprobacion', body: 'Las candidaturas son evaluadas por Talent Managers y Service Line Leaders, con notificacion de aprobacion, rechazo o correccion.' },
+        { title: '6. Obtencion y uso de badges', body: 'Los badges se otorgan cuando se cumplen todos los requisitos y no deben ser alterados, falsificados ni usados indebidamente.' },
+        { title: '7. Publicacion y comparticion', body: 'El usuario puede autorizar la publicacion de badges en la galeria publica y compartirlos en redes profesionales.' },
+        { title: '8. Puntuacion y gamificacion', body: 'Softinsa puede asignar puntos a los badges para apoyar el reconocimiento y la evolucion profesional.' },
+        { title: '9. Notificaciones', body: 'Al aceptar estos Terminos, el usuario consiente recibir notificaciones sobre candidaturas, aprobaciones, rechazos, expiraciones y recordatorios.' },
+        { title: '10. Conducta prohibida', body: 'Esta prohibido compartir credenciales, enviar evidencias falsas, acceder a datos de terceros sin permiso o usar la plataforma sin autorizacion.' },
+        { title: '11. Suspension o cancelacion', body: 'Softinsa puede suspender o cancelar cuentas por incumplimiento de estos Terminos o uso indebido de la plataforma.' },
+        { title: '12. Cambios en los terminos', body: 'Estos Terminos pueden actualizarse periodicamente y los usuarios seran informados de los cambios relevantes.' },
+        { title: '13. Legislacion aplicable', body: 'Estos Terminos se rigen por la legislacion portuguesa y cualquier conflicto sera tratado por los tribunales competentes.' }
+      ]
+    }
+  };
+
+  const currentContent = termsContent[language] || termsContent.pt;
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -26,77 +94,19 @@ function TermsModal({ isOpen, onClose }) {
     <div className="terms-modal-overlay" onClick={handleBackdropClick}>
       <div className="terms-modal-container">
         <div className="terms-modal-header">
-          <h1 className="terms-modal-title">Termos de Servico</h1>
+          <h1 className="terms-modal-title">{currentContent.title}</h1>
           <button className="terms-modal-close" onClick={onClose}>
             ✕
           </button>
         </div>
 
         <div className="terms-modal-content">
-          <section className="terms-section">
-            <h2>1. Aceitação dos termos</h2>
-            <p>Ao aceder ou utilizar a plataforma, o utilizador declara ter lido, compreendido e aceitado estes Termos na íntegra. Caso não concorde com algum dos pontos, não deverá utilizar a plataforma.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>2. Utilizadores abrangidos</h2>
-            <p>A plataforma destina-se exclusivamente a colaboradores da Softinsa, bem como a gestores (Talent Managers e Service Line Leaders) no exercício das suas funções.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>3. Criação de conta e segurança</h2>
-            <p>O utilizador compromete-se a fornecer informações verdadeiras, completas e atualizadas durante o registo. A password é pessoal e intransmissível. O utilizador é responsável por todas as atividades realizadas na sua conta. Na primeira autenticação, o utilizador deverá alterar a password fornecida. O utilizador pode solicitar a recuperação da password através do email associado à conta.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>4. Submissão de evidências</h2>
-            <p>Para concorrer a um badge, o utilizador deverá submeter as evidências solicitadas (certificados, diplomas, relatórios, etc.). O utilizador declara que todas as evidências submetidas são verdadeiras, autênticas e lhe pertencem. A Softinsa reserva-se o direito de solicitar documentação complementar ou de rejeitar evidências que considere insuficientes ou falsas.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>5. Processo de validação e aprovação</h2>
-            <p>As candidaturas serão analisadas primeiro pelo Talent Manager e depois pelo Service Line Leader da área respetiva. O utilizador será notificado por email sobre aprovações, rejeições ou pedidos de correção. Todas as decisões são finais nos termos do regulamento interno da Softinsa.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>6. Obtenção e utilização de badges</h2>
-            <p>Um badge é atribuído apenas quando todos os requisitos de um determinado nível estiverem cumpridos. Alguns badges podem ter data de expiração, sendo essa informação visível na página do badge. O utilizador compromete-se a não adulterar, falsificar ou utilizar indevidamente qualquer badge.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>7. Publicação e partilha de badges</h2>
-            <p>O utilizador pode autorizar que os seus badges sejam exibidos na galeria pública da plataforma. O utilizador pode partilhar voluntariamente os seus badges no LinkedIn ou noutras redes profissionais. Caso pretenda incluir um badge na assinatura de email corporativo, deverá ativar essa funcionalidade nas definições da conta.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>8. Sistema de pontuação e gamificação</h2>
-            <p>A Softinsa pode atribuir pontos a cada badge, de acordo com critérios definidos internamente. Os pontos servem para identificar talento e evolução profissional, podendo ser considerados em processos de reconhecimento ou compensação. Mesmo que um badge expire, a pontuação obtida mantém-se no histórico do utilizador.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>9. Notificações e lembretes</h2>
-            <p>Ao aceitar estes Termos, o utilizador consente receber notificações por email e/ou push relativas a: confirmação de candidatura a um badge, aprovação ou rejeição de pedidos, expiração de badges e lembretes de objetivos e prazos definidos na timeline pessoal.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>10. Conduta proibida</h2>
-            <p>O utilizador não deverá: partilhar as suas credenciais de acesso com terceiros; utilizar a plataforma para fins não profissionais ou não autorizados; submeter evidências falsas ou de terceiros sem consentimento; tentar aceder a dados de outros utilizadores sem permissão.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>11. Suspensão ou cancelamento de conta</h2>
-            <p>A Softinsa reserva-se o direito de suspender ou cancelar contas em caso de violação destes Termos, utilização indevida da plataforma ou por solicitação dos recursos humanos da empresa.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>12. Alterações aos termos</h2>
-            <p>Estes Termos podem ser atualizados periodicamente. As alterações serão comunicadas aos utilizadores com antecedência mínima de 15 dias, salvo quando exigido por lei.</p>
-          </section>
-
-          <section className="terms-section">
-            <h2>13. Legislação aplicável</h2>
-            <p>Estes Termos regem-se pela legislação portuguesa. Qualquer litígio será submetido aos tribunais da comarca de Lisboa.</p>
-          </section>
+          {currentContent.sections.map((section) => (
+            <section className="terms-section" key={section.title}>
+              <h2>{section.title}</h2>
+              <p>{section.body}</p>
+            </section>
+          ))}
         </div>
       </div>
     </div>
