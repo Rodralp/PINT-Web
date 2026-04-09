@@ -15,7 +15,8 @@ import {
   CircleUserRound,
   UsersRound,
   Megaphone,
-  Settings
+  Settings,
+  Crown
 } from 'lucide-react';
 import '../css/Sidebar.css';
 
@@ -28,7 +29,7 @@ const sidebarConfig = [
       { id: 'meus_badges_C', label: 'Meus Badges', icon: Trophy },
       { id: 'learning_paths_C', label: 'Learning Paths', icon: BookOpen },
       { id: 'pedidos_C', label: 'Meus Pedidos', icon: Clock },
-      { id: 'ranking_C', label: 'Ranking', icon: BarChart2 },
+      { id: 'ranking_C', label: 'Ranking', icon: Crown },
       { id: 'lembretes_C', label: 'Lembretes', icon: Pin },
       { id: 'exportacoes_C', label: 'Exportações', icon: ArrowDownToLine },
     ],
@@ -47,7 +48,7 @@ const sidebarConfig = [
     items: [
       { id: 'dashboard_SLL', label: 'Dashboard', icon: Home },
       { id: 'learning_paths_SLL', label: 'Meu Learning Path', icon: BookOpen },
-      { id: 'ranking_SLL', label: 'Ranking da Service Line', icon: BarChart2 },
+      { id: 'ranking_SLL', label: 'Ranking da Service Line', icon: Crown },
       { id: 'pedidos_SLL', label: 'Gestão de Pedidos', icon: FilePenLine },
       { id: 'historico_SLL', label: 'Histórico', icon: History },
       { id: 'exportacoes_SLL', label: 'Exportações SLL', icon: ArrowDownToLine },

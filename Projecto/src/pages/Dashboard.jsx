@@ -12,6 +12,7 @@ import {
   GraduationCap,
   ChevronsRight,
   ArrowRight,
+  Crown
 } from 'lucide-react';
 import '../css/Dashboard.css';
 
@@ -54,7 +55,7 @@ const dashboardStats = [
   { title: 'Bagdes Obtidos', value: '12', note: '2 este mês', icon: Award, tone: 'gold' },
   { title: 'Sequência de Dias', value: '4', note: 'Recorde: 8 dias', icon: Flame, tone: 'fire' },
   { title: 'Meus Pedidos', value: '5', note: '2 em validação', icon: Clock3, tone: 'blue' },
-  { title: 'Ranking', value: '#15', note: '+3 posições este mês', icon: Trophy, tone: 'rank' },
+  { title: 'Ranking', value: '#15', note: '+3 posições este mês', icon: Crown, tone: 'rank' },
 ];
 
 function Dashboard() {
