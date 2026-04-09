@@ -1,5 +1,6 @@
 import './css/App.css'
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
+import './translations/i18n'
 import LandingPage from './LandingPage'
 import CriarConta from './criar'
 import Entrar from './entrar'
