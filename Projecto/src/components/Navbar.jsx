@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import '../css/Navbar.css';
 
 const IconLink = () => (
@@ -26,8 +28,48 @@ const IconGlobe = () => (
   </svg>
 );
 
+const FlagPortuguese = () => <img className="lang-flag-img" src="/flags/pt.svg" alt="PT" />;
+const FlagEnglish = () => <img className="lang-flag-img" src="/flags/gb.svg" alt="GB" />;
+const FlagSpanish = () => <img className="lang-flag-img" src="/flags/es.svg" alt="ES" />;
+
 function Navbar() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const languages = [
+    { code: 'pt', label: 'Português', flag: FlagPortuguese },
+    { code: 'en', label: 'English', flag: FlagEnglish },
+    { code: 'es', label: 'Español', flag: FlagSpanish }
+  ];
+
+  const currentLang = languages.find(lang => i18n.language?.startsWith(lang.code)) || languages[0];
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const dropdownWrappers = document.querySelectorAll('.navbar-lang-dropdown-wrapper');
+      let isClickInside = false;
+      
+      dropdownWrappers.forEach(wrapper => {
+        if (wrapper && wrapper.contains(event.target)) {
+          isClickInside = true;
+        }
+      });
+      
+      if (!isClickInside) {
+        setShowLangDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLanguageChange = (lang) => {
+    i18n.changeLanguage(lang);
+    setShowLangDropdown(false);
+  };
 
   return (
     <nav className="navbar navbar-expand-md navbar-light bg-white shadow-sm fixed-top main-navbar" style={{ height: '60px' }}>
@@ -46,18 +88,64 @@ function Navbar() {
               <IconLink /> www.softinsa.pt
             </a>
             <a href="#galeria" className="nav-link text-dark fw-medium d-flex align-items-center gap-1 p-0">
-              <IconSearch /> Galeria Pública
+              <IconSearch /> {t('nav_public_gallery')}
             </a>
             <button className="btn btn-primary rounded-pill px-4 fw-semibold border-0" style={{ backgroundColor: '#0088FF' }} onClick={() => navigate('/entrar')}>
-              Entrar
+              {t('nav_login')}
             </button>
             <button className="btn btn-dark rounded-pill px-4 fw-semibold" onClick={() => navigate('/criar')}>
-              Registar
+              {t('nav_register')}
             </button>
-            <div className="nav-link text-dark fw-medium d-flex align-items-center gap-1 p-0" style={{ cursor: 'pointer' }}>
-              Português <IconGlobe />
+            <div className="navbar-lang-dropdown-wrapper d-md-none">
+              <button 
+                className="nav-link text-dark fw-medium d-flex align-items-center gap-1 navbar-lang-btn"
+                style={{ cursor: 'pointer', background: 'none', border: 'none' }}
+                onClick={() => setShowLangDropdown(!showLangDropdown)}
+              >
+                <IconGlobe />
+                <span>{t('nav_language')}</span>
+              </button>
+              {showLangDropdown && (
+                <div className="navbar-lang-dropdown navbar-lang-dropdown-mobile">
+                  {languages.map(lang => (
+                    <button
+                      key={lang.code}
+                      className={`navbar-lang-option ${lang.code === i18n.language ? 'active' : ''}`}
+                      onClick={() => handleLanguageChange(lang.code)}
+                    >
+                      <lang.flag />
+                      <span>{lang.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
+        </div>
+
+        <div className="navbar-lang-dropdown-wrapper d-none d-md-flex" ref={dropdownRef}>
+          <button 
+            className="nav-link text-dark fw-medium d-flex align-items-center gap-1 navbar-lang-btn"
+            style={{ cursor: 'pointer', background: 'none', border: 'none' }}
+            onClick={() => setShowLangDropdown(!showLangDropdown)}
+          >
+            <span>{currentLang.label}</span>
+            <IconGlobe />
+          </button>
+          {showLangDropdown && (
+            <div className="navbar-lang-dropdown">
+              {languages.map(lang => (
+                <button
+                  key={lang.code}
+                  className={`navbar-lang-option ${lang.code === i18n.language ? 'active' : ''}`}
+                  onClick={() => handleLanguageChange(lang.code)}
+                >
+                  <lang.flag />
+                  <span>{lang.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </nav>

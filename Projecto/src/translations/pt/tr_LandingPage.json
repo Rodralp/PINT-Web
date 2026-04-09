@@ -1,4 +1,13 @@
 {
+  "nav_public_gallery": "Galeria Pública",
+  "nav_login": "Entrar",
+  "nav_register": "Registar",
+  "nav_language": "Idioma",
+
+  "lang_portuguese": "Português",
+  "lang_english": "English",
+  "lang_spanish": "Español",
+
   "about_title": "Quem Somos?",
   "about_lead": "Especialistas em serviços de gestão aplicacional e de infraestruturas.",
   "about_body": "O sucesso da Softinsa tem como base a inovação e a capacidade de nos reinventarmos continuamente.",

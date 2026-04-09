@@ -21,16 +21,16 @@ function LandingPage() {
         <div className="lp-info-inner">
           <div className="lp-info-col">
             <h2 className="lp-info-title">{t("about_title")}</h2>
-            <p className="lp-info-lead">Especialistas em serviços de gestão aplicacional e de infraestruturas.</p>
+            <p className="lp-info-lead">{t("about_lead")}</p>
             <p className="lp-info-body">
-              O sucesso da Softinsa tem como base a inovação e a capacidade de nos reinventarmos continuamente.
+              {t("about_body")}
             </p>
           </div>
           <div className="lp-info-col">
-            <h2 className="lp-info-title">Serviços</h2>
-            <p className="lp-info-lead">Soluções integradas e à medida do cliente.</p>
+            <h2 className="lp-info-title">{t("services_title")}</h2>
+            <p className="lp-info-lead">{t("services_lead")}</p>
             <p className="lp-info-body">
-              Procuramos satisfazer as necessidades de negócios dos nossos clientes.
+              {t("services_body")}
             </p>
           </div>
         </div>
@@ -40,19 +40,16 @@ function LandingPage() {
       <footer className="lp-footer">
         <div className="lp-footer-inner">
           <div className="lp-footer-left">
-            <button onClick={() => i18n.changeLanguage("pt")}>PT</button>
-            <button onClick={() => i18n.changeLanguage("en")}>EN</button>
-            <button onClick={() => i18n.changeLanguage("es")}>ES</button>
-            <h3 className="lp-footer-title">Vamos conversar?</h3>
+            <h3 className="lp-footer-title">{t("footer_title")}</h3>
             <a href="mailto:info@softinsa.pt" className="lp-footer-btn">
-              Nos Envie Sua Mensagem →
+              {t("footer_button")}
             </a>
           </div>
           <div className="lp-footer-right">
-            <a href="#softinsa" className="lp-footer-link">Softinsa</a>
-            <a href="#privacidade" className="lp-footer-link">Política de Privacidade</a>
-            <a href="#utilizacao" className="lp-footer-link">Condições de Utilização</a>
-            <a href="#contactos" className="lp-footer-link">Contactos</a>
+            <a href="#softinsa" className="lp-footer-link">{t("footer_softinsa")}</a>
+            <a href="#privacidade" className="lp-footer-link">{t("footer_privacy")}</a>
+            <a href="#utilizacao" className="lp-footer-link">{t("footer_terms")}</a>
+            <a href="#contactos" className="lp-footer-link">{t("footer_contacts")}</a>
           </div>
         </div>
       </footer>

@@ -1,4 +1,13 @@
 {
+  "nav_public_gallery": "Public Gallery",
+  "nav_login": "Login",
+  "nav_register": "Register",
+  "nav_language": "Language",
+
+  "lang_portuguese": "Portuguese",
+  "lang_english": "English",
+  "lang_spanish": "Spanish",
+
   "about_title": "Who We Are?",
   "about_lead": "Experts in application and infrastructure management services.",
   "about_body": "Softinsa's success is based on innovation and our ability to continuously reinvent ourselves.",
