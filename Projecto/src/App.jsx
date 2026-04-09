@@ -1,9 +1,12 @@
 import './css/App.css'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
 import LandingPage from './LandingPage'
 import CriarConta from './criar'
 import Entrar from './entrar'
-import Dashboard from './pages/Dashboard'
+import DashboardC from './pages/Consultor/Dashboard_C'
+import DashboardTM from './pages/TalentManager/Dashboard_TM'
+import DashboardSLL from './pages/ServiceLineLeader/Dashboard_SLL'
+import DashboardAG from './pages/AdminGestor/Dashboard_AG'
 
 function App() {
   return (
@@ -12,7 +15,11 @@ function App() {
         <Route path='/' element={<LandingPage />} />
         <Route path='/criar' element={<CriarConta />} />
         <Route path='/entrar' element={<Entrar />} />
-        <Route path='/dashboard' element={<Dashboard />} />
+        <Route path='/dashboard' element={<Navigate to='/dashboard/consultor' replace />} />
+        <Route path='/dashboard/consultor' element={<DashboardC />} />
+        <Route path='/dashboard/talent-manager' element={<DashboardTM />} />
+        <Route path='/dashboard/service-line-leader' element={<DashboardSLL />} />
+        <Route path='/dashboard/admin-gestor' element={<DashboardAG />} />
       </Routes>
     </BrowserRouter>
   )

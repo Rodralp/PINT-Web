@@ -113,8 +113,8 @@
   width: 100%;
   max-width: 34px;
   border-radius: 4px 4px 0 0;
-  background: linear-gradient(180deg, #1f8cff 0%, #0a7cff 100%);
-  box-shadow: 0 8px 18px rgba(12, 131, 255, 0.22);
+  background: #0088FF;
+  box-shadow: 0 8px 18px rgba(0, 136, 255, 0.22);
 }
 
 .timeline-label {
