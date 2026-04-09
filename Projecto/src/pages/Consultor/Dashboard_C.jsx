@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Layout from '../components/Layout';
+import Layout from '../../components/Layout';
 import {
   Award,
   Flame,
@@ -13,7 +13,7 @@ import {
   ChevronsRight,
   ArrowRight,
 } from 'lucide-react';
-import '../css/Dashboard.css';
+import '../../css/Consultor/Dashboard_C.css';
 
 const timelineValues = [3, 2, 5, 4, 6, 3, 7, 5, 8, 4, 6, 9];
 
@@ -57,7 +57,7 @@ const dashboardStats = [
   { title: 'Ranking', value: '#15', note: '+3 posições este mês', icon: Trophy, tone: 'rank' },
 ];
 
-function Dashboard() {
+function DashboardC() {
   const timelineChartRef = useRef(null);
   const timelineData = useMemo(() => buildTimelineData(timelineValues), []);
   const [visibleTimelinePoints, setVisibleTimelinePoints] = useState(timelineData.length);
@@ -210,4 +210,4 @@ function Dashboard() {
   );
 }
 
-export default Dashboard;
+export default DashboardC;

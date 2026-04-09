@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { 
   ChevronDown,
   ChevronUp,
@@ -23,7 +24,7 @@ const sidebarConfig = [
   {
     title: 'Consultor',
     items: [
-      { id: 'dashboard_C', label: 'Dashboard', icon: Home, isActive: true },
+      { id: 'dashboard_C', label: 'Dashboard', icon: Home, route: '/dashboard/consultor' },
       { id: 'catalogo_C', label: 'Catálogo de Badges', icon: Medal },
       { id: 'meus_badges_C', label: 'Meus Badges', icon: Trophy },
       { id: 'learning_paths_C', label: 'Learning Paths', icon: BookOpen },
@@ -36,7 +37,7 @@ const sidebarConfig = [
   {
     title: 'Talent Manager',
     items: [
-      { id: 'dashboard_TM', label: 'Dashboard', icon: Home },
+      { id: 'dashboard_TM', label: 'Dashboard', icon: Home, route: '/dashboard/talent-manager' },
       { id: 'pedidos_TM', label: 'Gestão de Pedidos', icon: FilePenLine },
       { id: 'historico_TM', label: 'Histórico', icon: History },
       { id: 'exportacoes_TM', label: 'Exportações TM', icon: ArrowDownToLine },
@@ -45,7 +46,7 @@ const sidebarConfig = [
   {
     title: 'Service Line Leader',
     items: [
-      { id: 'dashboard_SLL', label: 'Dashboard', icon: Home },
+      { id: 'dashboard_SLL', label: 'Dashboard', icon: Home, route: '/dashboard/service-line-leader' },
       { id: 'learning_paths_SLL', label: 'Meu Learning Path', icon: BookOpen },
       { id: 'ranking_SLL', label: 'Ranking da Service Line', icon: BarChart2 },
       { id: 'pedidos_SLL', label: 'Gestão de Pedidos', icon: FilePenLine },
@@ -56,7 +57,7 @@ const sidebarConfig = [
   {
     title: 'Administrador / Gestor',
     items: [
-      { id: 'dashboard_AG', label: 'Dashboard', icon: Home },
+      { id: 'dashboard_AG', label: 'Dashboard', icon: Home, route: '/dashboard/admin-gestor' },
       { id: 'utilizadores_AG', label: 'Utilizadores', icon: CircleUserRound },
       { id: 'catalogo_AG', label: 'Catálogo de Badges', icon: Medal },
       { id: 'equipas_AG', label: 'Equipas e SLA', icon: UsersRound },
@@ -69,16 +70,51 @@ const sidebarConfig = [
 ];
 
 function Sidebar() {
+  const location = useLocation();
   const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
   const loginData = storedLoginData ? JSON.parse(storedLoginData) : null;
   const userName = loginData?.nome || 'Usuário';
-  // Guardamos o estado das secções expandidas (por default todas abertas, ou apenas a primeira)
-  const [expandedSections, setExpandedSections] = useState({
-    'Consultor': true,
-    'Talent Manager': false,
-    'Service Line Leader': false,
-    'Administrador / Gestor': false
-  });
+  const getInitialExpandedSections = () => {
+    const initialState = {
+      'Consultor': true,
+      'Talent Manager': false,
+      'Service Line Leader': false,
+      'Administrador / Gestor': false
+    };
+
+    const matchedSection = sidebarConfig.find((section) =>
+      section.items.some((item) => item.route === location.pathname)
+    );
+
+    if (matchedSection) {
+      return {
+        'Consultor': false,
+        'Talent Manager': false,
+        'Service Line Leader': false,
+        'Administrador / Gestor': false,
+        [matchedSection.title]: true,
+      };
+    }
+
+    return initialState;
+  };
+
+  const [expandedSections, setExpandedSections] = useState(getInitialExpandedSections);
+
+  useEffect(() => {
+    const matchedSection = sidebarConfig.find((section) =>
+      section.items.some((item) => item.route === location.pathname)
+    );
+
+    if (!matchedSection) {
+      return;
+    }
+
+    setExpandedSections((prev) => ({
+      ...prev,
+      [matchedSection.title]: true,
+    }));
+  }, [location.pathname]);
 
   const toggleSection = (sectionTitle) => {
     setExpandedSections(prev => ({
@@ -121,13 +157,23 @@ function Sidebar() {
                     const Icon = item.icon;
                     return (
                       <li key={item.id} className="sidebar-menu-item">
-                        <a 
-                          href={`#${item.id}`} 
-                          className={`sidebar-link ${item.isActive ? 'active' : ''}`}
-                        >
-                          <Icon size={20} strokeWidth={2} className="sidebar-link-icon" />
-                          <span className="sidebar-link-label">{item.label}</span>
-                        </a>
+                        {item.route ? (
+                          <NavLink
+                            to={item.route}
+                            className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                          >
+                            <Icon size={20} strokeWidth={2} className="sidebar-link-icon" />
+                            <span className="sidebar-link-label">{item.label}</span>
+                          </NavLink>
+                        ) : (
+                          <a
+                            href={`#${item.id}`}
+                            className="sidebar-link"
+                          >
+                            <Icon size={20} strokeWidth={2} className="sidebar-link-icon" />
+                            <span className="sidebar-link-label">{item.label}</span>
+                          </a>
+                        )}
                       </li>
                     );
                   })}
