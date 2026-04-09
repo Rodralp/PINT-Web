@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Trophy, Award, TrendingUp, Code, Users } from 'lucide-react';
+import { Trophy, Award, TrendingUp, Code, Users, FileCheck2 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/TalentManager/Dashboard_TM.css';
 
-const badgesTimelineValues = [3, 4, 3.5, 6, 4, 8, 6, 7, 5, 9, 8, 10];
+const badgesTimelineValues = [3, 4, 3, 6, 4, 8, 6, 7, 5, 8, 8, 10];
 const novosConsultoresValues = [2, 5, 4, 6, 3, 7, 5, 8, 4, 6];
 
 const topConsultores = [
@@ -97,17 +97,11 @@ const calculateVisibleTimelinePoints = (containerWidth, totalPoints) => {
   return Math.max(4, Math.min(totalPoints, maxPointsByWidth));
 };
 
-const calculateVisibleLineChartPoints = (containerWidth, totalPoints) => {
-  const minColumnWidth = 82;
-  const maxPointsByWidth = Math.floor(containerWidth / minColumnWidth);
-  return Math.max(4, Math.min(totalPoints, maxPointsByWidth, 4));
-};
-
 const buildChartScale = (data) => {
   const maxVisibleValue = Math.max(...data.map(({ value }) => value));
-  const yAxisStep = Math.max(1, Math.ceil(maxVisibleValue / 4));
-  const chartMaxValue = yAxisStep * 4;
-  const yAxisTicks = [1, 2, 3, 4].map((multiplier) => yAxisStep * multiplier);
+  const yAxisStep = Math.max(1, Math.ceil(maxVisibleValue / 3));
+  const chartMaxValue = yAxisStep * 3;
+  const yAxisTicks = [0, 1, 2, 3].map((multiplier) => yAxisStep * multiplier);
 
   return { chartMaxValue, yAxisTicks };
 };
@@ -115,7 +109,7 @@ const buildChartScale = (data) => {
 function DashboardTM() {
   const badgesChartRef = useRef(null);
   const novosConsultoresChartRef = useRef(null);
-  const badgesTimelineData = useMemo(() => buildDailyTimelineData(badgesTimelineValues), []);
+  const badgesTimelineData = useMemo(() => buildDailyTimelineData(badgesTimelineValues, 'day-month'), []);
   const novosConsultoresData = useMemo(() => buildDailyTimelineData(novosConsultoresValues, 'day-month'), []);
   const [visibleBadgesPoints, setVisibleBadgesPoints] = useState(badgesTimelineData.length);
   const [visibleNovosConsultoresPoints, setVisibleNovosConsultoresPoints] = useState(novosConsultoresData.length);
@@ -125,7 +119,7 @@ function DashboardTM() {
 
     if (badgesChartRef.current) {
       const updateBadgesPoints = (width) => {
-        setVisibleBadgesPoints(calculateVisibleLineChartPoints(width, badgesTimelineData.length));
+        setVisibleBadgesPoints(calculateVisibleTimelinePoints(width, badgesTimelineData.length));
       };
 
       const badgesObserver = new ResizeObserver((entries) => {
@@ -166,18 +160,13 @@ function DashboardTM() {
   const visibleNovosConsultoresData = novosConsultoresData.slice(-visibleNovosConsultoresPoints);
   const badgesScale = buildChartScale(visibleBadgesData);
   const novosConsultoresScale = buildChartScale(visibleNovosConsultoresData);
-  const lineChartWidth = 320;
-  const lineChartHeight = 180;
-  const lineChartPadding = { top: 14, right: 8, bottom: 30, left: 8 };
-  const lineChartInnerWidth = lineChartWidth - lineChartPadding.left - lineChartPadding.right;
-  const lineChartInnerHeight = lineChartHeight - lineChartPadding.top - lineChartPadding.bottom;
-  const badgesLinePoints = visibleBadgesData.map(({ value, label }, index) => {
-    const x = lineChartPadding.left + (index / (visibleBadgesData.length - 1 || 1)) * lineChartInnerWidth;
-    const y =
-      lineChartPadding.top +
-      ((badgesScale.chartMaxValue - value) / badgesScale.chartMaxValue) * lineChartInnerHeight;
 
-    return { x, y, label };
+  const badgesLinePoints = visibleBadgesData.map(({ value }, index) => {
+    const xPercentage =
+      visibleBadgesData.length === 1 ? 50 : ((index + 0.5) / visibleBadgesData.length) * 100;
+    const yPercentage = 100 - (value / badgesScale.chartMaxValue) * 100;
+
+    return { xPercentage, yPercentage };
   });
 
   return (
@@ -190,11 +179,10 @@ function DashboardTM() {
         <div className="dashboard-tm-content">
           {/* Metrics Grid */}
           <div className="row g-3 align-items-stretch metrics-container">
-            <div className="col-12 col-xl-4 d-flex">
+            <div className="col-12 col-lg-6 col-xl-5 d-flex tm-top-chart-col">
               {/* Badges Timeline Card */}
               <section className="metric-card metric-card-large h-100 w-100">
                 <div className="metric-card-title">Número de Pedidos de Badges</div>
-                <div className="metric-subtitle">Últimos 12 dias</div>
                 <div className="tm-chart-shell">
                   <div className="tm-chart-axis" aria-hidden="true">
                     {badgesScale.yAxisTicks.slice().reverse().map((tick) => (
@@ -202,87 +190,78 @@ function DashboardTM() {
                     ))}
                   </div>
 
-                  <div ref={badgesChartRef} className="tm-line-chart-wrap">
-                    <svg
-                      className="tm-line-chart"
-                      viewBox={`0 0 ${lineChartWidth} ${lineChartHeight}`}
-                      preserveAspectRatio="none"
-                    >
-                      {badgesScale.yAxisTicks.map((tick) => {
-                        const y =
-                          lineChartPadding.top +
-                          ((badgesScale.chartMaxValue - tick) / badgesScale.chartMaxValue) * lineChartInnerHeight;
-
-                        return (
-                          <line
-                            key={`line-grid-${tick}`}
-                            x1={lineChartPadding.left}
-                            y1={y}
-                            x2={lineChartWidth - lineChartPadding.right}
-                            y2={y}
-                            className="tm-line-grid"
-                          />
-                        );
-                      })}
-
-                      {badgesLinePoints.map(({ x }) => (
-                        <line
-                          key={`line-v-${x}`}
-                          x1={x}
-                          y1={lineChartPadding.top}
-                          x2={x}
-                          y2={lineChartHeight - lineChartPadding.bottom}
-                          className="tm-line-grid-vertical"
+                  <div
+                    ref={badgesChartRef}
+                    className="tm-chart tm-line-chart-grid"
+                    style={{ gridTemplateColumns: `repeat(${visibleBadgesData.length}, minmax(0, 1fr))` }}
+                  >
+                    <div className="tm-chart-grid-lines" aria-hidden="true">
+                      {badgesScale.yAxisTicks.map((tick) => (
+                        <span
+                          key={tick}
+                          className="tm-chart-grid-line"
+                          style={{ bottom: `${(tick / badgesScale.chartMaxValue) * 100}%` }}
                         />
                       ))}
+                    </div>
 
+                    <svg
+                      className="tm-line-path-svg"
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                      aria-hidden="true"
+                    >
                       <polyline
-                        points={badgesLinePoints.map(({ x, y }) => `${x},${y}`).join(' ')}
-                        className="tm-line-path"
+                        points={badgesLinePoints.map((_, index) => {
+                          const xPoint = badgesLinePoints[index].xPercentage;
+                          const yPoint = badgesLinePoints[index].yPercentage;
+                          return `${xPoint},${yPoint}`;
+                        }).join(' ')}
+                        className="tm-line-polyline"
                       />
-
-                      {badgesLinePoints.map(({ x, y, label }) => (
-                        <g key={`line-point-${label}-${x}`}>
-                          <circle cx={x} cy={y} r="4" className="tm-line-point" />
-                          <text x={x} y={lineChartHeight - 10} className="tm-line-label">{label}</text>
-                        </g>
-                      ))}
                     </svg>
-                  </div>
-                </div>
-                <div className="metric-footer">
-                  <div className="footer-item">
-                    <span>● Pedidos realizados</span>
-                  </div>
-                  <div className="footer-value">54</div>
-                  <div className="footer-item">
-                    <span>Total no período</span>
+
+                    {visibleBadgesData.map(({ label }, index) => (
+                      <div key={`${label}-${index}`} className="tm-chart-column">
+                        <div className="tm-line-value-track" aria-hidden="true" />
+                        <span className="tm-chart-label tm-line-day-label">{label}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </section>
             </div>
 
-            <div className="col-12 col-xl-4 d-flex">
-              <div className="middle-stack w-100">
-                <section className="metric-card metric-card-medium h-100 w-100">
+            <div className="col-12 col-lg-6 col-xl-2 d-flex tm-top-grid-col">
+              <div className="tm-stats-grid w-100">
+                <section className="metric-card metric-card-stat">
                   <div className="metric-card-title">Utilizadores Online</div>
-                  <div className="metric-value users-online">1302</div>
+                  <div className="metric-stat-body">
+                    <span className="metric-stat-icon">
+                      <Users size={36} strokeWidth={2} />
+                    </span>
+                    <strong>1302</strong>
+                  </div>
                   <div className="metric-note">Na Plataforma</div>
                 </section>
 
-                <section className="metric-card metric-card-medium h-100 w-100">
+                <section className="metric-card metric-card-stat">
                   <div className="metric-card-title">Pedidos a Verificar</div>
-                  <div className="metric-value pending">25</div>
+                  <div className="metric-stat-body">
+                    <span className="metric-stat-icon">
+                      <FileCheck2 size={36} strokeWidth={2} />
+                    </span>
+                    <strong>25</strong>
+                  </div>
                   <div className="metric-note">Na Plataforma</div>
                 </section>
               </div>
             </div>
 
-            <div className="col-12 col-xl-4 d-flex">
+            <div className="col-12 col-lg-12 col-xl-5 d-flex tm-top-chart-col">
               {/* New Consultores Card */}
               <section className="metric-card metric-card-large h-100 w-100">
                 <div className="metric-card-title">Novos Consultores</div>
-                <div className="metric-subtitle">Últimos 10 dias</div>
                 <div className="tm-chart-shell">
                   <div className="tm-chart-axis" aria-hidden="true">
                     {novosConsultoresScale.yAxisTicks.slice().reverse().map((tick) => (
@@ -323,7 +302,7 @@ function DashboardTM() {
           </div>
 
           <div className="row g-3 align-items-stretch tm-lower-grid">
-            <div className="col-12 col-xl-6 d-flex">
+            <div className="col-12 col-lg-6 d-flex">
               {/* Top Consultores Section */}
               <section className="consultores-section h-100 w-100">
                 <div className="section-header">
@@ -361,7 +340,7 @@ function DashboardTM() {
               </section>
             </div>
 
-            <div className="col-12 col-xl-6 d-flex">
+            <div className="col-12 col-lg-6 d-flex">
               {/* Recent Activities Section */}
               <section className="activities-section h-100 w-100">
                 <div className="section-header">

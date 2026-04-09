@@ -87,9 +87,9 @@ function DashboardC() {
 
   const visibleTimelineData = timelineData.slice(-visibleTimelinePoints);
   const maxVisibleValue = Math.max(...visibleTimelineData.map(({ value }) => value));
-  const yAxisStep = Math.max(1, Math.ceil(maxVisibleValue / 4));
-  const chartMaxValue = yAxisStep * 4;
-  const yAxisTicks = [1, 2, 3, 4].map((multiplier) => yAxisStep * multiplier);
+  const yAxisStep = Math.max(1, Math.ceil(maxVisibleValue / 3));
+  const chartMaxValue = yAxisStep * 3;
+  const yAxisTicks = [0, 1, 2, 3].map((multiplier) => yAxisStep * multiplier);
 
   return (
     <Layout>
