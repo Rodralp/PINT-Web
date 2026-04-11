@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { ArrowLeft, Clock3, Filter, Search, SlidersHorizontal, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
-import '../../css/CatalogoBadges.css';
+import '../../css/Consultor/CatalogoBadges_C.css';
 
 const badgeLevels = [
   { level: 'Júnior', points: 100, badgeImage: '/badges/J%C3%BAnior.png' },
