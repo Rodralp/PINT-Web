@@ -25,8 +25,8 @@ const sidebarConfig = [
   {
     title: 'Consultor',
     items: [
-      { id: 'dashboard_C', label: 'Dashboard', icon: Home, route: '/dashboard/consultor' },
-      { id: 'catalogo_C', label: 'Catálogo de Badges', icon: Medal, route: '/dashboard/catalogo-badges' },
+      { id: 'dashboard_C', label: 'Dashboard', icon: Home, route: '/consultor/dashboard' },
+      { id: 'catalogo_C', label: 'Catálogo de Badges', icon: Medal, route: '/consultor/catalogo-badges' },
       { id: 'meus_badges_C', label: 'Meus Badges', icon: Trophy },
       { id: 'learning_paths_C', label: 'Learning Paths', icon: BookOpen },
       { id: 'pedidos_C', label: 'Meus Pedidos', icon: Clock },
@@ -38,7 +38,7 @@ const sidebarConfig = [
   {
     title: 'Talent Manager',
     items: [
-      { id: 'dashboard_TM', label: 'Dashboard', icon: Home, route: '/dashboard/talent-manager' },
+      { id: 'dashboard_TM', label: 'Dashboard', icon: Home, route: '/talent-manager/dashboard' },
       { id: 'pedidos_TM', label: 'Gestão de Pedidos', icon: FilePenLine },
       { id: 'historico_TM', label: 'Histórico', icon: History },
       { id: 'exportacoes_TM', label: 'Exportações TM', icon: ArrowDownToLine },
@@ -47,7 +47,7 @@ const sidebarConfig = [
   {
     title: 'Service Line Leader',
     items: [
-      { id: 'dashboard_SLL', label: 'Dashboard', icon: Home, route: '/dashboard/service-line-leader' },
+      { id: 'dashboard_SLL', label: 'Dashboard', icon: Home, route: '/service-line-leader/dashboard' },
       { id: 'learning_paths_SLL', label: 'Meu Learning Path', icon: BookOpen },
       { id: 'ranking_SLL', label: 'Ranking da Service Line', icon: Crown },
       { id: 'pedidos_SLL', label: 'Gestão de Pedidos', icon: FilePenLine },
@@ -58,9 +58,9 @@ const sidebarConfig = [
   {
     title: 'Administrador / Gestor',
     items: [
-      { id: 'dashboard_AG', label: 'Dashboard', icon: Home, route: '/dashboard/admin-gestor' },
+      { id: 'dashboard_AG', label: 'Dashboard', icon: Home, route: '/admin-gestor/dashboard' },
       { id: 'utilizadores_AG', label: 'Utilizadores', icon: CircleUserRound },
-      { id: 'catalogo_AG', label: 'Catálogo de Badges', icon: Medal, route: '/dashboard/admin/catalogo-badges' },
+      { id: 'catalogo_AG', label: 'Catálogo de Badges', icon: Medal, route: '/admin-gestor/catalogo-badges' },
       { id: 'equipas_AG', label: 'Equipas e SLA', icon: UsersRound },
       { id: 'comunicados_AG', label: 'Comunicados e Avisos', icon: Megaphone },
       { id: 'pedidos_AG', label: 'Gestão de Pedidos', icon: FilePenLine },

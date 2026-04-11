@@ -113,7 +113,7 @@ function Entrar() {
 
   const handleCloseSuccess = () => {
     setShowSuccess(false);
-    navigate('/dashboard');
+    navigate('/consultor/dashboard');
   };
 
   return (

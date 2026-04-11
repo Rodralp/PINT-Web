@@ -17,13 +17,21 @@ function App() {
         <Route path='/' element={<LandingPage />} />
         <Route path='/criar' element={<CriarConta />} />
         <Route path='/entrar' element={<Entrar />} />
-        <Route path='/dashboard' element={<Navigate to='/dashboard/consultor' replace />} />
-        <Route path='/dashboard/consultor' element={<DashboardC />} />
-        <Route path='/dashboard/talent-manager' element={<DashboardTM />} />
-        <Route path='/dashboard/service-line-leader' element={<DashboardSLL />} />
-        <Route path='/dashboard/admin-gestor' element={<DashboardAG />} />
-        <Route path='/dashboard/catalogo-badges' element={<CatalogoBadges />} />
-        <Route path='/dashboard/admin/catalogo-badges' element={<CatalogoBadges />} />
+        <Route path='/dashboard' element={<Navigate to='/consultor/dashboard' replace />} />
+
+        <Route path='/consultor/dashboard' element={<DashboardC />} />
+        <Route path='/talent-manager/dashboard' element={<DashboardTM />} />
+        <Route path='/service-line-leader/dashboard' element={<DashboardSLL />} />
+        <Route path='/admin-gestor/dashboard' element={<DashboardAG />} />
+        <Route path='/consultor/catalogo-badges' element={<CatalogoBadges />} />
+        <Route path='/admin-gestor/catalogo-badges' element={<CatalogoBadges />} />
+
+        <Route path='/dashboard/consultor' element={<Navigate to='/consultor/dashboard' replace />} />
+        <Route path='/dashboard/talent-manager' element={<Navigate to='/talent-manager/dashboard' replace />} />
+        <Route path='/dashboard/service-line-leader' element={<Navigate to='/service-line-leader/dashboard' replace />} />
+        <Route path='/dashboard/admin-gestor' element={<Navigate to='/admin-gestor/dashboard' replace />} />
+        <Route path='/dashboard/catalogo-badges' element={<Navigate to='/consultor/catalogo-badges' replace />} />
+        <Route path='/dashboard/admin/catalogo-badges' element={<Navigate to='/admin-gestor/catalogo-badges' replace />} />
       </Routes>
     </BrowserRouter>
   )

@@ -1,15 +1,15 @@
 import { useMemo } from 'react';
-import { ArrowLeft, Clock3, Filter, Search, SlidersHorizontal, Trophy, ChevronLeft, ChevronRight, Rocket } from 'lucide-react';
+import { ArrowLeft, Clock3, Filter, Search, SlidersHorizontal, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import '../../css/CatalogoBadges.css';
 
 const badgeLevels = [
-  { level: 'Júnior', points: 100, tone: 'bronze' },
-  { level: 'Intermédio', points: 150, tone: 'prata' },
-  { level: 'Sénior', points: 200, tone: 'ouro' },
-  { level: 'Especialista', points: 250, tone: 'violeta' },
-  { level: 'Líder de Conhecimento', points: 300, tone: 'verde' },
+  { level: 'Júnior', points: 100, badgeImage: '/badges/J%C3%BAnior.png' },
+  { level: 'Intermédio', points: 150, badgeImage: '/badges/Interm%C3%A9dio.png' },
+  { level: 'Sénior', points: 200, badgeImage: '/badges/S%C3%A9nior.png' },
+  { level: 'Especialista', points: 250, badgeImage: '/badges/Especialista.png' },
+  { level: 'Líder de Conhecimento', points: 300, badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png' },
 ];
 
 const badgeAreas = ['LowCode (Outsystems)', 'Cloud Architecture'];
@@ -33,7 +33,7 @@ function CatalogoBadges() {
       return;
     }
 
-    navigate('/dashboard/consultor');
+    navigate('/consultor/dashboard');
   };
 
   return (
@@ -65,8 +65,8 @@ function CatalogoBadges() {
           <div className="catalog-grid">
             {badgeItems.map((item) => (
               <article key={item.id} className="catalog-card">
-                <div className={`catalog-badge-shape tone-${item.tone}`}>
-                  <Rocket size={28} strokeWidth={2.1} />
+                <div className="catalog-badge-frame">
+                  <img className="catalog-badge-image" src={item.badgeImage} alt={item.level} />
                 </div>
 
                 <div className="catalog-card-title">{item.area}</div>
