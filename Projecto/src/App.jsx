@@ -8,6 +8,7 @@ import DashboardC from './pages/Consultor/Dashboard_C'
 import DashboardTM from './pages/TalentManager/Dashboard_TM'
 import DashboardSLL from './pages/ServiceLineLeader/Dashboard_SLL'
 import DashboardAG from './pages/AdminGestor/Dashboard_AG'
+import CatalogoBadges from './pages/CatalogoBadges/CatalogoBadges'
 
 function App() {
   return (
@@ -21,6 +22,8 @@ function App() {
         <Route path='/dashboard/talent-manager' element={<DashboardTM />} />
         <Route path='/dashboard/service-line-leader' element={<DashboardSLL />} />
         <Route path='/dashboard/admin-gestor' element={<DashboardAG />} />
+        <Route path='/dashboard/catalogo-badges' element={<CatalogoBadges />} />
+        <Route path='/dashboard/admin/catalogo-badges' element={<CatalogoBadges />} />
       </Routes>
     </BrowserRouter>
   )

@@ -26,7 +26,7 @@ const sidebarConfig = [
     title: 'Consultor',
     items: [
       { id: 'dashboard_C', label: 'Dashboard', icon: Home, route: '/dashboard/consultor' },
-      { id: 'catalogo_C', label: 'Catálogo de Badges', icon: Medal },
+      { id: 'catalogo_C', label: 'Catálogo de Badges', icon: Medal, route: '/dashboard/catalogo-badges' },
       { id: 'meus_badges_C', label: 'Meus Badges', icon: Trophy },
       { id: 'learning_paths_C', label: 'Learning Paths', icon: BookOpen },
       { id: 'pedidos_C', label: 'Meus Pedidos', icon: Clock },
@@ -60,7 +60,7 @@ const sidebarConfig = [
     items: [
       { id: 'dashboard_AG', label: 'Dashboard', icon: Home, route: '/dashboard/admin-gestor' },
       { id: 'utilizadores_AG', label: 'Utilizadores', icon: CircleUserRound },
-      { id: 'catalogo_AG', label: 'Catálogo de Badges', icon: Medal },
+      { id: 'catalogo_AG', label: 'Catálogo de Badges', icon: Medal, route: '/dashboard/admin/catalogo-badges' },
       { id: 'equipas_AG', label: 'Equipas e SLA', icon: UsersRound },
       { id: 'comunicados_AG', label: 'Comunicados e Avisos', icon: Megaphone },
       { id: 'pedidos_AG', label: 'Gestão de Pedidos', icon: FilePenLine },

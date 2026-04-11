@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Trophy, Award, TrendingUp, Code, Users, FileCheck2 } from 'lucide-react';
+import { Trophy, Award, Users, FileCheck2, FileText, CheckCircle2 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/TalentManager/Dashboard_TM.css';
 
@@ -44,30 +44,27 @@ const topConsultores = [
 const recentActivities = [
   {
     id: 1,
-    title: 'Badge especial "Ranking Up" conquistado',
-    timeframe: 'Há 2 dias',
-    points: '+100 pts',
-    icon: Award,
+    title: 'Gerado relatório de badges da área Hybrid Cloud',
+    timeframe: 'Ontem',
+    icon: FileText,
   },
   {
     id: 2,
-    title: 'Badge "Cloud Architecture - Líder de Conhecimento" conquistada',
-    timeframe: 'Há 5 dias',
-    points: '+150 pts',
-    icon: Trophy,
+    title: 'Aprovado pedido de badge',
+    timeframe: 'Há 2 horas',
+    icon: CheckCircle2,
   },
   {
     id: 3,
-    title: 'Subiu 2 posições no ranking',
+    title: 'Consultado ranking de consultores da Service Line',
     timeframe: 'Há 2 dias',
-    icon: TrendingUp,
+    icon: Trophy,
   },
   {
     id: 4,
-    title: 'Badge "LowCode (Outsystem) - Júnior" conquistado',
-    timeframe: 'Há 5 semana',
-    points: '+100 pts',
-    icon: Code,
+    title: 'Revisado progresso de 8 consultores da Service Line',
+    timeframe: 'Ontem',
+    icon: Users,
   },
 ];
 
