@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
 import {
   Award,
@@ -18,7 +19,7 @@ import '../../css/Consultor/Dashboard_C.css';
 
 const timelineValues = [3, 2, 5, 4, 6, 3, 7, 5, 8, 4, 6, 9];
 
-const buildTimelineData = (values) => {
+const buildTimelineData = (values, locale) => {
   const today = new Date();
 
   return values.map((value, index) => {
@@ -28,7 +29,7 @@ const buildTimelineData = (values) => {
 
     return {
       value,
-      label: date.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' }),
+      label: date.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' }),
     };
   });
 };
@@ -40,27 +41,29 @@ const calculateVisibleTimelinePoints = (containerWidth, totalPoints) => {
 };
 
 const inProgressItems = [
-  { title: 'LowCode (Outsystems)', subtitle: 'Especialista', accent: 'warning', icon: AlertCircle },
-  { title: 'LowCode (Outsystems)', subtitle: 'Sénior', accent: 'yellow', icon: Search },
-  { title: 'LowCode (Outsystems)', subtitle: 'Intermédio', accent: 'info', icon: TimerReset },
+  { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_specialist', accent: 'warning', icon: AlertCircle },
+  { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_senior', accent: 'yellow', icon: Search },
+  { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_intermediate', accent: 'info', icon: TimerReset },
 ];
 
 const suggestionItems = [
-  { title: 'LowCode (Outsystems)', subtitle: 'Líder de Conhecimento', accent: 'success' },
-  { title: 'Cloud Architecture', subtitle: 'Especialista', accent: 'violet' },
-  { title: 'C++ Mastery', subtitle: 'Sénior', accent: 'amber' },
+  { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_knowledge_lead', accent: 'success' },
+  { title: 'Cloud Architecture', subtitleKey: 'badge_level_specialist', accent: 'violet' },
+  { title: 'C++ Mastery', subtitleKey: 'badge_level_senior', accent: 'amber' },
 ];
 
 const dashboardStats = [
-  { title: 'Bagdes Obtidos', value: '12', note: '2 este mês', icon: Award, tone: 'gold' },
-  { title: 'Sequência de Dias', value: '4', note: 'Recorde: 8 dias', icon: Flame, tone: 'fire' },
-  { title: 'Meus Pedidos', value: '5', note: '2 em validação', icon: Clock3, tone: 'blue' },
-  { title: 'Ranking', value: '#15', note: '+3 posições este mês', icon: Crown, tone: 'rank' },
+  { titleKey: 'dashboard_stat_badges_title', value: '12', noteKey: 'dashboard_stat_badges_note', icon: Award, tone: 'gold' },
+  { titleKey: 'dashboard_stat_streak_title', value: '4', noteKey: 'dashboard_stat_streak_note', icon: Flame, tone: 'fire' },
+  { titleKey: 'dashboard_stat_requests_title', value: '5', noteKey: 'dashboard_stat_requests_note', icon: Clock3, tone: 'blue' },
+  { titleKey: 'dashboard_stat_ranking_title', value: '#15', noteKey: 'dashboard_stat_ranking_note', icon: Crown, tone: 'rank' },
 ];
 
 function DashboardC() {
+  const { t, i18n } = useTranslation();
   const timelineChartRef = useRef(null);
-  const timelineData = useMemo(() => buildTimelineData(timelineValues), []);
+  const locale = i18n.language?.startsWith('es') ? 'es-ES' : i18n.language?.startsWith('en') ? 'en-GB' : 'pt-PT';
+  const timelineData = useMemo(() => buildTimelineData(timelineValues, locale), [locale]);
   const [visibleTimelinePoints, setVisibleTimelinePoints] = useState(timelineData.length);
 
   useEffect(() => {
@@ -95,12 +98,12 @@ function DashboardC() {
     <Layout>
       <div className="dashboard-consultor-page">
         <div className="dashboard-consultor-header">
-          <h1>Dashboard Consultor</h1>
+          <h1>{t('dashboard_consultor_title')}</h1>
         </div>
 
         <div className="dashboard-consultor-grid">
           <section className="dashboard-card dashboard-timeline-card">
-            <div className="dashboard-card-title">Timeline (Badges Obtidas)</div>
+            <div className="dashboard-card-title">{t('dashboard_timeline_badges')}</div>
             <div className="timeline-chart-shell">
               <div className="timeline-axis" aria-hidden="true">
                 {yAxisTicks.slice().reverse().map((tick) => (
@@ -113,7 +116,7 @@ function DashboardC() {
               <div
                 ref={timelineChartRef}
                 className="timeline-chart"
-                aria-label="Timeline de badges obtidas"
+                aria-label={t('dashboard_timeline_badges')}
                 style={{ gridTemplateColumns: `repeat(${visibleTimelineData.length}, minmax(0, 1fr))` }}
               >
                 <div className="timeline-grid-lines" aria-hidden="true">
@@ -142,37 +145,37 @@ function DashboardC() {
           </section>
 
           <div className="dashboard-stats-grid">
-            {dashboardStats.map(({ title, value, note, icon: Icon, tone }) => (
-              <section key={title} className={`dashboard-card dashboard-stat-card tone-${tone}`}>
-                <div className="dashboard-card-title">{title}</div>
+            {dashboardStats.map(({ titleKey, value, noteKey, icon: Icon, tone }) => (
+              <section key={titleKey} className={`dashboard-card dashboard-stat-card tone-${tone}`}>
+                <div className="dashboard-card-title">{t(titleKey)}</div>
                 <div className="dashboard-stat-body">
                   <span className="dashboard-stat-icon">
                     <Icon size={36} strokeWidth={2} />
                   </span>
                   <strong>{value}</strong>
                 </div>
-                <div className="dashboard-stat-note">{note}</div>
+                <div className="dashboard-stat-note">{t(noteKey)}</div>
               </section>
             ))}
           </div>
 
           <section className="dashboard-card dashboard-panel-card dashboard-progress-card">
             <div className="dashboard-panel-header">
-              <h2>Em Progresso</h2>
+              <h2>{t('dashboard_in_progress')}</h2>
               <a href="#ver-todos-progresso" onClick={(event) => event.preventDefault()}>
-                Ver todos <ArrowRight size={16} />
+                {t('dashboard_view_all')} <ArrowRight size={16} />
               </a>
             </div>
 
             <div className="dashboard-list">
-              {inProgressItems.map(({ title, subtitle, accent, icon: Icon }) => (
-                <article key={`${title}-${subtitle}`} className="dashboard-list-item">
+              {inProgressItems.map(({ title, subtitleKey, accent, icon: Icon }) => (
+                <article key={`${title}-${subtitleKey}`} className="dashboard-list-item">
                   <div className={`dashboard-list-badge accent-${accent}`}>
                     <Sparkles size={18} strokeWidth={2} />
                   </div>
                   <div className="dashboard-list-content">
                     <strong>{title}</strong>
-                    <span>{subtitle}</span>
+                    <span>{t(subtitleKey)}</span>
                   </div>
                   <div className={`dashboard-list-action accent-${accent}`}>
                     <Icon size={18} strokeWidth={2} />
@@ -184,21 +187,21 @@ function DashboardC() {
 
           <section className="dashboard-card dashboard-panel-card dashboard-suggestions-card">
             <div className="dashboard-panel-header">
-              <h2>Sugestões</h2>
+              <h2>{t('dashboard_suggestions')}</h2>
               <a href="#ver-todos-sugestoes" onClick={(event) => event.preventDefault()}>
-                Ver todos <ArrowRight size={16} />
+                {t('dashboard_view_all')} <ArrowRight size={16} />
               </a>
             </div>
 
             <div className="dashboard-list dashboard-suggestions-list">
-              {suggestionItems.map(({ title, subtitle, accent }) => (
-                <article key={`${title}-${subtitle}`} className="dashboard-list-item dashboard-suggestion-item">
+              {suggestionItems.map(({ title, subtitleKey, accent }) => (
+                <article key={`${title}-${subtitleKey}`} className="dashboard-list-item dashboard-suggestion-item">
                   <div className={`dashboard-list-badge accent-${accent}`}>
                     <GraduationCap size={18} strokeWidth={2} />
                   </div>
                   <div className="dashboard-list-content">
                     <strong>{title}</strong>
-                    <span>{subtitle}</span>
+                    <span>{t(subtitleKey)}</span>
                   </div>
                   <ChevronsRight className="dashboard-item-chevron" size={18} />
                 </article>

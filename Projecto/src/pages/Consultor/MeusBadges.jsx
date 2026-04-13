@@ -1,15 +1,16 @@
 import { useMemo } from 'react';
 import { ArrowLeft, CheckCircle2, Clock3, Filter, SearchCheck, Search, SlidersHorizontal, Trophy, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
 import '../../css/Consultor/CatalogoBadges_C.css';
 
 const badgeLevels = [
-  { level: 'Júnior', points: 100, badgeImage: '/badges/J%C3%BAnior.png' },
-  { level: 'Intermédio', points: 150, badgeImage: '/badges/Interm%C3%A9dio.png' },
-  { level: 'Sénior', points: 200, badgeImage: '/badges/S%C3%A9nior.png' },
-  { level: 'Especialista', points: 250, badgeImage: '/badges/Especialista.png' },
-  { level: 'Líder de Conhecimento', points: 300, badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png' },
+  { levelKey: 'badge_level_junior', points: 100, badgeImage: '/badges/J%C3%BAnior.png' },
+  { levelKey: 'badge_level_intermediate', points: 150, badgeImage: '/badges/Interm%C3%A9dio.png' },
+  { levelKey: 'badge_level_senior', points: 200, badgeImage: '/badges/S%C3%A9nior.png' },
+  { levelKey: 'badge_level_specialist', points: 250, badgeImage: '/badges/Especialista.png' },
+  { levelKey: 'badge_level_knowledge_lead', points: 300, badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png' },
 ];
 
 const badgeAreas = ['LowCode (Outsystems)', 'Cloud Architecture'];
@@ -17,7 +18,7 @@ const badgeAreas = ['LowCode (Outsystems)', 'Cloud Architecture'];
 const badgeStates = [
   {
     id: 'validado',
-    label: 'Validado',
+    labelKey: 'badge_status_validated',
     tint: 'rgba(34, 197, 94, 0.18)',
     border: 'rgba(21, 128, 61, 0.48)',
     buttonBg: '#dcfce7',
@@ -27,7 +28,7 @@ const badgeStates = [
   },
   {
     id: 'pendente',
-    label: 'Pendente',
+    labelKey: 'badge_status_pending',
     tint: 'rgba(250, 204, 21, 0.14)',
     border: 'rgba(234, 179, 8, 0.36)',
     buttonBg: '#fef3c7',
@@ -37,7 +38,7 @@ const badgeStates = [
   },
   {
     id: 'em_revisao',
-    label: 'Em revisão',
+    labelKey: 'badge_status_in_review',
     tint: 'rgba(59, 130, 246, 0.12)',
     border: 'rgba(37, 99, 235, 0.34)',
     buttonBg: '#dbeafe',
@@ -47,7 +48,7 @@ const badgeStates = [
   },
   {
     id: 'rejeitado',
-    label: 'Rejeitado',
+    labelKey: 'badge_status_rejected',
     tint: 'rgba(248, 113, 113, 0.12)',
     border: 'rgba(239, 68, 68, 0.34)',
     buttonBg: '#fee2e2',
@@ -59,20 +60,25 @@ const badgeStates = [
 
 function MeusBadges() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const badgeItems = useMemo(
     () => badgeAreas.flatMap((area, areaIndex) => badgeLevels.map((level, levelIndex) => {
       const state = badgeStates[(areaIndex + levelIndex) % badgeStates.length];
 
+      const translatedLevel = t(level.levelKey);
+
       return {
-        id: `${area}-${level.level}`,
+        id: `${area}-${level.levelKey}`,
         area,
         state,
-        ...level,
+        level: translatedLevel,
+        points: level.points,
+        badgeImage: level.badgeImage,
         date: '12 Jan 2026',
       };
     })),
-    []
+    [t]
   );
 
   const handleGoBack = () => {
@@ -88,25 +94,25 @@ function MeusBadges() {
     <Layout>
       <div className="catalog-page">
         <header className="catalog-header">
-          <button type="button" className="catalog-back-btn" onClick={handleGoBack} aria-label="Voltar">
+          <button type="button" className="catalog-back-btn" onClick={handleGoBack} aria-label={t('back')}>
             <ArrowLeft size={22} />
           </button>
-          <h1>Meus Badges</h1>
+          <h1>{t('my_badges_title')}</h1>
         </header>
 
         <section className="catalog-shell">
           <div className="catalog-controls">
             <div className="catalog-search-wrap">
               <Search size={20} />
-              <input type="text" placeholder="Pesquisar badges" aria-label="Pesquisar badges" />
+              <input type="text" placeholder={t('search_badges')} aria-label={t('search_badges')} />
             </div>
             <button type="button" className="catalog-action-btn">
               <Filter size={20} />
-              <span>Filtrar pesquisa</span>
+              <span>{t('filter_search')}</span>
             </button>
             <button type="button" className="catalog-action-btn">
               <SlidersHorizontal size={20} />
-              <span>Ordenar</span>
+              <span>{t('sort')}</span>
             </button>
           </div>
 
@@ -133,7 +139,7 @@ function MeusBadges() {
                   <div className="catalog-card-meta">
                     <div className="catalog-meta-row">
                       <Trophy size={14} />
-                      <span>{item.points} pontos</span>
+                      <span>{item.points} {t('points')}</span>
                     </div>
                     <div className="catalog-meta-row">
                       <Clock3 size={14} />
@@ -143,8 +149,8 @@ function MeusBadges() {
 
                   <button
                     type="button"
-                    aria-label={item.state.label}
-                    title={item.state.label}
+                    aria-label={t(item.state.labelKey)}
+                    title={t(item.state.labelKey)}
                     style={{
                       marginTop: '10px',
                       marginLeft: 'auto',
@@ -168,14 +174,14 @@ function MeusBadges() {
             })}
           </div>
 
-          <div className="catalog-pagination" role="navigation" aria-label="Paginação">
-            <button type="button" className="catalog-page-btn ghost" aria-label="Página anterior">
+          <div className="catalog-pagination" role="navigation" aria-label={t('pagination')}>
+            <button type="button" className="catalog-page-btn ghost" aria-label={t('previous_page')}>
               <ChevronLeft size={16} />
             </button>
             <button type="button" className="catalog-page-btn active">1</button>
             <button type="button" className="catalog-page-btn">2</button>
             <button type="button" className="catalog-page-btn">3</button>
-            <button type="button" className="catalog-page-btn ghost" aria-label="Página seguinte">
+            <button type="button" className="catalog-page-btn ghost" aria-label={t('next_page')}>
               <ChevronRight size={16} />
             </button>
           </div>

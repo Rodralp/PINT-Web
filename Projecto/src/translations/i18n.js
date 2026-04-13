@@ -13,6 +13,10 @@ import pt_criar from "./pt/tr_Criar.json";
 import en_criar from "./en/tr_Criar.json";
 import es_criar from "./es/tr_Criar.json";
 
+import pt_appArea from "./pt/tr_AppArea.json";
+import en_appArea from "./en/tr_AppArea.json";
+import es_appArea from "./es/tr_AppArea.json";
+
 
 const STORAGE_KEY = "preferredLanguage";
 const SUPPORTED_LANGUAGES = ["pt", "en", "es"];
@@ -49,13 +53,13 @@ i18n
   .init({
     resources: {
       pt: { 
-        translation: { ...pt_landingPage, ...pt_entrar, ...pt_criar }
+        translation: { ...pt_landingPage, ...pt_entrar, ...pt_criar, ...pt_appArea }
       },
       en: { 
-        translation: { ...en_landingPage, ...en_entrar, ...en_criar }
+        translation: { ...en_landingPage, ...en_entrar, ...en_criar, ...en_appArea }
       },
       es: { 
-        translation: { ...es_landingPage, ...es_entrar, ...es_criar }
+        translation: { ...es_landingPage, ...es_entrar, ...es_criar, ...es_appArea }
       }
     },
     lng: getInitialLanguage(),

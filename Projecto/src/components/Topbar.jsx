@@ -1,21 +1,33 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bell, MessageSquare, MoreVertical, Settings, Languages, LogOut, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import '../css/Topbar.css';
 
 function Topbar({ onToggleSidebar }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
   const loginData = storedLoginData ? JSON.parse(storedLoginData) : null;
-  const userName = loginData?.nome || 'Usuário';
+  const userName = loginData?.nome || t('app_user_default');
+
+  const languages = [
+    { code: 'pt', label: t('lang_portuguese'), flag: '/flags/pt.svg' },
+    { code: 'en', label: t('lang_english'), flag: '/flags/gb.svg' },
+    { code: 'es', label: t('lang_spanish'), flag: '/flags/es.svg' },
+  ];
+
+  const currentLanguage = languages.find(({ code }) => i18n.language?.startsWith(code)) || languages[0];
 
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
+        setShowLanguageMenu(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -29,6 +41,12 @@ function Topbar({ onToggleSidebar }) {
     sessionStorage.removeItem('loginData');
 
     navigate('/');
+  };
+
+  const handleLanguageChange = (languageCode) => {
+    i18n.changeLanguage(languageCode);
+    setShowLanguageMenu(false);
+    setDropdownOpen(false);
   };
 
   return (
@@ -67,15 +85,30 @@ function Topbar({ onToggleSidebar }) {
             <div className="topbar-dropdown-menu">
               <button className="topbar-dropdown-item">
                 <Settings size={20} strokeWidth={2} />
-                <span>Configuração</span>
+                <span>{t('topbar_settings')}</span>
               </button>
-              <button className="topbar-dropdown-item">
+              <button className="topbar-dropdown-item" onClick={() => setShowLanguageMenu((prev) => !prev)}>
                 <Languages size={20} strokeWidth={2} />
-                <span>Idioma</span>
+                <span>{t('topbar_language')}</span>
+                <span className="topbar-language-current">{currentLanguage.label}</span>
               </button>
+              {showLanguageMenu && (
+                <div className="topbar-language-list">
+                  {languages.map((language) => (
+                    <button
+                      key={language.code}
+                      className={`topbar-language-option ${i18n.language?.startsWith(language.code) ? 'active' : ''}`}
+                      onClick={() => handleLanguageChange(language.code)}
+                    >
+                      <img src={language.flag} alt={language.label} className="topbar-language-flag" />
+                      <span>{language.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
               <button className="topbar-dropdown-item" onClick={handleLogout}>
                 <LogOut size={20} strokeWidth={2} />
-                <span>Sair</span>
+                <span>{t('topbar_logout')}</span>
               </button>
             </div>
           )}
