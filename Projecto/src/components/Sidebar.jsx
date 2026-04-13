@@ -27,7 +27,7 @@ const sidebarConfig = [
     items: [
       { id: 'dashboard_C', label: 'Dashboard', icon: Home, route: '/consultor/dashboard' },
       { id: 'catalogo_C', label: 'Catálogo de Badges', icon: Medal, route: '/consultor/catalogo-badges' },
-      { id: 'meus_badges_C', label: 'Meus Badges', icon: Trophy },
+      { id: 'meus_badges_C', label: 'Meus Badges', icon: Trophy, route: '/consultor/meus-badges' },
       { id: 'learning_paths_C', label: 'Learning Paths', icon: BookOpen },
       { id: 'pedidos_C', label: 'Meus Pedidos', icon: Clock },
       { id: 'ranking_C', label: 'Ranking', icon: Crown },

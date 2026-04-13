@@ -9,6 +9,7 @@ import DashboardTM from './pages/TalentManager/Dashboard_TM'
 import DashboardSLL from './pages/ServiceLineLeader/Dashboard_SLL'
 import DashboardAG from './pages/AdminGestor/Dashboard_AG'
 import CatalogoBadges from './pages/CatalogoBadges/CatalogoBadges'
+import MeusBadges from './pages/Consultor/MeusBadges'
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path='/service-line-leader/dashboard' element={<DashboardSLL />} />
         <Route path='/admin-gestor/dashboard' element={<DashboardAG />} />
         <Route path='/consultor/catalogo-badges' element={<CatalogoBadges />} />
+        <Route path='/consultor/meus-badges' element={<MeusBadges />} />
         <Route path='/admin-gestor/catalogo-badges' element={<CatalogoBadges />} />
 
         <Route path='/dashboard/consultor' element={<Navigate to='/consultor/dashboard' replace />} />
@@ -31,6 +33,7 @@ function App() {
         <Route path='/dashboard/service-line-leader' element={<Navigate to='/service-line-leader/dashboard' replace />} />
         <Route path='/dashboard/admin-gestor' element={<Navigate to='/admin-gestor/dashboard' replace />} />
         <Route path='/dashboard/catalogo-badges' element={<Navigate to='/consultor/catalogo-badges' replace />} />
+        <Route path='/dashboard/meus-badges' element={<Navigate to='/consultor/meus-badges' replace />} />
         <Route path='/dashboard/admin/catalogo-badges' element={<Navigate to='/admin-gestor/catalogo-badges' replace />} />
       </Routes>
     </BrowserRouter>
