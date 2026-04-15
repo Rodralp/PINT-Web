@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -9,6 +9,12 @@ import {
   Trash2,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
+import {
+  createReminder as createReminderRequest,
+  deleteReminder as deleteReminderRequest,
+  fetchReminders,
+  updateReminder as updateReminderRequest,
+} from '../../services/consultorService';
 import '../../css/Consultor/Lembretes.css';
 
 const monthLabels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -69,13 +75,77 @@ const defaultFormState = {
   color: 'green',
 };
 
+const REMINDERS_STORAGE_KEY = 'consultorLembretes';
+
+const safeParseReminders = (value) => {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const hasSameId = (firstId, secondId) => String(firstId) === String(secondId);
+
+const normalizeReminder = (reminder, fallbackId) => {
+  const colorIsValid = colorOptions.some((option) => option.id === reminder?.color);
+
+  return {
+    id: Number(reminder?.id) || fallbackId,
+    title: String(reminder?.title || '').trim(),
+    description: String(reminder?.description || '').trim(),
+    date: String(reminder?.date || ''),
+    color: colorIsValid ? reminder.color : 'green',
+  };
+};
+
+const getInitialReminders = () => {
+  const storedReminders = safeParseReminders(localStorage.getItem(REMINDERS_STORAGE_KEY));
+  if (storedReminders.length === 0) {
+    return initialReminders;
+  }
+
+  return storedReminders.map((item, index) => normalizeReminder(item, Date.now() + index));
+};
+
 function Lembretes() {
   const navigate = useNavigate();
-  const [reminders, setReminders] = useState(initialReminders);
+  const [reminders, setReminders] = useState(getInitialReminders);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(defaultFormState);
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadReminders = async () => {
+      try {
+        const data = await fetchReminders();
+        if (isMounted && Array.isArray(data)) {
+          const normalizedReminders = data.map((item, index) => normalizeReminder(item, Date.now() + index));
+          setReminders(normalizedReminders);
+        }
+      } catch {
+        // Mantem os lembretes locais quando a API nao estiver disponivel.
+      }
+    };
+
+    loadReminders();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(REMINDERS_STORAGE_KEY, JSON.stringify(reminders));
+  }, [reminders]);
 
   const modalTitle = editingId ? 'Editar Lembrete' : 'Novo Lembrete';
   const saveLabel = editingId ? 'Salvar Alteracoes' : 'Criar Lembrete';
@@ -150,7 +220,7 @@ function Lembretes() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const onSaveReminder = () => {
+  const onSaveReminder = async () => {
     const trimmedTitle = formData.title.trim();
     const trimmedDescription = formData.description.trim();
     const selectedDate = formData.date;
@@ -159,43 +229,64 @@ function Lembretes() {
       return;
     }
 
-    if (editingId) {
-      setReminders((prev) =>
-        prev.map((item) =>
-          item.id === editingId
-            ? {
-                ...item,
-                title: trimmedTitle,
-                description: trimmedDescription,
-                date: selectedDate,
-                color: formData.color,
-              }
-            : item
-        )
-      );
+    const payload = {
+      title: trimmedTitle,
+      description: trimmedDescription,
+      date: selectedDate,
+      color: formData.color,
+    };
 
+    if (editingId) {
+      const targetId = editingId;
+      const updatedLocalReminder = {
+        id: targetId,
+        ...payload,
+      };
+
+      setReminders((prev) =>
+        prev.map((item) => (hasSameId(item.id, targetId) ? updatedLocalReminder : item)),
+      );
       closeModal();
+
+      try {
+        const updatedReminder = await updateReminderRequest(targetId, payload);
+        setReminders((prev) =>
+          prev.map((item) => (hasSameId(item.id, targetId) ? normalizeReminder(updatedReminder, Number(targetId)) : item)),
+        );
+      } catch {
+        // O estado local ja foi atualizado; ignorar falhas da API.
+      }
+
       return;
     }
 
-    const nextId = reminders.length > 0 ? Math.max(...reminders.map((item) => item.id)) + 1 : 1;
+    const localId = Date.now();
+    const localReminder = {
+      id: localId,
+      ...payload,
+    };
 
-    setReminders((prev) => [
-      {
-        id: nextId,
-        title: trimmedTitle,
-        description: trimmedDescription,
-        date: selectedDate,
-        color: formData.color,
-      },
-      ...prev,
-    ]);
-
+    setReminders((prev) => [localReminder, ...prev]);
     closeModal();
+
+    try {
+      const createdReminder = await createReminderRequest(payload);
+      setReminders((prev) =>
+        prev.map((item) => (hasSameId(item.id, localId) ? normalizeReminder(createdReminder, localId) : item)),
+      );
+    } catch {
+      // O lembrete local permanece mesmo com falha de sincronizacao.
+    }
   };
 
-  const onDeleteReminder = (id) => {
-    setReminders((prev) => prev.filter((item) => item.id !== id));
+  const onDeleteReminder = async (id) => {
+    setReminders((prev) => prev.filter((item) => !hasSameId(item.id, id)));
+
+    try {
+      await deleteReminderRequest(id);
+    } catch {
+      // Mantem a remocao local mesmo quando a API falha.
+    }
   };
 
   return (
@@ -256,6 +347,10 @@ function Lembretes() {
               );
             })}
           </div>
+
+          {reminders.length === 0 && (
+            <div className="reminders-empty-state">Sem lembretes para mostrar.</div>
+          )}
         </section>
 
         {isModalOpen && (

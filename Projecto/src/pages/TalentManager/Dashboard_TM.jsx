@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Trophy, Award, Users, FileCheck2, FileText, CheckCircle2 } from 'lucide-react';
 import Layout from '../../components/Layout';
+import { fetchTalentManagerDashboard } from '../../services/dashboardService';
 import '../../css/TalentManager/Dashboard_TM.css';
 
-const badgesTimelineValues = [3, 4, 3, 6, 4, 8, 6, 7, 5, 8, 8, 10];
-const novosConsultoresValues = [2, 5, 4, 6, 3, 7, 5, 8, 4, 6];
+const defaultBadgesTimelineValues = [3, 4, 3, 6, 4, 8, 6, 7, 5, 8, 8, 10];
+const defaultNovosConsultoresValues = [2, 5, 4, 6, 3, 7, 5, 8, 4, 6];
 
 const topConsultores = [
   {
@@ -106,10 +107,62 @@ const buildChartScale = (data) => {
 function DashboardTM() {
   const badgesChartRef = useRef(null);
   const novosConsultoresChartRef = useRef(null);
-  const badgesTimelineData = useMemo(() => buildDailyTimelineData(badgesTimelineValues, 'day-month'), []);
-  const novosConsultoresData = useMemo(() => buildDailyTimelineData(novosConsultoresValues, 'day-month'), []);
+  const [badgesTimelineValues, setBadgesTimelineValues] = useState(defaultBadgesTimelineValues);
+  const [novosConsultoresValues, setNovosConsultoresValues] = useState(defaultNovosConsultoresValues);
+  const [onlineUsers, setOnlineUsers] = useState(1302);
+  const [pendingRequests, setPendingRequests] = useState(25);
+  const [dashboardStatusMessage, setDashboardStatusMessage] = useState('');
+  const badgesTimelineData = useMemo(
+    () => buildDailyTimelineData(badgesTimelineValues, 'day-month'),
+    [badgesTimelineValues],
+  );
+  const novosConsultoresData = useMemo(
+    () => buildDailyTimelineData(novosConsultoresValues, 'day-month'),
+    [novosConsultoresValues],
+  );
   const [visibleBadgesPoints, setVisibleBadgesPoints] = useState(badgesTimelineData.length);
   const [visibleNovosConsultoresPoints, setVisibleNovosConsultoresPoints] = useState(novosConsultoresData.length);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDashboardData = async () => {
+      try {
+        const data = await fetchTalentManagerDashboard();
+        if (!isMounted) {
+          return;
+        }
+
+        if (Array.isArray(data.badgesTimelineValues) && data.badgesTimelineValues.length > 0) {
+          setBadgesTimelineValues(data.badgesTimelineValues);
+        }
+
+        if (Array.isArray(data.novosConsultoresValues) && data.novosConsultoresValues.length > 0) {
+          setNovosConsultoresValues(data.novosConsultoresValues);
+        }
+
+        if (Number.isFinite(data.onlineUsers)) {
+          setOnlineUsers(data.onlineUsers);
+        }
+
+        if (Number.isFinite(data.pendingRequests)) {
+          setPendingRequests(data.pendingRequests);
+        }
+
+        setDashboardStatusMessage('');
+      } catch {
+        if (isMounted) {
+          setDashboardStatusMessage('');
+        }
+      }
+    };
+
+    loadDashboardData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const observers = [];
@@ -174,6 +227,12 @@ function DashboardTM() {
         </header>
 
         <div className="dashboard-tm-content">
+          {dashboardStatusMessage && (
+            <div className="alert alert-warning py-2" role="status">
+              {dashboardStatusMessage}
+            </div>
+          )}
+
           {/* Metrics Grid */}
           <div className="row g-3 align-items-stretch metrics-container">
             <div className="col-12 col-lg-6 col-xl-5 d-flex tm-top-chart-col">
@@ -237,7 +296,7 @@ function DashboardTM() {
                     <span className="metric-stat-icon">
                       <Users size={36} strokeWidth={2} />
                     </span>
-                    <strong>1302</strong>
+                    <strong>{onlineUsers}</strong>
                   </div>
                   <div className="metric-note">Na Plataforma</div>
                 </section>
@@ -248,7 +307,7 @@ function DashboardTM() {
                     <span className="metric-stat-icon">
                       <FileCheck2 size={36} strokeWidth={2} />
                     </span>
-                    <strong>25</strong>
+                    <strong>{pendingRequests}</strong>
                   </div>
                   <div className="metric-note">Na Plataforma</div>
                 </section>

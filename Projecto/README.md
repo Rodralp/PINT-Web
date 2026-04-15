@@ -1,16 +1,92 @@
-# React + Vite
+# Projeto PINT Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicacao React + Vite com backend Express em arquitetura MVC.
+O backend usa PostgreSQL (via Sequelize) para autenticacao e lembretes.
 
-Currently, two official plugins are available:
+## Tecnologias
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React + React Hooks
+- Bootstrap
+- Fetch API
+- Express
+- PostgreSQL
+- Sequelize
 
-## React Compiler
+## Estrutura (MVC no backend)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+server/src/
+- models/
+- services/
+- controllers/
+- routes/
+- app.js
+- server.js
 
-## Expanding the ESLint configuration
+src/
+- services/ (camada HTTP do frontend com fetch)
+- pages/
+- components/
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Autenticacao (prioridade local/session)
+
+- O frontend verifica primeiro contas em localStorage e sessionStorage (chave: contasCriadas)
+- Se nao encontrar conta local, faz chamada HTTP para a API
+- Login guardado em localStorage ou sessionStorage conforme a opcao "Guardar dados"
+
+## Base de dados
+
+- PostgreSQL obrigatorio
+- Persistencia em PostgreSQL ja ativa para:
+	- contas de autenticacao
+	- lembretes do consultor
+- Outros datasets (dashboards, catalogo e ranking) mantem dados mock nesta fase
+
+## Configuracao de ambiente
+
+Configura as variaveis em .env (podes copiar de .env.example):
+
+- VITE_API_BASE_URL=http://localhost:4000/api
+- PORT=4000
+- DB_HOST=localhost
+- DB_PORT=5432
+- DB_NAME=pint_web
+- DB_USER=postgres
+- DB_PASSWORD=postgres
+- DB_LOGGING=false
+
+Depois cria a base de dados no PostgreSQL e inicia o servidor. As tabelas sao sincronizadas automaticamente no arranque.
+
+## Scripts
+
+- npm run dev:client: inicia frontend Vite em modo desenvolvimento
+- npm run dev:server: inicia backend Express (watch mode)
+- npm run build: gera build de producao do frontend
+- npm run preview: preview da build do frontend
+
+## Endpoints API atuais
+
+- GET /api/health
+- GET /api/dashboard/talent-manager
+- GET /api/dashboard/service-line-leader
+- GET /api/dashboard/admin-gestor
+- GET /api/dashboard/consultor
+- POST /api/auth/register
+- POST /api/auth/login
+- POST /api/auth/recover-password
+- GET /api/consultor/catalog-badges
+- GET /api/consultor/meus-badges
+- GET /api/consultor/meus-pedidos
+- GET /api/consultor/ranking
+- GET /api/consultor/lembretes
+- POST /api/consultor/lembretes
+- PUT /api/consultor/lembretes/:id
+- DELETE /api/consultor/lembretes/:id
+- GET /api/consultor/profile
+
+## Configuracao de API no frontend
+
+Por omissao, o frontend usa:
+
+- http://localhost:4000/api
+
+Opcionalmente, podes definir VITE_API_BASE_URL para apontar para outro host.

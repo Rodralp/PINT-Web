@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import Navbar from './components/Navbar';
 import TermsModal from './components/TermsModal';
 import PrivacyModal from './components/PrivacyModal';
+import { registerAccount } from './services/authService';
 import './css/Criar.css';
 
 function CriarConta() {
@@ -22,6 +23,7 @@ function CriarConta() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -77,27 +79,25 @@ function CriarConta() {
       return;
     }
 
-    // TODO: Quando tiver base de dados, enviar os dados para o backend
-    console.log('Dados do formulário:', formData);
-    setShowSuccess(true);
+    try {
+      await registerAccount({
+        nome: formData.nome,
+        email: formData.email,
+        senha: formData.senha,
+      });
 
-    // Criar conta e guardar em localStorage (remover quando tiver backend)
-    const contas = JSON.parse(localStorage.getItem('contasCriadas')) || [];
-    contas.push({
-      nome: formData.nome,
-      email: formData.email,
-      senha: formData.senha,
-      status: 'pendente' // Indica que a conta está aguardando verificação
-    });
-    localStorage.setItem('contasCriadas', JSON.stringify(contas));
-    
-    // Limpar formulário
-    setFormData({
-      nome: '',
-      email: '',
-      senha: '',
-      confirmaSenha: ''
-    });
+      setApiError('');
+      setShowSuccess(true);
+
+      setFormData({
+        nome: '',
+        email: '',
+        senha: '',
+        confirmaSenha: ''
+      });
+    } catch {
+      setApiError('Ja existe conta com este email ou nao foi possivel criar a conta.');
+    }
   };
 
   const handleCloseSuccess = () => {
@@ -138,6 +138,12 @@ function CriarConta() {
           <h1>{t('register_title')}</h1>
           <p>{t('register_subtitle')}</p>
         </div>
+
+        {apiError && (
+          <div className="alert alert-danger py-2" role="alert">
+            {apiError}
+          </div>
+        )}
 
         {/* Formulário */}
         <form onSubmit={handleSubmit} className="criar-form">

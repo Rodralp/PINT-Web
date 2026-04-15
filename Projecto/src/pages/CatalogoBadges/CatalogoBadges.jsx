@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, Clock3, Filter, Search, SlidersHorizontal, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
+import { fetchCatalogBadges } from '../../services/consultorService';
 import '../../css/Consultor/CatalogoBadges_C.css';
 
 const badgeLevels = [
@@ -15,21 +16,47 @@ const badgeLevels = [
 
 const badgeAreas = ['LowCode (Outsystems)', 'Cloud Architecture'];
 
-function CatalogoBadges() {
-  const navigate = useNavigate();
-  const { t } = useTranslation();
-
-  const badgeItems = useMemo(
-    () => badgeAreas.flatMap((area) => badgeLevels.map((level) => ({
+const buildDefaultBadgeItems = () =>
+  badgeAreas.flatMap((area) =>
+    badgeLevels.map((level) => ({
       id: `${area}-${level.levelKey}`,
       area,
-      level: t(level.levelKey),
+      levelKey: level.levelKey,
       points: level.points,
       badgeImage: level.badgeImage,
       date: '12 Jan 2026',
-    }))),
-    [t]
+    })),
   );
+
+function CatalogoBadges() {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const [badgeItems, setBadgeItems] = useState(buildDefaultBadgeItems);
+  const [statusMessage, setStatusMessage] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCatalog = async () => {
+      try {
+        const data = await fetchCatalogBadges();
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setBadgeItems(data);
+          setStatusMessage('');
+        }
+      } catch {
+        if (isMounted) {
+          setStatusMessage('');
+        }
+      }
+    };
+
+    loadCatalog();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleGoBack = () => {
     if (window.history.length > 1) {
@@ -51,6 +78,12 @@ function CatalogoBadges() {
         </header>
 
         <section className="catalog-shell">
+          {statusMessage && (
+            <div className="alert alert-warning py-2" role="status">
+              {statusMessage}
+            </div>
+          )}
+
           <div className="catalog-controls">
             <div className="catalog-search-wrap">
               <Search size={20} />
@@ -70,11 +103,11 @@ function CatalogoBadges() {
             {badgeItems.map((item) => (
               <article key={item.id} className="catalog-card">
                 <div className="catalog-badge-frame">
-                  <img className="catalog-badge-image" src={item.badgeImage} alt={item.level} />
+                  <img className="catalog-badge-image" src={item.badgeImage} alt={t(item.levelKey)} />
                 </div>
 
                 <div className="catalog-card-title">{item.area}</div>
-                <div className="catalog-card-level">{item.level}</div>
+                <div className="catalog-card-level">{t(item.levelKey)}</div>
 
                 <div className="catalog-card-meta">
                   <div className="catalog-meta-row">

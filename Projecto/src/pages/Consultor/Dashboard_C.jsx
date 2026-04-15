@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
+import { fetchConsultorDashboard } from '../../services/dashboardService';
 import {
   Award,
   Flame,
@@ -17,7 +18,20 @@ import {
 } from 'lucide-react';
 import '../../css/Consultor/Dashboard_C.css';
 
-const timelineValues = [3, 2, 5, 4, 6, 3, 7, 5, 8, 4, 6, 9];
+const defaultTimelineValues = [3, 2, 5, 4, 6, 3, 7, 5, 8, 4, 6, 9];
+
+const statIconMap = {
+  award: Award,
+  flame: Flame,
+  clock: Clock3,
+  crown: Crown,
+};
+
+const progressIconMap = {
+  alertTriangle: AlertTriangle,
+  searchCheck: SearchCheck,
+  clock: Clock3,
+};
 
 const buildTimelineData = (values, locale) => {
   const today = new Date();
@@ -40,19 +54,19 @@ const calculateVisibleTimelinePoints = (containerWidth, totalPoints) => {
   return Math.max(4, Math.min(totalPoints, maxPointsByWidth));
 };
 
-const inProgressItems = [
+const defaultInProgressItems = [
   { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_specialist', accent: 'warning', icon: AlertTriangle },
   { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_senior', accent: 'yellow', icon: SearchCheck },
   { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_intermediate', accent: 'info', icon: Clock3 },
 ];
 
-const suggestionItems = [
+const defaultSuggestionItems = [
   { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_knowledge_lead', accent: 'success' },
   { title: 'Cloud Architecture', subtitleKey: 'badge_level_specialist', accent: 'violet' },
   { title: 'C++ Mastery', subtitleKey: 'badge_level_senior', accent: 'amber' },
 ];
 
-const dashboardStats = [
+const defaultDashboardStats = [
   { titleKey: 'dashboard_stat_badges_title', value: '12', noteKey: 'dashboard_stat_badges_note', icon: Award, tone: 'gold' },
   { titleKey: 'dashboard_stat_streak_title', value: '4', noteKey: 'dashboard_stat_streak_note', icon: Flame, tone: 'fire' },
   { titleKey: 'dashboard_stat_requests_title', value: '5', noteKey: 'dashboard_stat_requests_note', icon: Clock3, tone: 'blue' },
@@ -63,8 +77,62 @@ function DashboardC() {
   const { t, i18n } = useTranslation();
   const timelineChartRef = useRef(null);
   const locale = i18n.language?.startsWith('es') ? 'es-ES' : i18n.language?.startsWith('en') ? 'en-GB' : 'pt-PT';
-  const timelineData = useMemo(() => buildTimelineData(timelineValues, locale), [locale]);
+  const [timelineValues, setTimelineValues] = useState(defaultTimelineValues);
+  const [dashboardStats, setDashboardStats] = useState(defaultDashboardStats);
+  const [inProgressItems, setInProgressItems] = useState(defaultInProgressItems);
+  const [suggestionItems, setSuggestionItems] = useState(defaultSuggestionItems);
+  const [dashboardStatusMessage, setDashboardStatusMessage] = useState('');
+  const timelineData = useMemo(() => buildTimelineData(timelineValues, locale), [timelineValues, locale]);
   const [visibleTimelinePoints, setVisibleTimelinePoints] = useState(timelineData.length);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDashboardData = async () => {
+      try {
+        const data = await fetchConsultorDashboard();
+        if (!isMounted) {
+          return;
+        }
+
+        if (Array.isArray(data.timelineValues) && data.timelineValues.length > 0) {
+          setTimelineValues(data.timelineValues);
+        }
+
+        if (Array.isArray(data.stats) && data.stats.length > 0) {
+          const mappedStats = data.stats.map((item) => ({
+            ...item,
+            icon: statIconMap[item.iconKey] || Award,
+          }));
+          setDashboardStats(mappedStats);
+        }
+
+        if (Array.isArray(data.inProgressItems) && data.inProgressItems.length > 0) {
+          const mappedInProgress = data.inProgressItems.map((item) => ({
+            ...item,
+            icon: progressIconMap[item.iconKey] || AlertTriangle,
+          }));
+          setInProgressItems(mappedInProgress);
+        }
+
+        if (Array.isArray(data.suggestionItems) && data.suggestionItems.length > 0) {
+          setSuggestionItems(data.suggestionItems);
+        }
+
+        setDashboardStatusMessage('');
+      } catch {
+        if (isMounted) {
+          setDashboardStatusMessage('');
+        }
+      }
+    };
+
+    loadDashboardData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!timelineChartRef.current) {
@@ -100,6 +168,12 @@ function DashboardC() {
         <div className="dashboard-consultor-header">
           <h1>{t('dashboard_consultor_title')}</h1>
         </div>
+
+        {dashboardStatusMessage && (
+          <div className="alert alert-warning py-2" role="status">
+            {dashboardStatusMessage}
+          </div>
+        )}
 
         <div className="dashboard-consultor-grid">
           <section className="dashboard-card dashboard-timeline-card">
@@ -145,18 +219,22 @@ function DashboardC() {
           </section>
 
           <div className="dashboard-stats-grid">
-            {dashboardStats.map(({ titleKey, value, noteKey, icon: Icon, tone }) => (
-              <section key={titleKey} className={`dashboard-card dashboard-stat-card tone-${tone}`}>
-                <div className="dashboard-card-title">{t(titleKey)}</div>
+            {dashboardStats.map((item) => {
+              const StatIcon = item.icon;
+
+              return (
+                <section key={item.titleKey} className={`dashboard-card dashboard-stat-card tone-${item.tone}`}>
+                  <div className="dashboard-card-title">{t(item.titleKey)}</div>
                 <div className="dashboard-stat-body">
                   <span className="dashboard-stat-icon">
-                    <Icon size={36} strokeWidth={2} />
+                      <StatIcon size={36} strokeWidth={2} />
                   </span>
-                  <strong>{value}</strong>
+                    <strong>{item.value}</strong>
                 </div>
-                <div className="dashboard-stat-note">{t(noteKey)}</div>
-              </section>
-            ))}
+                  <div className="dashboard-stat-note">{t(item.noteKey)}</div>
+                </section>
+              );
+            })}
           </div>
 
           <section className="dashboard-card dashboard-panel-card dashboard-progress-card">
@@ -168,20 +246,24 @@ function DashboardC() {
             </div>
 
             <div className="dashboard-list">
-              {inProgressItems.map(({ title, subtitleKey, accent, icon: Icon }) => (
-                <article key={`${title}-${subtitleKey}`} className="dashboard-list-item">
-                  <div className={`dashboard-list-badge accent-${accent}`}>
+              {inProgressItems.map((item) => {
+                const ProgressIcon = item.icon;
+
+                return (
+                  <article key={`${item.title}-${item.subtitleKey}`} className="dashboard-list-item">
+                    <div className={`dashboard-list-badge accent-${item.accent}`}>
                     <Sparkles size={18} strokeWidth={2} />
                   </div>
                   <div className="dashboard-list-content">
-                    <strong>{title}</strong>
-                    <span>{t(subtitleKey)}</span>
+                      <strong>{item.title}</strong>
+                      <span>{t(item.subtitleKey)}</span>
                   </div>
-                  <div className={`dashboard-list-action accent-${accent}`}>
-                    <Icon size={18} strokeWidth={2} />
+                    <div className={`dashboard-list-action accent-${item.accent}`}>
+                      <ProgressIcon size={18} strokeWidth={2} />
                   </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           </section>
 

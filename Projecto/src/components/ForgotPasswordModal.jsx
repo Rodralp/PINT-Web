@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { recoverPassword } from '../services/authService';
 import '../css/ForgotPassword.css';
 import PuzzleCaptcha from './PuzzleCaptcha';
 
@@ -9,6 +10,7 @@ function ForgotPasswordModal({ isOpen, onClose }) {
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [recoveredPassword, setRecoveredPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const validateEmail = () => {
     if (!email.trim()) {
@@ -23,32 +25,23 @@ function ForgotPasswordModal({ isOpen, onClose }) {
     return true;
   };
 
-  const handleEmailSubmit = (e) => {
+  const handleEmailSubmit = async (e) => {
     e.preventDefault();
     if (validateEmail()) {
-      // Verificar se o email existe no localStorage
-      const contasCriadas = JSON.parse(localStorage.getItem('contasCriadas')) || [];
-      const contaEncontrada = contasCriadas.find(conta => conta.email === email);
-      
-      if (contaEncontrada) {
+      try {
+        setIsLoading(true);
+        const data = await recoverPassword({ email });
+        setRecoveredPassword(data.password);
         setStep('captcha');
-      } else {
+      } catch {
         setEmailError(t('forgot_email_not_found'));
+      } finally {
+        setIsLoading(false);
       }
     }
   };
 
   const handleCaptchaComplete = () => {
-    // Buscar a senha da conta guardada no localStorage baseada no email
-    const contasCriadas = JSON.parse(localStorage.getItem('contasCriadas')) || [];
-    const contaEncontrada = contasCriadas.find(conta => conta.email === email);
-    
-    if (contaEncontrada) {
-      setRecoveredPassword(contaEncontrada.senha);
-    } else {
-      // Fallback se a conta não for encontrada
-      setRecoveredPassword(t('forgot_account_not_found_fallback'));
-    }
     setStep('success');
   };
 
@@ -86,7 +79,7 @@ function ForgotPasswordModal({ isOpen, onClose }) {
                 {emailError && <span className="forgot-error">{emailError}</span>}
               </div>
               <button type="submit" className="forgot-btn-continue">
-                {t('forgot_verify_email')}
+                {isLoading ? 'A validar...' : t('forgot_verify_email')}
               </button>
             </form>
           </div>

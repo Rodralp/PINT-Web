@@ -3,6 +3,7 @@ import { ArrowLeft, CheckCircle2, Clock3, Filter, SearchCheck, Search, SlidersHo
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
+import { fetchMyBadges } from '../../services/consultorService';
 import '../../css/Consultor/CatalogoBadges_C.css';
 
 const badgeLevels = [
@@ -60,6 +61,23 @@ const badgeStates = [
 
 const ITEMS_PER_PAGE = 10;
 
+const buildDefaultBadgeItems = () =>
+  badgeAreas.flatMap((area, areaIndex) =>
+    badgeLevels.map((level, levelIndex) => {
+      const state = badgeStates[(areaIndex + levelIndex) % badgeStates.length];
+
+      return {
+        id: `${area}-${level.levelKey}`,
+        area,
+        stateId: state.id,
+        levelKey: level.levelKey,
+        points: level.points,
+        badgeImage: level.badgeImage,
+        date: '12 Jan 2026',
+      };
+    }),
+  );
+
 function MeusBadges() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -70,27 +88,39 @@ function MeusBadges() {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [sortBy, setSortBy] = useState(defaultSort);
+  const [badgeItems, setBadgeItems] = useState(buildDefaultBadgeItems);
+  const [statusMessage, setStatusMessage] = useState('');
   const filterDropdownRef = useRef(null);
   const sortDropdownRef = useRef(null);
 
-  const badgeItems = useMemo(
-    () => badgeAreas.flatMap((area, areaIndex) => badgeLevels.map((level, levelIndex) => {
-      const state = badgeStates[(areaIndex + levelIndex) % badgeStates.length];
-
-      const translatedLevel = t(level.levelKey);
-
-      return {
-        id: `${area}-${level.levelKey}`,
-        area,
-        state,
-        level: translatedLevel,
-        points: level.points,
-        badgeImage: level.badgeImage,
-        date: '12 Jan 2026',
-      };
-    })),
-    [t]
+  const badgeStateMap = useMemo(
+    () => badgeStates.reduce((acc, item) => ({ ...acc, [item.id]: item }), {}),
+    [],
   );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadMyBadges = async () => {
+      try {
+        const data = await fetchMyBadges();
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setBadgeItems(data);
+          setStatusMessage('');
+        }
+      } catch {
+        if (isMounted) {
+          setStatusMessage('');
+        }
+      }
+    };
+
+    loadMyBadges();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filters = useMemo(() => [
     { id: 'todos', label: 'Todos' },
@@ -127,16 +157,18 @@ function MeusBadges() {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
     return badgeItems.filter((item) => {
-      const filterMatch = activeFilter === 'todos' || item.state.id === activeFilter;
+      const translatedLevel = t(item.levelKey);
+      const stateLabel = badgeStateMap[item.stateId]?.label || '';
+      const filterMatch = activeFilter === 'todos' || item.stateId === activeFilter;
       const searchMatch =
         normalizedSearch.length === 0
         || item.area.toLowerCase().includes(normalizedSearch)
-        || item.level.toLowerCase().includes(normalizedSearch)
-        || item.state.label.toLowerCase().includes(normalizedSearch);
+        || translatedLevel.toLowerCase().includes(normalizedSearch)
+        || stateLabel.toLowerCase().includes(normalizedSearch);
 
       return filterMatch && searchMatch;
     });
-  }, [badgeItems, activeFilter, searchTerm]);
+  }, [badgeItems, activeFilter, searchTerm, badgeStateMap, t]);
 
   const totalPages = Math.max(1, Math.ceil(filteredBadges.length / ITEMS_PER_PAGE));
 
@@ -237,6 +269,12 @@ function MeusBadges() {
         </header>
 
         <section className="catalog-shell">
+          {statusMessage && (
+            <div className="alert alert-warning py-2" role="status">
+              {statusMessage}
+            </div>
+          )}
+
           <div className="catalog-controls">
             <div className="catalog-search-wrap">
               <Search size={20} />
@@ -304,23 +342,24 @@ function MeusBadges() {
 
           <div className="catalog-grid">
             {pagedBadges.map((item) => {
-              const { Icon } = item.state;
+              const currentState = badgeStateMap[item.stateId] || badgeStateMap.aprovado;
+              const { Icon } = currentState;
 
               return (
                 <article
                   key={item.id}
                   className="catalog-card"
                   style={{
-                    background: item.state.tint,
-                    borderColor: item.state.border,
+                    background: currentState.tint,
+                    borderColor: currentState.border,
                   }}
                 >
                   <div className="catalog-badge-frame">
-                    <img className="catalog-badge-image" src={item.badgeImage} alt={item.level} />
+                    <img className="catalog-badge-image" src={item.badgeImage} alt={t(item.levelKey)} />
                   </div>
 
                   <div className="catalog-card-title">{item.area}</div>
-                  <div className="catalog-card-level">{item.level}</div>
+                  <div className="catalog-card-level">{t(item.levelKey)}</div>
 
                   <div className="catalog-card-meta">
                     <div className="catalog-meta-row">
@@ -335,17 +374,17 @@ function MeusBadges() {
 
                   <button
                     type="button"
-                    aria-label={item.state.label}
-                    title={item.state.label}
+                    aria-label={currentState.label}
+                    title={currentState.label}
                     style={{
                       marginTop: '10px',
                       marginLeft: 'auto',
                       width: '34px',
                       height: '34px',
                       borderRadius: '8px',
-                      border: `2px solid ${item.state.buttonBorder}`,
-                      background: item.state.buttonBg,
-                      color: item.state.buttonColor,
+                      border: `2px solid ${currentState.buttonBorder}`,
+                      background: currentState.buttonBg,
+                      color: currentState.buttonColor,
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',

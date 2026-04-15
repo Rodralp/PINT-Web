@@ -5,15 +5,16 @@ import {
   Search,
   Filter,
   SlidersHorizontal,
-  Medal,
+  Trophy,
   Award,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
+import { fetchRankingConsultores } from '../../services/consultorService';
 import '../../css/Consultor/Ranking_C.css';
 
-const consultants = [
+const defaultConsultants = [
   { id: 1, name: 'Joao Gomes', email: 'joaogomes1234@softinsa.pt', points: 2450, badges: 12, serviceLine: 'Cloud', avatar: 'https://i.pravatar.cc/120?u=joao.gomes' },
   { id: 2, name: 'Maria Santos', email: 'maria.santos@softinsa.pt', points: 2200, badges: 10, serviceLine: 'Data & AI', avatar: 'https://i.pravatar.cc/120?u=maria.santos' },
   { id: 3, name: 'Pedro Mendes', email: 'pedro.mendes@softinsa.pt', points: 1950, badges: 9, serviceLine: 'Cloud', avatar: 'https://i.pravatar.cc/120?u=pedro.mendes' },
@@ -32,17 +33,43 @@ const ITEMS_PER_PAGE = 12;
 
 function RankingConsultores() {
   const navigate = useNavigate();
+  const [consultants, setConsultants] = useState(defaultConsultants);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeServiceLine, setActiveServiceLine] = useState('all');
   const [sortBy, setSortBy] = useState('points_desc');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [page, setPage] = useState(1);
+  const defaultSort = 'points_desc';
 
   const filterDropdownRef = useRef(null);
   const sortDropdownRef = useRef(null);
 
-  const serviceLineOptions = useMemo(() => ['all', ...new Set(consultants.map((item) => item.serviceLine))], []);
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRanking = async () => {
+      try {
+        const data = await fetchRankingConsultores();
+        if (isMounted && Array.isArray(data)) {
+          setConsultants(data);
+        }
+      } catch {
+        // Mantem o ranking local quando a API nao estiver disponivel.
+      }
+    };
+
+    loadRanking();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const serviceLineOptions = useMemo(
+    () => ['all', ...new Set(consultants.map((item) => item.serviceLine))],
+    [consultants],
+  );
 
   const sortOptions = useMemo(() => [
     { id: 'points_desc', label: 'Pontos (Maior para Menor)' },
@@ -64,7 +91,7 @@ function RankingConsultores() {
 
       return serviceLineMatch && searchMatch;
     });
-  }, [searchTerm, activeServiceLine]);
+  }, [searchTerm, activeServiceLine, consultants]);
 
   const sortedConsultants = useMemo(() => {
     return [...filteredConsultants].sort((a, b) => {
@@ -97,6 +124,8 @@ function RankingConsultores() {
 
   const activeFilterLabel = activeServiceLine === 'all' ? 'Todas as Service Lines' : activeServiceLine;
   const activeSortLabel = sortOptions.find((item) => item.id === sortBy)?.label || sortOptions[0].label;
+  const hasActiveFilter = activeServiceLine !== 'all';
+  const hasActiveSort = sortBy !== defaultSort;
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -161,38 +190,38 @@ function RankingConsultores() {
         </header>
 
         <section className="ranking-shell">
-          <div className="ranking-controls">
-            <div className="ranking-search-wrap">
+          <div className="catalog-controls">
+            <div className="catalog-search-wrap">
               <Search size={20} />
               <input
                 type="text"
-                placeholder="Pesquisar badges"
-                aria-label="Pesquisar badges"
+                placeholder="Pesquisar consultores"
+                aria-label="Pesquisar consultores"
                 value={searchTerm}
                 onChange={onSearchChange}
               />
             </div>
 
-            <div className="ranking-dropdown" ref={filterDropdownRef}>
+            <div className="catalog-dropdown" ref={filterDropdownRef}>
               <button
                 type="button"
-                className={`ranking-action-btn ${showFilterDropdown || activeServiceLine !== 'all' ? 'active' : ''}`}
+                className={`catalog-action-btn ${showFilterDropdown || hasActiveFilter ? 'active' : ''}`}
                 onClick={() => {
                   setShowFilterDropdown((current) => !current);
                   setShowSortDropdown(false);
                 }}
               >
                 <Filter size={20} />
-                <span>Filtrar pesquisa</span>
+                <span>{`Filtrar pesquisa: ${activeFilterLabel}`}</span>
               </button>
 
               {showFilterDropdown && (
-                <div className="ranking-dropdown-menu" role="menu" aria-label="Filtrar por service line">
+                <div className="catalog-dropdown-menu" role="menu" aria-label="Filtrar por service line">
                   {serviceLineOptions.map((option) => (
                     <button
                       key={option}
                       type="button"
-                      className={`ranking-dropdown-item ${activeServiceLine === option ? 'active' : ''}`}
+                      className={`catalog-dropdown-item ${activeServiceLine === option ? 'active' : ''}`}
                       onClick={() => onFilterSelect(option)}
                     >
                       {option === 'all' ? 'Todas as Service Lines' : option}
@@ -202,26 +231,26 @@ function RankingConsultores() {
               )}
             </div>
 
-            <div className="ranking-dropdown" ref={sortDropdownRef}>
+            <div className="catalog-dropdown" ref={sortDropdownRef}>
               <button
                 type="button"
-                className={`ranking-action-btn ${showSortDropdown || sortBy !== 'points_desc' ? 'active' : ''}`}
+                className={`catalog-action-btn ${showSortDropdown || hasActiveSort ? 'active' : ''}`}
                 onClick={() => {
                   setShowSortDropdown((current) => !current);
                   setShowFilterDropdown(false);
                 }}
               >
                 <SlidersHorizontal size={20} />
-                <span>Ordenar</span>
+                <span>{`Ordenar: ${activeSortLabel}`}</span>
               </button>
 
               {showSortDropdown && (
-                <div className="ranking-dropdown-menu" role="menu" aria-label="Ordenar ranking">
+                <div className="catalog-dropdown-menu" role="menu" aria-label="Ordenar ranking">
                   {sortOptions.map((option) => (
                     <button
                       key={option.id}
                       type="button"
-                      className={`ranking-dropdown-item ${sortBy === option.id ? 'active' : ''}`}
+                      className={`catalog-dropdown-item ${sortBy === option.id ? 'active' : ''}`}
                       onClick={() => onSortSelect(option.id)}
                     >
                       {option.label}
@@ -232,7 +261,9 @@ function RankingConsultores() {
             </div>
           </div>
 
-          <div className="ranking-current-state">{activeFilterLabel} · {activeSortLabel}</div>
+          <div className="ranking-current-state">
+            {sortedConsultants.length} consultor(es) · {activeFilterLabel} · {activeSortLabel}
+          </div>
 
           <div className="ranking-grid">
             {pagedConsultants.map((consultant) => {
@@ -241,7 +272,7 @@ function RankingConsultores() {
               return (
                 <article key={consultant.id} className="ranking-card">
                   <div className={`ranking-badge ${isTopThree ? `top-${consultant.rank}` : ''}`}>
-                    {isTopThree ? <Medal size={18} strokeWidth={2} /> : <span>#{consultant.rank}</span>}
+                    {isTopThree ? <Trophy size={20} strokeWidth={2} /> : <span>#{consultant.rank}</span>}
                   </div>
 
                   <img className="ranking-avatar" src={consultant.avatar} alt={consultant.name} />

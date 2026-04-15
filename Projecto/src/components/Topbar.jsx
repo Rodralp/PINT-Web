@@ -37,8 +37,9 @@ function Topbar({ onToggleSidebar }) {
   }, [dropdownRef]);
 
   const handleLogout = () => {
-    // Remover dados de login de sessionStorage ou localStorage
+    // Remover dados de login de sessionStorage e localStorage
     sessionStorage.removeItem('loginData');
+    localStorage.removeItem('loginData');
 
     navigate('/');
   };

@@ -1,7 +1,7 @@
 .ranking-page {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
 
 .ranking-header {
@@ -12,15 +12,15 @@
 
 .ranking-header h1 {
   margin: 0;
-  font-size: 36px;
+  font-size: 28px;
   font-weight: 700;
   color: #2f3747;
-  line-height: 1.1;
+  line-height: 1.15;
 }
 
 .ranking-back-btn {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: none;
   background: transparent;
   color: #344054;
@@ -37,18 +37,18 @@
 .ranking-shell {
   background: #ffffff;
   border: 1px solid rgba(148, 163, 184, 0.12);
-  border-radius: 10px;
+  border-radius: 16px;
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02), 0 10px 30px rgba(15, 23, 42, 0.04);
-  padding: 14px 20px 16px;
+  padding: 18px;
 }
 
-.ranking-controls {
+.ranking-shell .catalog-controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 182px 182px;
   gap: 12px;
 }
 
-.ranking-search-wrap {
+.ranking-shell .catalog-search-wrap {
   border: 2px solid #a3b1c5;
   border-radius: 8px;
   height: 40px;
@@ -60,7 +60,7 @@
   background: transparent;
 }
 
-.ranking-search-wrap input {
+.ranking-shell .catalog-search-wrap input {
   width: 100%;
   border: none;
   outline: none;
@@ -70,11 +70,11 @@
   background: transparent;
 }
 
-.ranking-search-wrap input::placeholder {
+.ranking-shell .catalog-search-wrap input::placeholder {
   color: #b2bac8;
 }
 
-.ranking-action-btn {
+.ranking-shell .catalog-action-btn {
   height: 40px;
   border: 2px solid #a3b1c5;
   border-radius: 8px;
@@ -92,17 +92,17 @@
   width: 100%;
 }
 
-.ranking-action-btn.active {
+.ranking-shell .catalog-action-btn.active {
   border-color: #1b84f4;
   color: #1b84f4;
   background: #eff6ff;
 }
 
-.ranking-dropdown {
+.ranking-shell .catalog-dropdown {
   position: relative;
 }
 
-.ranking-dropdown-menu {
+.ranking-shell .catalog-dropdown-menu {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
@@ -119,7 +119,7 @@
   gap: 4px;
 }
 
-.ranking-dropdown-item {
+.ranking-shell .catalog-dropdown-item {
   border: none;
   background: transparent;
   color: #2f3747;
@@ -131,76 +131,77 @@
   width: 100%;
 }
 
-.ranking-dropdown-item:hover {
+.ranking-shell .catalog-dropdown-item:hover {
   background: #f3f6fa;
 }
 
-.ranking-dropdown-item.active {
+.ranking-shell .catalog-dropdown-item.active {
   background: #e8f1fd;
   color: #1b84f4;
   font-weight: 700;
 }
 
 .ranking-current-state {
-  margin-top: 12px;
+  margin-top: 10px;
   color: #788395;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .ranking-grid {
-  margin-top: 12px;
+  margin-top: 14px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px 14px;
+  gap: 12px;
 }
 
 .ranking-card {
   border: 1px solid #e5eaf2;
-  border-radius: 8px;
+  border-radius: 12px;
   background: #ffffff;
-  min-height: 104px;
+  min-height: 118px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px;
+  gap: 12px;
+  padding: 14px;
 }
 
 .ranking-badge {
-  width: 38px;
-  height: 38px;
+  width: 48px;
+  height: 48px;
+  padding: 10px;
   border-radius: 999px;
   background: #eef2f7;
   color: #5f6b7d;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 14px;
   font-weight: 700;
   flex: 0 0 auto;
 }
 
 .ranking-badge.top-1 {
   background: #fef3c7;
-  color: #b45309;
+  color: #a16207;
 }
 
 .ranking-badge.top-2 {
-  background: #e5e7eb;
-  color: #6b7280;
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 .ranking-badge.top-3 {
-  background: #ffedd5;
-  color: #c2410c;
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .ranking-badge span {
-  font-size: 22px;
+  font-size: 14px;
 }
 
 .ranking-avatar {
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   object-fit: cover;
   flex: 0 0 auto;
@@ -214,36 +215,36 @@
 }
 
 .ranking-content strong {
-  font-size: 22px;
+  font-size: 14px;
   color: #1f2937;
-  line-height: 1.1;
+  line-height: 1.2;
 }
 
 .ranking-content span {
   color: #8a93a5;
-  font-size: 14px;
+  font-size: 12px;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
 }
 
 .ranking-metrics {
-  margin-top: 8px;
+  margin-top: 6px;
   display: flex;
-  gap: 22px;
+  gap: 16px;
 }
 
 .ranking-metrics small {
   display: block;
   color: #8a93a5;
-  font-size: 12px;
+  font-size: 10px;
   margin-bottom: 2px;
 }
 
 .ranking-metrics p {
   margin: 0;
   color: #1b84f4;
-  font-size: 22px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1;
   display: inline-flex;
@@ -263,7 +264,7 @@
 }
 
 .ranking-pagination {
-  margin-top: 18px;
+  margin-top: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -305,16 +306,16 @@
   }
 
   .ranking-content strong {
-    font-size: 18px;
+    font-size: 14px;
   }
 
   .ranking-metrics p {
-    font-size: 18px;
+    font-size: 14px;
   }
 }
 
 @media (max-width: 920px) {
-  .ranking-controls {
+  .ranking-shell .catalog-controls {
     grid-template-columns: 1fr;
   }
 
@@ -325,7 +326,7 @@
 
 @media (max-width: 767.98px) {
   .ranking-page {
-    gap: 8px;
+    gap: 10px;
   }
 
   .ranking-header h1 {
@@ -333,8 +334,13 @@
   }
 
   .ranking-shell {
-    padding: 10px;
+    padding: 12px;
     border-radius: 16px;
+  }
+
+  .ranking-shell .catalog-search-wrap,
+  .ranking-shell .catalog-action-btn {
+    height: 38px;
   }
 
   .ranking-card {
@@ -348,12 +354,13 @@
   }
 
   .ranking-badge {
-    width: 34px;
-    height: 34px;
+    width: 42px;
+    height: 42px;
+    padding: 8px;
   }
 
   .ranking-content strong {
-    font-size: 15px;
+    font-size: 14px;
   }
 
   .ranking-content span {
@@ -365,6 +372,6 @@
   }
 
   .ranking-metrics p {
-    font-size: 15px;
+    font-size: 13px;
   }
 }

@@ -19,10 +19,11 @@ import {
   MapPin,
   Calendar
 } from 'lucide-react';
+import { fetchProfileData } from '../services/consultorService';
 import '../css/Consultor/Dashboard_C.css';
 import '../css/profile.css';
 
-const timelineValues = [3, 2, 5, 4, 6, 3, 7, 5, 8, 4, 6, 9];
+const defaultTimelineValues = [3, 2, 5, 4, 6, 3, 7, 5, 8, 4, 6, 9];
 
 const buildTimelineData = (values, locale) => {
   const today = new Date();
@@ -45,20 +46,27 @@ const calculateVisibleTimelinePoints = (containerWidth, totalPoints) => {
   return Math.max(4, Math.min(totalPoints, maxPointsByWidth));
 };
 
-const profileStats = [
+const statIconMap = {
+  award: Award,
+  flame: Flame,
+  clock: Clock3,
+  crown: Crown,
+};
+
+const defaultProfileStats = [
   { titleKey: 'dashboard_stat_badges_title', value: '12', noteKey: 'dashboard_stat_badges_note', icon: Award, tone: 'gold' },
   { titleKey: 'dashboard_stat_streak_title', value: '4', noteKey: 'dashboard_stat_streak_note', icon: Flame, tone: 'fire' },
   { titleKey: 'dashboard_stat_requests_title', value: '5', noteKey: 'dashboard_stat_requests_note', icon: Clock3, tone: 'blue' },
   { titleKey: 'dashboard_stat_ranking_title', value: '#15', noteKey: 'dashboard_stat_ranking_note', icon: Crown, tone: 'rank' },
 ];
 
-const skillsItems = [
+const defaultSkillsItems = [
   { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_specialist', accent: 'warning' },
   { title: 'JavaScript', subtitleKey: 'badge_level_senior', accent: 'yellow' },
   { title: 'React', subtitleKey: 'badge_level_intermediate', accent: 'info' },
 ];
 
-const certificationsItems = [
+const defaultCertificationsItems = [
   { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_knowledge_lead', accent: 'success' },
   { title: 'Cloud Architecture', subtitleKey: 'badge_level_specialist', accent: 'violet' },
   { title: 'C++ Mastery', subtitleKey: 'badge_level_senior', accent: 'amber' },
@@ -68,13 +76,95 @@ function Profile() {
   const { t, i18n } = useTranslation();
   const timelineChartRef = useRef(null);
   const locale = i18n.language?.startsWith('es') ? 'es-ES' : i18n.language?.startsWith('en') ? 'en-GB' : 'pt-PT';
-  const timelineData = useMemo(() => buildTimelineData(timelineValues, locale), [locale]);
+  const [timelineValues, setTimelineValues] = useState(defaultTimelineValues);
+  const [profileStats, setProfileStats] = useState(defaultProfileStats);
+  const [skillsItems, setSkillsItems] = useState(defaultSkillsItems);
+  const [certificationsItems, setCertificationsItems] = useState(defaultCertificationsItems);
+  const [profileLocation, setProfileLocation] = useState('Portugal');
+  const [profileJoined, setProfileJoined] = useState('2023');
+  const [statusMessage, setStatusMessage] = useState('');
+  const timelineData = useMemo(() => buildTimelineData(timelineValues, locale), [timelineValues, locale]);
   const [visibleTimelinePoints, setVisibleTimelinePoints] = useState(timelineData.length);
 
   const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
   const loginData = storedLoginData ? JSON.parse(storedLoginData) : null;
   const userName = loginData?.nome || t('app_user_default');
   const userEmail = loginData?.email || 'user@example.com';
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadProfile = async () => {
+      try {
+        const data = await fetchProfileData();
+        if (!isMounted) {
+          return;
+        }
+
+        if (Array.isArray(data.timelineValues) && data.timelineValues.length > 0) {
+          setTimelineValues(data.timelineValues);
+        }
+
+        if (Array.isArray(data.stats) && data.stats.length > 0) {
+          const mappedStats = data.stats.map((item) => ({
+            ...item,
+            icon: statIconMap[item.iconKey] || Award,
+          }));
+          setProfileStats(mappedStats);
+        }
+
+        if (Array.isArray(data.skillsItems) && data.skillsItems.length > 0) {
+          setSkillsItems(data.skillsItems);
+        }
+
+        if (Array.isArray(data.certificationsItems) && data.certificationsItems.length > 0) {
+          setCertificationsItems(data.certificationsItems);
+        }
+
+        if (typeof data.location === 'string' && data.location) {
+          setProfileLocation(data.location);
+        }
+
+        if (typeof data.joined === 'string' && data.joined) {
+          setProfileJoined(data.joined);
+        }
+
+        setStatusMessage('');
+      } catch {
+        if (isMounted) {
+          setStatusMessage('');
+        }
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!timelineChartRef.current) {
+      return undefined;
+    }
+
+    const updateVisiblePoints = (width) => {
+      setVisibleTimelinePoints(calculateVisibleTimelinePoints(width, timelineData.length));
+    };
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        updateVisiblePoints(entry.contentRect.width);
+      }
+    });
+
+    observer.observe(timelineChartRef.current);
+    updateVisiblePoints(timelineChartRef.current.clientWidth);
+
+    return () => observer.disconnect();
+  }, [timelineData]);
 
   const visibleTimelineData = timelineData.slice(-visibleTimelinePoints);
   const maxVisibleValue = Math.max(...visibleTimelineData.map(({ value }) => value));
@@ -89,6 +179,12 @@ function Profile() {
           <h1>{t('profile_title')}</h1>
         </div>
 
+        {statusMessage && (
+          <div className="alert alert-warning py-2" role="status">
+            {statusMessage}
+          </div>
+        )}
+
         <section className="dashboard-card dashboard-profile-header">
           <div className="profile-header-content">
             <div className="profile-avatar">
@@ -99,8 +195,8 @@ function Profile() {
               <p className="profile-role">{t('profile_type')}</p>
               <div className="profile-meta">
                 <span><Mail size={16} /> {userEmail}</span>
-                <span><MapPin size={16} /> Portugal</span>
-                <span><Calendar size={16} /> Joined 2023</span>
+                <span><MapPin size={16} /> {profileLocation}</span>
+                <span><Calendar size={16} /> Joined {profileJoined}</span>
               </div>
             </div>
             <button className="profile-edit-btn">
@@ -111,18 +207,22 @@ function Profile() {
 
         <div className="dashboard-consultor-grid">
           <div className="dashboard-stats-grid">
-            {profileStats.map(({ titleKey, value, noteKey, icon: Icon, tone }) => (
-              <section key={titleKey} className={`dashboard-card dashboard-stat-card tone-${tone}`}>
-                <div className="dashboard-card-title">{t(titleKey)}</div>
-                <div className="dashboard-stat-body">
-                  <span className="dashboard-stat-icon">
-                    <Icon size={36} strokeWidth={2} />
-                  </span>
-                  <strong>{value}</strong>
-                </div>
-                <div className="dashboard-stat-note">{t(noteKey)}</div>
-              </section>
-            ))}
+            {profileStats.map((item) => {
+              const StatIcon = item.icon;
+
+              return (
+                <section key={item.titleKey} className={`dashboard-card dashboard-stat-card tone-${item.tone}`}>
+                  <div className="dashboard-card-title">{t(item.titleKey)}</div>
+                  <div className="dashboard-stat-body">
+                    <span className="dashboard-stat-icon">
+                      <StatIcon size={36} strokeWidth={2} />
+                    </span>
+                    <strong>{item.value}</strong>
+                  </div>
+                  <div className="dashboard-stat-note">{t(item.noteKey)}</div>
+                </section>
+              );
+            })}
           </div>
 
           <section className="dashboard-card dashboard-timeline-card">

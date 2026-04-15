@@ -5,7 +5,17 @@ import Navbar from './components/Navbar';
 import TermsModal from './components/TermsModal';
 import PrivacyModal from './components/PrivacyModal';
 import ForgotPasswordModal from './components/ForgotPasswordModal';
+import { loginAccount } from './services/authService';
 import './css/entrar.css';
+
+const dashboardPathByRole = {
+  consultor: '/consultor/dashboard',
+  'talent-manager': '/talent-manager/dashboard',
+  'service-line-leader': '/service-line-leader/dashboard',
+  'admin-gestor': '/admin-gestor/dashboard',
+};
+
+const resolveDashboardPath = (role) => dashboardPathByRole[role] || '/consultor/dashboard';
 
 function Entrar() {
   const navigate = useNavigate();
@@ -25,6 +35,7 @@ function Entrar() {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [redirectPath, setRedirectPath] = useState('/consultor/dashboard');
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -63,57 +74,48 @@ function Entrar() {
     return Object.keys(novosErros).length === 0;
   };
 
-  const valodarExistenciaConta = () => {
-    // Comparar dados do formulário com localStorage ContasCriadas enquanto não tiver base de dados
-    const contasCriadas = JSON.parse(localStorage.getItem('contasCriadas')) || [];
-    const contaEncontrada = contasCriadas.find(conta => conta.email === formData.email && conta.senha === formData.senha);
-
-    if (contaEncontrada) {
-      return contaEncontrada;
-    }
-
-    setErros(prev => ({
-      ...prev,
-      email: t('err_invalid_credentials'),
-      senha: t('err_invalid_credentials')
-    }));
-    return null;
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!validarFormulario()) {
       return;
     }
 
-    const contaEncontrada = valodarExistenciaConta();
+    try {
+      const account = await loginAccount({
+        email: formData.email,
+        senha: formData.senha,
+      });
 
-    if (!contaEncontrada) {
-      return;
-    }
+      const dadosLogin = {
+        ...formData,
+        nome: account.nome,
+        email: account.email,
+        role: account.role,
+      };
 
-    // TODO: Quando tiver base de dados, enviar os dados para o backend
-    console.log('Dados do login:', formData);
-    setShowSuccess(true);
+      if (formData.guardarDados) {
+        localStorage.setItem('loginData', JSON.stringify(dadosLogin));
+        sessionStorage.removeItem('loginData');
+      } else {
+        localStorage.removeItem('loginData');
+        sessionStorage.setItem('loginData', JSON.stringify(dadosLogin));
+      }
 
-    // Guardar dados de login no localStorage ou sessionStorage se a checkbox estiver marcada
-    const dadosLogin = {
-      ...formData,
-      nome: contaEncontrada.nome
-    };
-
-    if (formData.guardarDados) {
-      localStorage.setItem('loginData', JSON.stringify(dadosLogin));
-    } else {
-      localStorage.removeItem('loginData');
-      sessionStorage.setItem('loginData', JSON.stringify(dadosLogin));
+      setRedirectPath(resolveDashboardPath(account.role));
+      setShowSuccess(true);
+    } catch {
+      setErros(prev => ({
+        ...prev,
+        email: t('err_invalid_credentials'),
+        senha: t('err_invalid_credentials')
+      }));
     }
   };
 
   const handleCloseSuccess = () => {
     setShowSuccess(false);
-    navigate('/consultor/dashboard');
+    navigate(redirectPath);
   };
 
   return (

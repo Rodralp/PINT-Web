@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -11,6 +11,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
+import { fetchMyRequests } from '../../services/consultorService';
 import '../../css/Consultor/MeusPedidos.css';
 
 const statusConfig = {
@@ -39,7 +40,7 @@ const statusConfig = {
   },
 };
 
-const allRequests = [
+const defaultRequests = [
   { id: 1, badge: 'UX/UI Design', level: 'Especialista', date: '05/12/2025', status: 'pendente' },
   { id: 2, badge: 'Data Analytics', level: 'Intermédio', date: '04/12/2025', status: 'rejeitado' },
   { id: 3, badge: 'Cloud Architecture', level: 'Sénior', date: '03/12/2025', status: 'aprovado' },
@@ -62,8 +63,30 @@ const ITEMS_PER_PAGE = 10;
 
 function MeusPedidos() {
   const navigate = useNavigate();
-  const [activeFilter, setActiveFilter] = useState('todos');
+  const [allRequests, setAllRequests] = useState(defaultRequests);
+  const [activeFilters, setActiveFilters] = useState(filters.map((filter) => filter.id));
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadMyRequests = async () => {
+      try {
+        const data = await fetchMyRequests();
+        if (isMounted && Array.isArray(data)) {
+          setAllRequests(data);
+        }
+      } catch {
+        // Mantem os dados locais quando a API nao estiver disponivel.
+      }
+    };
+
+    loadMyRequests();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const counts = useMemo(() => {
     const submitted = allRequests.length;
@@ -72,15 +95,15 @@ function MeusPedidos() {
     const approved = allRequests.filter((item) => item.status === 'aprovado').length;
 
     return { submitted, inReview, rejected, approved };
-  }, []);
+  }, [allRequests]);
 
   const filteredRequests = useMemo(() => {
-    if (activeFilter === 'todos') {
-      return allRequests;
+    if (activeFilters.length === 0) {
+      return [];
     }
 
-    return allRequests.filter((item) => item.status === activeFilter);
-  }, [activeFilter]);
+    return allRequests.filter((item) => activeFilters.includes(item.status));
+  }, [activeFilters, allRequests]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRequests.length / ITEMS_PER_PAGE));
 
@@ -91,7 +114,14 @@ function MeusPedidos() {
   }, [filteredRequests, page]);
 
   const onFilterSelect = (filterId) => {
-    setActiveFilter(filterId);
+    setActiveFilters((current) => {
+      if (current.includes(filterId)) {
+        return current.filter((item) => item !== filterId);
+      }
+
+      return [...current, filterId];
+    });
+
     setPage(1);
   };
 
@@ -173,19 +203,13 @@ function MeusPedidos() {
                 <button
                   key={filter.id}
                   type="button"
-                  className={`orders-filter-chip ${activeFilter === filter.id ? 'active' : ''} ${filter.id}`}
+                  className={`orders-filter-chip ${activeFilters.includes(filter.id) ? 'is-active' : 'is-inactive'} ${filter.id}`}
                   onClick={() => onFilterSelect(filter.id)}
+                  aria-pressed={activeFilters.includes(filter.id)}
                 >
                   {filter.label}
                 </button>
               ))}
-              <button
-                type="button"
-                className={`orders-filter-chip ${activeFilter === 'todos' ? 'active' : ''}`}
-                onClick={() => onFilterSelect('todos')}
-              >
-                Todos
-              </button>
             </div>
           </div>
 
@@ -201,21 +225,31 @@ function MeusPedidos() {
                 </tr>
               </thead>
               <tbody>
-                {pagedRequests.map((request) => (
-                  <tr key={request.id}>
-                    <td>{request.badge}</td>
-                    <td>{request.level}</td>
-                    <td>{request.date}</td>
-                    <td>
-                      <span className={statusConfig[request.status].badgeClass}>
-                        {statusConfig[request.status].label}
-                      </span>
-                    </td>
-                    <td>
-                      <button type="button" className="orders-view-btn">Ver</button>
-                    </td>
+                {pagedRequests.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="orders-empty-row">Sem pedidos para os filtros escolhidos.</td>
                   </tr>
-                ))}
+                )}
+
+                {pagedRequests.map((request) => {
+                  const requestStatus = statusConfig[request.status] || statusConfig.pendente;
+
+                  return (
+                    <tr key={request.id}>
+                      <td>{request.badge}</td>
+                      <td>{request.level}</td>
+                      <td>{request.date}</td>
+                      <td>
+                        <span className={requestStatus.badgeClass}>
+                          {requestStatus.label}
+                        </span>
+                      </td>
+                      <td>
+                        <button type="button" className="orders-view-btn">Ver</button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
