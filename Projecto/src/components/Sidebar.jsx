@@ -31,7 +31,7 @@ const sidebarConfig = [
       { id: 'catalogo_C', labelKey: 'sidebar_catalog_badges', icon: Medal, route: '/consultor/catalogo-badges' },
       { id: 'meus_badges_C', labelKey: 'sidebar_my_badges', icon: Trophy, route: '/consultor/meus-badges' },
       { id: 'learning_paths_C', labelKey: 'sidebar_learning_paths', icon: BookOpen },
-      { id: 'pedidos_C', labelKey: 'sidebar_my_requests', icon: Clock },
+      { id: 'pedidos_C', labelKey: 'sidebar_my_requests', icon: Clock, route: '/consultor/meus-pedidos' },
       { id: 'ranking_C', labelKey: 'sidebar_ranking', icon: Crown },
       { id: 'lembretes_C', labelKey: 'sidebar_reminders', icon: Pin },
       { id: 'exportacoes_C', labelKey: 'sidebar_exports', icon: ArrowDownToLine },
