@@ -33,7 +33,7 @@ const sidebarConfig = [
       { id: 'learning_paths_C', labelKey: 'sidebar_learning_paths', icon: BookOpen },
       { id: 'pedidos_C', labelKey: 'sidebar_my_requests', icon: Clock, route: '/consultor/meus-pedidos' },
       { id: 'ranking_C', labelKey: 'sidebar_ranking', icon: Crown, route: '/consultor/ranking' },
-      { id: 'lembretes_C', labelKey: 'sidebar_reminders', icon: Pin },
+      { id: 'lembretes_C', labelKey: 'sidebar_reminders', icon: Pin, route: '/consultor/lembretes' },
       { id: 'exportacoes_C', labelKey: 'sidebar_exports', icon: ArrowDownToLine },
     ],
   },
