@@ -34,7 +34,7 @@ const sidebarConfig = [
       { id: 'pedidos_C', labelKey: 'sidebar_my_requests', icon: Clock, route: '/consultor/meus-pedidos' },
       { id: 'ranking_C', labelKey: 'sidebar_ranking', icon: Crown, route: '/consultor/ranking' },
       { id: 'lembretes_C', labelKey: 'sidebar_reminders', icon: Pin, route: '/consultor/lembretes' },
-      { id: 'exportacoes_C', labelKey: 'sidebar_exports', icon: ArrowDownToLine },
+      { id: 'exportacoes_C', labelKey: 'sidebar_exports', icon: ArrowDownToLine, route: '/consultor/exportacoes' },
     ],
   },
   {
