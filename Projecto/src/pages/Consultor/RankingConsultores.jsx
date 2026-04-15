@@ -212,7 +212,7 @@ function RankingConsultores() {
                 }}
               >
                 <Filter size={20} />
-                <span>{`Filtrar pesquisa: ${activeFilterLabel}`}</span>
+                <span className="catalog-action-btn-label">{`Filtrar pesquisa: ${activeFilterLabel}`}</span>
               </button>
 
               {showFilterDropdown && (
@@ -241,7 +241,7 @@ function RankingConsultores() {
                 }}
               >
                 <SlidersHorizontal size={20} />
-                <span>{`Ordenar: ${activeSortLabel}`}</span>
+                <span className="catalog-action-btn-label">{`Ordenar: ${activeSortLabel}`}</span>
               </button>
 
               {showSortDropdown && (

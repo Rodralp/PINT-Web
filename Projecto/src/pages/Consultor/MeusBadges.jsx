@@ -309,7 +309,7 @@ function MeusBadges() {
                 onClick={toggleFilterDropdown}
               >
                 <Filter size={20} />
-                <span>{`${t('filter_search')}: ${activeFilterLabel}`}</span>
+                <span className="catalog-action-btn-label">{`${t('filter_search')}: ${activeFilterLabel}`}</span>
               </button>
 
               {showFilterDropdown && (
@@ -335,7 +335,7 @@ function MeusBadges() {
                 onClick={toggleSortDropdown}
               >
                 <SlidersHorizontal size={20} />
-                <span>{`${t('sort')}: ${activeSortLabel}`}</span>
+                <span className="catalog-action-btn-label">{`${t('sort')}: ${activeSortLabel}`}</span>
               </button>
 
               {showSortDropdown && (
