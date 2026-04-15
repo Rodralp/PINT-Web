@@ -6,8 +6,8 @@ import {
   Flame,
   Clock3,
   Trophy,
-  AlertCircle,
-  Search,
+  AlertTriangle,
+  SearchCheck,
   TimerReset,
   Sparkles,
   GraduationCap,
@@ -41,9 +41,9 @@ const calculateVisibleTimelinePoints = (containerWidth, totalPoints) => {
 };
 
 const inProgressItems = [
-  { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_specialist', accent: 'warning', icon: AlertCircle },
-  { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_senior', accent: 'yellow', icon: Search },
-  { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_intermediate', accent: 'info', icon: TimerReset },
+  { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_specialist', accent: 'warning', icon: AlertTriangle },
+  { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_senior', accent: 'yellow', icon: SearchCheck },
+  { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_intermediate', accent: 'info', icon: Clock3 },
 ];
 
 const suggestionItems = [
