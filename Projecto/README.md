@@ -7,7 +7,7 @@ O backend usa PostgreSQL (via Sequelize) para autenticacao e lembretes.
 
 - React + React Hooks
 - Bootstrap
-- Fetch API
+- Axios
 - Express
 - PostgreSQL
 - Sequelize
@@ -23,7 +23,7 @@ server/src/
 - server.js
 
 src/
-- services/ (camada HTTP do frontend com fetch)
+- services/ (camada HTTP do frontend com Axios)
 - pages/
 - components/
 
