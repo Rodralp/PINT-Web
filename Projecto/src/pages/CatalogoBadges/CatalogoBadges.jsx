@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Clock3, Filter, Search, SlidersHorizontal, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -16,8 +16,24 @@ const badgeLevels = [
 
 const badgeAreas = ['LowCode (Outsystems)', 'Cloud Architecture'];
 
+const badgeTypes = [
+  { id: 'todos', label: 'Todos' },
+  { id: 'badge_level_junior', label: 'Júnior' },
+  { id: 'badge_level_intermediate', label: 'Intermédio' },
+  { id: 'badge_level_senior', label: 'Sénior' },
+  { id: 'badge_level_specialist', label: 'Especialista' },
+  { id: 'badge_level_knowledge_lead', label: 'Líder de Conhecimento' },
+];
+
+const ITEMS_PER_PAGE = 10;
+
+const normalizeBadgeItem = (item) => ({
+  ...item,
+  typeId: item.typeId || item.levelKey,
+});
+
 const buildDefaultBadgeItems = () =>
-  badgeAreas.flatMap((area) =>
+  badgeAreas.flatMap((area, areaIndex) =>
     badgeLevels.map((level) => ({
       id: `${area}-${level.levelKey}`,
       area,
@@ -25,6 +41,7 @@ const buildDefaultBadgeItems = () =>
       points: level.points,
       badgeImage: level.badgeImage,
       date: '12 Jan 2026',
+      typeId: level.levelKey,
     })),
   );
 
@@ -33,6 +50,13 @@ function CatalogoBadges() {
   const { t } = useTranslation();
   const [badgeItems, setBadgeItems] = useState(buildDefaultBadgeItems);
   const [statusMessage, setStatusMessage] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilter, setActiveFilter] = useState('todos');
+  const [sortBy, setSortBy] = useState('points_desc');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const filterDropdownRef = useRef(null);
+  const sortDropdownRef = useRef(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -41,7 +65,7 @@ function CatalogoBadges() {
       try {
         const data = await fetchCatalogBadges();
         if (isMounted && Array.isArray(data) && data.length > 0) {
-          setBadgeItems(data);
+          setBadgeItems(data.map(normalizeBadgeItem));
           setStatusMessage('');
         }
       } catch {
@@ -67,6 +91,132 @@ function CatalogoBadges() {
     navigate('/consultor/dashboard');
   };
 
+  const handleOpenBadgeDetails = (item) => {
+    navigate(`/consultor/badge/${encodeURIComponent(item.id)}`, {
+      state: {
+        badge: item,
+      },
+    });
+  };
+
+  const handleCardKeyDown = (event, item) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleOpenBadgeDetails(item);
+    }
+  };
+
+  const filters = useMemo(() => badgeTypes, []);
+
+  const sortOptions = useMemo(() => [
+    { id: 'points_desc', label: 'Pontos (Maior para Menor)' },
+    { id: 'points_asc', label: 'Pontos (Menor para Maior)' },
+    { id: 'area_asc', label: 'Area (A-Z)' },
+    { id: 'area_desc', label: 'Area (Z-A)' },
+  ], []);
+
+  const sortButtonLabels = useMemo(() => ({
+    points_desc: 'Pontos ↓',
+    points_asc: 'Pontos ↑',
+    area_asc: 'Area A-Z',
+    area_desc: 'Area Z-A',
+  }), []);
+
+  const activeFilterLabel = useMemo(() => {
+    const selected = filters.find((filter) => filter.id === activeFilter);
+    return selected ? selected.label : 'Todos';
+  }, [activeFilter, filters]);
+
+  const activeSortLabel = sortButtonLabels[sortBy] || 'Pontos ↓';
+  const hasActiveFilter = activeFilter !== 'todos';
+  const hasActiveSort = sortBy !== 'points_desc';
+
+  const filteredBadges = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    return badgeItems.filter((item) => {
+      const translatedLevel = t(item.levelKey).toLowerCase();
+      const searchMatch =
+        normalizedSearch.length === 0
+        || item.area.toLowerCase().includes(normalizedSearch)
+        || translatedLevel.includes(normalizedSearch);
+      const filterMatch = activeFilter === 'todos' || item.typeId === activeFilter;
+
+      return searchMatch && filterMatch;
+    });
+  }, [badgeItems, activeFilter, searchTerm, t]);
+
+  const sortedBadges = useMemo(() => {
+    return [...filteredBadges].sort((a, b) => {
+      if (sortBy === 'area_asc') {
+        return a.area.localeCompare(b.area);
+      }
+
+      if (sortBy === 'area_desc') {
+        return b.area.localeCompare(a.area);
+      }
+
+      if (sortBy === 'points_asc') {
+        return a.points - b.points;
+      }
+
+      return b.points - a.points;
+    });
+  }, [filteredBadges, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedBadges.length / ITEMS_PER_PAGE));
+  const [page, setPage] = useState(1);
+
+  const pagedBadges = useMemo(() => {
+    const start = (page - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    return sortedBadges.slice(start, end);
+  }, [sortedBadges, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, activeFilter, sortBy]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target)) {
+        setShowFilterDropdown(false);
+      }
+
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target)) {
+        setShowSortDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, []);
+
+  const onSearchChange = (event) => {
+    setSearchTerm(event.target.value);
+  };
+
+  const onFilterSelect = (filterId) => {
+    setActiveFilter(filterId);
+    setShowFilterDropdown(false);
+  };
+
+  const onSortSelect = (sortId) => {
+    setSortBy(sortId);
+    setShowSortDropdown(false);
+  };
+
+  const previousPage = () => {
+    setPage((current) => Math.max(1, current - 1));
+  };
+
+  const nextPage = () => {
+    setPage((current) => Math.min(totalPages, current + 1));
+  };
+
   return (
     <Layout>
       <div className="catalog-page">
@@ -87,21 +237,78 @@ function CatalogoBadges() {
           <div className="catalog-controls">
             <div className="catalog-search-wrap">
               <Search size={20} />
-              <input type="text" placeholder={t('search_badges')} aria-label={t('search_badges')} />
+              <input
+                type="text"
+                placeholder={t('search_badges')}
+                aria-label={t('search_badges')}
+                value={searchTerm}
+                onChange={onSearchChange}
+              />
             </div>
-            <button type="button" className="catalog-action-btn">
-              <Filter size={20} />
-              <span>{t('filter_search')}</span>
-            </button>
-            <button type="button" className="catalog-action-btn">
-              <SlidersHorizontal size={20} />
-              <span>{t('sort')}</span>
-            </button>
+
+            <div className="catalog-dropdown" ref={filterDropdownRef}>
+              <button
+                type="button"
+                className={`catalog-action-btn ${showFilterDropdown || hasActiveFilter ? 'active' : ''}`}
+                onClick={() => setShowFilterDropdown((current) => !current)}
+              >
+                <Filter size={20} />
+                <span className="catalog-action-btn-label">{`${t('filter_search')}: ${activeFilterLabel}`}</span>
+              </button>
+
+              {showFilterDropdown && (
+                <div className="catalog-dropdown-menu" role="menu" aria-label="Filtros de badges">
+                  {filters.map((filter) => (
+                    <button
+                      key={filter.id}
+                      type="button"
+                      className={`catalog-dropdown-item ${activeFilter === filter.id ? 'active' : ''}`}
+                      onClick={() => onFilterSelect(filter.id)}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="catalog-dropdown" ref={sortDropdownRef}>
+              <button
+                type="button"
+                className={`catalog-action-btn ${showSortDropdown || hasActiveSort ? 'active' : ''}`}
+                onClick={() => setShowSortDropdown((current) => !current)}
+              >
+                <SlidersHorizontal size={20} />
+                <span className="catalog-action-btn-label">{`${t('sort')}: ${activeSortLabel}`}</span>
+              </button>
+
+              {showSortDropdown && (
+                <div className="catalog-dropdown-menu" role="menu" aria-label="Ordenacao de badges">
+                  {sortOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`catalog-dropdown-item ${sortBy === option.id ? 'active' : ''}`}
+                      onClick={() => onSortSelect(option.id)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="catalog-grid">
-            {badgeItems.map((item) => (
-              <article key={item.id} className="catalog-card">
+            {pagedBadges.map((item) => (
+              <article
+                key={item.id}
+                className="catalog-card"
+                role="button"
+                tabIndex={0}
+                onClick={() => handleOpenBadgeDetails(item)}
+                onKeyDown={(event) => handleCardKeyDown(event, item)}
+              >
                 <div className="catalog-badge-frame">
                   <img className="catalog-badge-image" src={item.badgeImage} alt={t(item.levelKey)} />
                 </div>
@@ -123,14 +330,39 @@ function CatalogoBadges() {
             ))}
           </div>
 
+          {filteredBadges.length === 0 && (
+            <div className="catalog-empty-state">Nenhum badge encontrado com os filtros escolhidos.</div>
+          )}
+
           <div className="catalog-pagination" role="navigation" aria-label={t('pagination')}>
-            <button type="button" className="catalog-page-btn ghost" aria-label={t('previous_page')}>
+            <button
+              type="button"
+              className="catalog-page-btn ghost"
+              aria-label={t('previous_page')}
+              onClick={previousPage}
+              disabled={page === 1}
+            >
               <ChevronLeft size={16} />
             </button>
-            <button type="button" className="catalog-page-btn active">1</button>
-            <button type="button" className="catalog-page-btn">2</button>
-            <button type="button" className="catalog-page-btn">3</button>
-            <button type="button" className="catalog-page-btn ghost" aria-label={t('next_page')}>
+
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+              <button
+                key={pageNumber}
+                type="button"
+                className={`catalog-page-btn ${pageNumber === page ? 'active' : ''}`}
+                onClick={() => setPage(pageNumber)}
+              >
+                {pageNumber}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              className="catalog-page-btn ghost"
+              aria-label={t('next_page')}
+              onClick={nextPage}
+              disabled={page === totalPages}
+            >
               <ChevronRight size={16} />
             </button>
           </div>

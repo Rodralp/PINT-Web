@@ -83,13 +83,13 @@
   color: #2f3747;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 10px;
   font-size: 14px;
   font-weight: 500;
   line-height: 1;
-  white-space: nowrap;
   padding: 0 14px;
+  min-width: 0;
 }
 
 .catalog-action-btn.active {
@@ -104,6 +104,14 @@
 
 .catalog-dropdown .catalog-action-btn {
   width: 100%;
+}
+
+.catalog-action-btn-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
 }
 
 .catalog-dropdown-menu {
@@ -162,11 +170,17 @@
   padding: 16px 12px 12px;
   text-align: center;
   transition: transform 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
 }
 
 .catalog-card:hover {
   transform: translateY(-1px);
   border-color: #eef1f6;
+}
+
+.catalog-card:focus-visible {
+  outline: 2px solid #1b84f4;
+  outline-offset: 2px;
 }
 
 .catalog-badge-frame {

@@ -231,6 +231,21 @@ function MeusBadges() {
     setPage((current) => Math.min(totalPages, current + 1));
   };
 
+  const handleOpenBadgeDetails = (item) => {
+    navigate(`/consultor/badge/${encodeURIComponent(item.id)}`, {
+      state: {
+        badge: item,
+      },
+    });
+  };
+
+  const handleCardKeyDown = (event, item) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleOpenBadgeDetails(item);
+    }
+  };
+
   const handleGoBack = () => {
     if (window.history.length > 1) {
       navigate(-1);
@@ -349,6 +364,10 @@ function MeusBadges() {
                 <article
                   key={item.id}
                   className="catalog-card"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleOpenBadgeDetails(item)}
+                  onKeyDown={(event) => handleCardKeyDown(event, item)}
                   style={{
                     background: currentState.tint,
                     borderColor: currentState.border,
@@ -376,6 +395,10 @@ function MeusBadges() {
                     type="button"
                     aria-label={currentState.label}
                     title={currentState.label}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleOpenBadgeDetails(item);
+                    }}
                     style={{
                       marginTop: '10px',
                       marginLeft: 'auto',

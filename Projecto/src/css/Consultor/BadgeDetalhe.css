@@ -1,0 +1,333 @@
+.badge-details-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.badge-details-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.badge-details-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #202938;
+  line-height: 1.12;
+}
+
+.badge-details-back-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: #334155;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge-details-back-btn:hover {
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.badge-hero-card {
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02), 0 10px 30px rgba(15, 23, 42, 0.04);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 154px;
+}
+
+.badge-hero-media {
+  width: 132px;
+  height: 112px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge-hero-image {
+  width: 104px;
+  height: 104px;
+  object-fit: contain;
+}
+
+.badge-hero-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.badge-hero-content h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.1;
+  font-weight: 700;
+  color: #212939;
+}
+
+.badge-hero-content p {
+  margin: 0;
+  color: #3c4454;
+  font-size: 18px;
+  line-height: 1.15;
+}
+
+.badge-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.badge-hero-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.badge-hero-meta strong {
+  color: #111827;
+  font-weight: 700;
+}
+
+.badge-details-breadcrumb {
+  margin: 2px 0 0;
+  color: #8c94a3;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.badge-requirements-card {
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02), 0 10px 30px rgba(15, 23, 42, 0.04);
+  padding: 16px 20px;
+}
+
+.badge-requirements-card h3 {
+  margin: 0 0 14px;
+  color: #212939;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.badge-requirements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.badge-requirement-item {
+  min-height: 52px;
+  border: 1px solid #e5eaf1;
+  border-radius: 12px;
+  padding: 8px 12px;
+  background: #ffffff;
+}
+
+.badge-requirement-item.is-open {
+  padding-bottom: 12px;
+}
+
+.badge-requirement-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.badge-requirement-head p {
+  margin: 0;
+  color: #2f3747;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.badge-requirement-view-btn {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge-requirement-view-btn:hover {
+  background: #f1f5f9;
+}
+
+.badge-requirement-detail {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border-top: 1px solid #eef2f7;
+  margin-top: 8px;
+  padding: 12px 6px 0;
+}
+
+.badge-requirement-detail-image {
+  width: 132px;
+  height: 76px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.badge-requirement-detail p {
+  margin: 0;
+  color: #7a8393;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1400px) {
+  .badge-details-header h1 {
+    font-size: 28px;
+  }
+
+  .badge-hero-content h2 {
+    font-size: 22px;
+  }
+
+  .badge-hero-content p {
+    font-size: 17px;
+  }
+
+  .badge-hero-meta span {
+    font-size: 12px;
+  }
+
+  .badge-requirements-card h3 {
+    font-size: 26px;
+  }
+
+  .badge-requirement-head p {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .badge-hero-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .badge-hero-media {
+    width: 100%;
+    height: auto;
+    justify-content: flex-start;
+  }
+
+  .badge-hero-image {
+    width: 92px;
+    height: 92px;
+  }
+
+  .badge-hero-content h2 {
+    font-size: 22px;
+  }
+
+  .badge-hero-content p {
+    font-size: 16px;
+  }
+
+  .badge-requirements-card {
+    padding: 16px;
+  }
+
+  .badge-requirements-card h3 {
+    font-size: 22px;
+  }
+
+  .badge-requirement-item {
+    min-height: 44px;
+    padding: 0 12px;
+  }
+
+  .badge-requirement-head p {
+    font-size: 16px;
+  }
+
+  .badge-requirement-detail {
+    gap: 12px;
+    padding-top: 10px;
+  }
+
+  .badge-requirement-detail-image {
+    width: 106px;
+    height: 62px;
+  }
+
+  .badge-requirement-detail p {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .badge-details-page {
+    gap: 12px;
+  }
+
+  .badge-details-header h1 {
+    font-size: 24px;
+  }
+
+  .badge-hero-content h2 {
+    font-size: 20px;
+  }
+
+  .badge-hero-content p {
+    font-size: 15px;
+  }
+
+  .badge-hero-meta {
+    gap: 10px;
+  }
+
+  .badge-hero-meta span {
+    font-size: 14px;
+  }
+
+  .badge-details-breadcrumb {
+    font-size: 12px;
+  }
+
+  .badge-requirements-card h3 {
+    font-size: 20px;
+  }
+
+  .badge-requirement-head p {
+    font-size: 14px;
+  }
+
+  .badge-requirement-detail {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .badge-requirement-detail-image {
+    width: 90px;
+    height: 54px;
+  }
+
+  .badge-requirement-detail p {
+    font-size: 12px;
+  }
+}
