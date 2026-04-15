@@ -43,6 +43,10 @@ function Topbar({ onToggleSidebar }) {
     navigate('/');
   };
 
+  function handleProfileClick() {
+    navigate('/profile');
+  }
+
   const handleLanguageChange = (languageCode) => {
     i18n.changeLanguage(languageCode);
     setShowLanguageMenu(false);
@@ -68,7 +72,7 @@ function Topbar({ onToggleSidebar }) {
         <button className="topbar-icon-btn">
           <MessageSquare size={20} strokeWidth={2} />
         </button>
-        <div className="topbar-user-info">
+        <div className="topbar-user-info" onClick={handleProfileClick} style={{ cursor: 'pointer' }}>
           <span className="topbar-user-name">{userName}</span>
           <img src={`https://i.pravatar.cc/150?u=${loginData?.nome}`} alt="User Avatar" className="topbar-avatar" />
         </div>
