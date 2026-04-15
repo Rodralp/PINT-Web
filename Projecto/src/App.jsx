@@ -11,6 +11,7 @@ import DashboardAG from './pages/AdminGestor/Dashboard_AG'
 import CatalogoBadges from './pages/CatalogoBadges/CatalogoBadges'
 import MeusBadges from './pages/Consultor/MeusBadges'
 import MeusPedidos from './pages/Consultor/MeusPedidos'
+import RankingConsultores from './pages/Consultor/RankingConsultores'
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path='/consultor/catalogo-badges' element={<CatalogoBadges />} />
         <Route path='/consultor/meus-badges' element={<MeusBadges />} />
         <Route path='/consultor/meus-pedidos' element={<MeusPedidos />} />
+        <Route path='/consultor/ranking' element={<RankingConsultores />} />
         <Route path='/admin-gestor/catalogo-badges' element={<CatalogoBadges />} />
 
         <Route path='/dashboard/consultor' element={<Navigate to='/consultor/dashboard' replace />} />
@@ -37,6 +39,7 @@ function App() {
         <Route path='/dashboard/catalogo-badges' element={<Navigate to='/consultor/catalogo-badges' replace />} />
         <Route path='/dashboard/meus-badges' element={<Navigate to='/consultor/meus-badges' replace />} />
         <Route path='/dashboard/meus-pedidos' element={<Navigate to='/consultor/meus-pedidos' replace />} />
+        <Route path='/dashboard/ranking' element={<Navigate to='/consultor/ranking' replace />} />
         <Route path='/dashboard/admin/catalogo-badges' element={<Navigate to='/admin-gestor/catalogo-badges' replace />} />
       </Routes>
     </BrowserRouter>
