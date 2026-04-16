@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 import Layout from '../components/Layout';
 import {
   Award,
@@ -17,28 +19,16 @@ import {
   Edit3,
   Mail,
   MapPin,
-  Calendar
+  Calendar,
+  TrendingUp,
+  Star,
+  Zap
 } from 'lucide-react';
 import { fetchProfileData } from '../services/consultorService';
 import '../css/Consultor/Dashboard_C.css';
 import '../css/profile.css';
 
 const defaultTimelineValues = [3, 2, 5, 4, 6, 3, 7, 5, 8, 4, 6, 9];
-
-const buildTimelineData = (values, locale) => {
-  const today = new Date();
-
-  return values.map((value, index) => {
-    const daysOffset = values.length - 1 - index;
-    const date = new Date(today);
-    date.setDate(today.getDate() - daysOffset);
-
-    return {
-      value,
-      label: date.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' }),
-    };
-  });
-};
 
 const calculateVisibleTimelinePoints = (containerWidth, totalPoints) => {
   const minColumnWidth = 42;
@@ -72,19 +62,24 @@ const defaultCertificationsItems = [
   { title: 'C++ Mastery', subtitleKey: 'badge_level_senior', accent: 'amber' },
 ];
 
+const defaultActivityItems = [
+  { type: 'rank', description: 'Rose to rank #14', date: '5 days ago', icon: TrendingUp, color: 'yellow' },
+  { type: 'skill', description: 'Added skill: JavaScript', date: '1 week ago', icon: Star, color: 'success' },
+  { type: 'achievement', description: 'Completed 10 skill assessments', date: '2 weeks ago', icon: Trophy, color: 'violet' },
+  { type: 'badge', description: 'Earned badge: React Senior', date: '3 weeks ago', icon: Award, color: 'info' },
+  { type: 'streak', description: 'Achieved 7-day streak', date: '1 month ago', icon: Zap, color: 'amber' },
+];
+
 function Profile() {
+  const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const timelineChartRef = useRef(null);
-  const locale = i18n.language?.startsWith('es') ? 'es-ES' : i18n.language?.startsWith('en') ? 'en-GB' : 'pt-PT';
-  const [timelineValues, setTimelineValues] = useState(defaultTimelineValues);
   const [profileStats, setProfileStats] = useState(defaultProfileStats);
   const [skillsItems, setSkillsItems] = useState(defaultSkillsItems);
   const [certificationsItems, setCertificationsItems] = useState(defaultCertificationsItems);
+  const [activityItems, setActivityItems] = useState(defaultActivityItems);
   const [profileLocation, setProfileLocation] = useState('Portugal');
   const [profileJoined, setProfileJoined] = useState('2023');
   const [statusMessage, setStatusMessage] = useState('');
-  const timelineData = useMemo(() => buildTimelineData(timelineValues, locale), [timelineValues, locale]);
-  const [visibleTimelinePoints, setVisibleTimelinePoints] = useState(timelineData.length);
 
   const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
   const loginData = storedLoginData ? JSON.parse(storedLoginData) : null;
@@ -101,10 +96,6 @@ function Profile() {
           return;
         }
 
-        if (Array.isArray(data.timelineValues) && data.timelineValues.length > 0) {
-          setTimelineValues(data.timelineValues);
-        }
-
         if (Array.isArray(data.stats) && data.stats.length > 0) {
           const mappedStats = data.stats.map((item) => ({
             ...item,
@@ -119,6 +110,10 @@ function Profile() {
 
         if (Array.isArray(data.certificationsItems) && data.certificationsItems.length > 0) {
           setCertificationsItems(data.certificationsItems);
+        }
+
+        if (Array.isArray(data.activityItems) && data.activityItems.length > 0) {
+          setActivityItems(data.activityItems);
         }
 
         if (typeof data.location === 'string' && data.location) {
@@ -143,34 +138,6 @@ function Profile() {
       isMounted = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (!timelineChartRef.current) {
-      return undefined;
-    }
-
-    const updateVisiblePoints = (width) => {
-      setVisibleTimelinePoints(calculateVisibleTimelinePoints(width, timelineData.length));
-    };
-
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (entry) {
-        updateVisiblePoints(entry.contentRect.width);
-      }
-    });
-
-    observer.observe(timelineChartRef.current);
-    updateVisiblePoints(timelineChartRef.current.clientWidth);
-
-    return () => observer.disconnect();
-  }, [timelineData]);
-
-  const visibleTimelineData = timelineData.slice(-visibleTimelinePoints);
-  const maxVisibleValue = Math.max(...visibleTimelineData.map(({ value }) => value));
-  const yAxisStep = Math.max(1, Math.ceil(maxVisibleValue / 3));
-  const chartMaxValue = yAxisStep * 3;
-  const yAxisTicks = [0, 1, 2, 3].map((multiplier) => yAxisStep * multiplier);
 
   return (
     <Layout>
@@ -199,9 +166,14 @@ function Profile() {
                 <span><Calendar size={16} /> Joined {profileJoined}</span>
               </div>
             </div>
-            <button className="profile-edit-btn">
-              <Edit3 size={18} /> {t('profile_edit')}
-            </button>
+            <div className="profile-btn-space">
+              <button className="profile-home-btn" onClick={() => navigate('/')}>
+                {t('profile_pub')}
+              </button>
+              <button className="profile-edit-btn">
+                <Edit3 size={18} /> {t('profile_edit')}
+              </button>
+            </div>
           </div>
         </section>
 
@@ -225,45 +197,29 @@ function Profile() {
             })}
           </div>
 
-          <section className="dashboard-card dashboard-timeline-card">
-            <div className="dashboard-card-title">{t('profile_activity_timeline')}</div>
-            <div className="timeline-chart-shell">
-              <div className="timeline-axis" aria-hidden="true">
-                {yAxisTicks.slice().reverse().map((tick) => (
-                  <span key={tick} className="timeline-axis-label">
-                    {tick}
-                  </span>
-                ))}
-              </div>
+          <section className="dashboard-card dashboard-panel-card">
+            <div className="dashboard-panel-header">
+              <h2>{t('profile_activity_title', 'Recent Activity')}</h2>
+              <a href="#ver-todos-activity" onClick={(event) => event.preventDefault()}>
+                {t('dashboard_view_all')} <ArrowRight size={16} />
+              </a>
+            </div>
 
-              <div
-                ref={timelineChartRef}
-                className="timeline-chart"
-                aria-label={t('profile_activity_timeline')}
-                style={{ gridTemplateColumns: `repeat(${visibleTimelineData.length}, minmax(0, 1fr))` }}
-              >
-                <div className="timeline-grid-lines" aria-hidden="true">
-                  {yAxisTicks.map((tick) => (
-                    <span
-                      key={tick}
-                      className="timeline-grid-line"
-                      style={{ bottom: `${(tick / chartMaxValue) * 100}%` }}
-                    />
-                  ))}
-                </div>
-
-                {visibleTimelineData.map(({ value, label }) => (
-                  <div key={label} className="timeline-column">
-                    <div className="timeline-bar-track">
-                      <div
-                        className="timeline-bar"
-                        style={{ height: `${(value / chartMaxValue) * 100}%` }}
-                      />
+            <div className="dashboard-list-compact">
+              {activityItems.map((activity, index) => {
+                const ActivityIcon = activity.icon;
+                return (
+                  <div key={index} className="dashboard-list-item-compact">
+                    <div className={`dashboard-list-badge accent-${activity.color}`}>
+                      <ActivityIcon size={18} strokeWidth={2} />
                     </div>
-                    <span className="timeline-label">{label}</span>
+                    <div className="dashboard-list-content">
+                      <strong>{activity.description}</strong>
+                      <span>{activity.date}</span>
+                    </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           </section>
 

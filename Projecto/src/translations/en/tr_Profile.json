@@ -2,8 +2,9 @@
     "profile_title" : "Profile",
     "profile_type" : "Consultant",
     "profile_edit" : "Edit Profile",
+    "profile_pub" : "Public Page",
 
-    "profile_activity_timeline" : "Profile Activity Timeline",
+    "profile_activity_title" : "Recent Activities",
     "profile_skills" : "Skills",
     "profile_certifications" : "Certifications"
 }

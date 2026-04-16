@@ -38,6 +38,9 @@ function Navbar() {
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
+  const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
+  const isLoggedIn = !!storedLoginData;
+
   const languages = [
     { code: 'pt', label: 'Português', flag: FlagPortuguese },
     { code: 'en', label: 'English', flag: FlagEnglish },
@@ -148,6 +151,10 @@ function Navbar() {
           )}
         </div>
       </div>
+
+
+
+      
     </nav>
   );
 }
