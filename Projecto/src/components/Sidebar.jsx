@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -26,6 +26,7 @@ const sidebarConfig = [
   {
     title: 'Consultor',
     titleKey: 'sidebar_section_consultor',
+    allowedRoles: ['consultor'],
     items: [
       { id: 'dashboard_C', labelKey: 'sidebar_dashboard', icon: Home, route: '/consultor/dashboard' },
       { id: 'catalogo_C', labelKey: 'sidebar_catalog_badges', icon: Medal, route: '/consultor/catalogo-badges' },
@@ -40,6 +41,7 @@ const sidebarConfig = [
   {
     title: 'Talent Manager',
     titleKey: 'sidebar_section_tm',
+    allowedRoles: ['talent-manager'],
     items: [
       { id: 'dashboard_TM', labelKey: 'sidebar_dashboard', icon: Home, route: '/talent-manager/dashboard' },
       { id: 'pedidos_TM', labelKey: 'sidebar_manage_requests', icon: FilePenLine },
@@ -50,6 +52,7 @@ const sidebarConfig = [
   {
     title: 'Service Line Leader',
     titleKey: 'sidebar_section_sll',
+    allowedRoles: ['service-line-leader'],
     items: [
       { id: 'dashboard_SLL', labelKey: 'sidebar_dashboard', icon: Home, route: '/service-line-leader/dashboard' },
       { id: 'learning_paths_SLL', labelKey: 'sidebar_my_learning_path', icon: BookOpen },
@@ -62,6 +65,7 @@ const sidebarConfig = [
   {
     title: 'Administrador / Gestor',
     titleKey: 'sidebar_section_admin',
+    allowedRoles: ['admin-gestor'],
     items: [
       { id: 'dashboard_AG', labelKey: 'sidebar_dashboard', icon: Home, route: '/admin-gestor/dashboard' },
       { id: 'utilizadores_AG', labelKey: 'sidebar_users', icon: CircleUserRound },
@@ -75,53 +79,79 @@ const sidebarConfig = [
   },
 ];
 
+const DEFAULT_ROLE = 'consultor';
+
+const getStoredLoginData = () => {
+  const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
+
+  if (!storedLoginData) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(storedLoginData);
+  } catch {
+    return null;
+  }
+};
+
+const normalizeRoles = (rolesValue) => {
+  const rawRoles = Array.isArray(rolesValue)
+    ? rolesValue
+    : typeof rolesValue === 'string'
+      ? rolesValue.split(';')
+      : [];
+
+  const parsedRoles = rawRoles
+    .map((role) => String(role).trim().toLowerCase())
+    .filter(Boolean);
+
+  const uniqueRoles = [...new Set(parsedRoles)];
+  return uniqueRoles.length > 0 ? uniqueRoles : [DEFAULT_ROLE];
+};
+
 function Sidebar() {
   const { t } = useTranslation();
   const location = useLocation();
-  const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
-  const loginData = storedLoginData ? JSON.parse(storedLoginData) : null;
+  const loginData = getStoredLoginData();
+  const userRoles = normalizeRoles(loginData?.roles ?? loginData?.role);
+  const filteredSections = sidebarConfig.filter((section) =>
+    section.allowedRoles.some((role) => userRoles.includes(role))
+  );
+  const visibleSidebarSections = filteredSections.length > 0
+    ? filteredSections
+    : sidebarConfig.filter((section) => section.allowedRoles.includes(DEFAULT_ROLE));
   const userName = loginData?.nome || t('app_user_default');
-  const getInitialExpandedSections = () => {
-    const initialState = {
-      'Consultor': true,
-      'Talent Manager': false,
-      'Service Line Leader': false,
-      'Administrador / Gestor': false
-    };
+  const matchedSectionTitle =
+    visibleSidebarSections.find((section) =>
+      section.items.some((item) => item.route === location.pathname)
+    )?.title || null;
 
-    const matchedSection = sidebarConfig.find((section) =>
+  const buildSectionState = (expandedSectionTitle = null) => {
+    const nextState = {};
+
+    visibleSidebarSections.forEach((section, index) => {
+      nextState[section.title] = expandedSectionTitle
+        ? section.title === expandedSectionTitle
+        : index === 0;
+    });
+
+    return nextState;
+  };
+
+  const getInitialExpandedSections = () => {
+    const matchedSection = visibleSidebarSections.find((section) =>
       section.items.some((item) => item.route === location.pathname)
     );
 
     if (matchedSection) {
-      return {
-        'Consultor': false,
-        'Talent Manager': false,
-        'Service Line Leader': false,
-        'Administrador / Gestor': false,
-        [matchedSection.title]: true,
-      };
+      return buildSectionState(matchedSection.title);
     }
 
-    return initialState;
+    return buildSectionState();
   };
 
   const [expandedSections, setExpandedSections] = useState(getInitialExpandedSections);
-
-  useEffect(() => {
-    const matchedSection = sidebarConfig.find((section) =>
-      section.items.some((item) => item.route === location.pathname)
-    );
-
-    if (!matchedSection) {
-      return;
-    }
-
-    setExpandedSections((prev) => ({
-      ...prev,
-      [matchedSection.title]: true,
-    }));
-  }, [location.pathname]);
 
   const toggleSection = (sectionTitle) => {
     setExpandedSections(prev => ({
@@ -145,8 +175,10 @@ function Sidebar() {
       </div>
 
       <nav className="sidebar-nav">
-        {sidebarConfig.map((section, idx) => {
-          const isExpanded = expandedSections[section.title];
+        {visibleSidebarSections.map((section, idx) => {
+          const isExpanded = section.title === matchedSectionTitle
+            ? true
+            : expandedSections[section.title];
 
           return (
             <div key={idx} className="sidebar-section">

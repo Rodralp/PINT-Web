@@ -66,7 +66,27 @@ export const seedDatabase = async () => {
     await Account.bulkCreate(defaultAccounts);
   }
 
-  if (remindersCount === 0) {
-    await Reminder.bulkCreate(defaultReminders);
+  const orderedAccounts = await Account.findAll({ order: [['id', 'ASC']] });
+  const defaultConsultorAccount = orderedAccounts.find((account) =>
+    String(account.role || '')
+      .split(';')
+      .map((role) => role.trim().toLowerCase())
+      .includes('consultor')
+  ) || orderedAccounts[0] || null;
+
+  if (defaultConsultorAccount) {
+    await Reminder.update(
+      { accountId: defaultConsultorAccount.id },
+      { where: { accountId: null } },
+    );
+  }
+
+  if (remindersCount === 0 && defaultConsultorAccount) {
+    await Reminder.bulkCreate(
+      defaultReminders.map((reminder) => ({
+        ...reminder,
+        accountId: defaultConsultorAccount.id,
+      })),
+    );
   }
 };

@@ -15,14 +15,51 @@ const dashboardPathByRole = {
   'admin-gestor': '/admin-gestor/dashboard',
 };
 
-const resolveDashboardPath = (role) => dashboardPathByRole[role] || '/consultor/dashboard';
+const DEFAULT_ROLE = 'consultor';
+
+const normalizeRoles = (rolesValue) => {
+  const rawRoles = Array.isArray(rolesValue)
+    ? rolesValue
+    : typeof rolesValue === 'string'
+      ? rolesValue.split(';')
+      : [];
+
+  const parsedRoles = rawRoles
+    .map((role) => String(role).trim().toLowerCase())
+    .filter(Boolean);
+
+  const uniqueRoles = [...new Set(parsedRoles)];
+  return uniqueRoles.length > 0 ? uniqueRoles : [DEFAULT_ROLE];
+};
+
+const resolveDashboardPath = (rolesValue) => {
+  const roles = normalizeRoles(rolesValue);
+  const firstMatchingPath = roles
+    .map((role) => dashboardPathByRole[role])
+    .find(Boolean);
+
+  return firstMatchingPath || '/consultor/dashboard';
+};
+
+const getRememberedLoginData = () => {
+  try {
+    const savedLoginData = localStorage.getItem('loginData');
+    return savedLoginData ? JSON.parse(savedLoginData) : null;
+  } catch {
+    return null;
+  }
+};
 
 function Entrar() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  // Preencher ou limpar campos de dados caso o utilizador tenha escolhido "Guardar dados de login" usando o localStorage
-  const savedLoginData = localStorage.getItem('loginData');
-  const initialFormData = savedLoginData ? JSON.parse(savedLoginData) : {
+  // Preencher campos caso o utilizador tenha escolhido guardar dados de login.
+  const savedLoginData = getRememberedLoginData();
+  const initialFormData = savedLoginData ? {
+    email: savedLoginData.email || '',
+    senha: savedLoginData.senha || '',
+    guardarDados: Boolean(savedLoginData.guardarDados),
+  } : {
     email: '',
     senha: '',
     guardarDados: false
@@ -31,7 +68,7 @@ function Entrar() {
   const [formData, setFormData] = useState(initialFormData);
   const [erros, setErros] = useState({});
   const [mostraSenha, setMostraSenha] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [loginFeedbackType, setLoginFeedbackType] = useState(null);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
@@ -82,16 +119,23 @@ function Entrar() {
     }
 
     try {
+      setLoginFeedbackType(null);
+
       const account = await loginAccount({
         email: formData.email,
         senha: formData.senha,
       });
 
+      const accountRoles = normalizeRoles(account.roles ?? account.role);
+
       const dadosLogin = {
         ...formData,
+        id: account.id,
         nome: account.nome,
         email: account.email,
-        role: account.role,
+        role: accountRoles[0],
+        roles: accountRoles,
+        status: account.status,
       };
 
       if (formData.guardarDados) {
@@ -102,9 +146,15 @@ function Entrar() {
         sessionStorage.setItem('loginData', JSON.stringify(dadosLogin));
       }
 
-      setRedirectPath(resolveDashboardPath(account.role));
-      setShowSuccess(true);
-    } catch {
+      setRedirectPath(resolveDashboardPath(accountRoles));
+      setLoginFeedbackType('success');
+    } catch (error) {
+      if (error?.code === 'ACCOUNT_PENDING_APPROVAL') {
+        setErros({});
+        setLoginFeedbackType('pending');
+        return;
+      }
+
       setErros(prev => ({
         ...prev,
         email: t('err_invalid_credentials'),
@@ -113,9 +163,13 @@ function Entrar() {
     }
   };
 
-  const handleCloseSuccess = () => {
-    setShowSuccess(false);
-    navigate(redirectPath);
+  const handleCloseFeedback = () => {
+    const shouldRedirect = loginFeedbackType === 'success';
+    setLoginFeedbackType(null);
+
+    if (shouldRedirect) {
+      navigate(redirectPath);
+    }
   };
 
   return (
@@ -132,16 +186,35 @@ function Entrar() {
       <ForgotPasswordModal isOpen={showForgotPasswordModal} onClose={() => setShowForgotPasswordModal(false)} />
 
       {/* SUCCESS MODAL */}
-      {showSuccess && (
+      {loginFeedbackType && (
         <div className="entrar-overlay">
           <div className="entrar-success-modal">
-            <svg className="entrar-success-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0088FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
+            <svg
+              className="entrar-success-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              width="64"
+              height="64"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={loginFeedbackType === 'success' ? '#0088FF' : '#F59E0B'}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              {loginFeedbackType === 'success' ? (
+                <polyline points="20 6 9 17 4 12"/>
+              ) : (
+                <>
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </>
+              )}
             </svg>
-            <h2>{t('login_success_title')}</h2>
-            <p>{t('login_success_subtitle')}</p>
-            <button onClick={handleCloseSuccess} className="entrar-success-btn">
-              {t('login_success_cta')}
+            <h2>{loginFeedbackType === 'success' ? t('login_success_title') : t('login_pending_title')}</h2>
+            <p>{loginFeedbackType === 'success' ? t('login_success_subtitle') : t('login_pending_subtitle')}</p>
+            <button onClick={handleCloseFeedback} className="entrar-success-btn">
+              {loginFeedbackType === 'success' ? t('login_success_cta') : t('login_pending_cta')}
             </button>
           </div>
         </div>

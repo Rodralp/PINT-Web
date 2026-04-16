@@ -4,7 +4,7 @@ import { Sequelize } from 'sequelize';
 const {
   DB_HOST = 'localhost',
   DB_PORT = '5432',
-  DB_NAME = 'pint_web',
+  DB_NAME = 'BD-PINT',
   DB_USER = 'postgres',
   DB_PASSWORD = 'postgres',
   DB_LOGGING = 'false',
@@ -24,5 +24,5 @@ export const connectToDatabase = async () => {
 };
 
 export const syncDatabase = async () => {
-  await sequelize.sync();
+  await sequelize.sync({ alter: true });
 };

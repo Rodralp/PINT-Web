@@ -37,37 +37,6 @@ const colorOptions = [
   { id: 'purple', card: '#9851e8', pill: '#9851e8' },
 ];
 
-const initialReminders = [
-  {
-    id: 1,
-    title: 'Conferir requisitos enviados.',
-    description: 'Rever todos os requisitos do novo projeto',
-    date: '2025-12-07',
-    color: 'green',
-  },
-  {
-    id: 2,
-    title: 'Badge "C++ Mastery" expira em 30 dias.',
-    description: 'Renovar certificacao antes do prazo',
-    date: '2025-11-29',
-    color: 'yellow',
-  },
-  {
-    id: 3,
-    title: 'Lembrete: Meta de 15 badges ate ao fim do mes.',
-    description: 'Completar badges restantes para atingir a meta',
-    date: '2025-11-27',
-    color: 'blue',
-  },
-  {
-    id: 4,
-    title: 'Reuniao de equipa trimestral',
-    description: 'Preparar apresentacao dos resultados',
-    date: '2026-01-15',
-    color: 'purple',
-  },
-];
-
 const defaultFormState = {
   title: '',
   description: '',
@@ -76,19 +45,6 @@ const defaultFormState = {
 };
 
 const REMINDERS_STORAGE_KEY = 'consultorLembretes';
-
-const safeParseReminders = (value) => {
-  if (!value) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
 
 const hasSameId = (firstId, secondId) => String(firstId) === String(secondId);
 
@@ -104,22 +60,19 @@ const normalizeReminder = (reminder, fallbackId) => {
   };
 };
 
-const getInitialReminders = () => {
-  const storedReminders = safeParseReminders(localStorage.getItem(REMINDERS_STORAGE_KEY));
-  if (storedReminders.length === 0) {
-    return initialReminders;
-  }
-
-  return storedReminders.map((item, index) => normalizeReminder(item, Date.now() + index));
-};
-
 function Lembretes() {
   const navigate = useNavigate();
-  const [reminders, setReminders] = useState(getInitialReminders);
+  const [reminders, setReminders] = useState([]);
+  const [statusMessage, setStatusMessage] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(defaultFormState);
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    // Remove legacy local reminders to keep only loginData/language in localStorage.
+    localStorage.removeItem(REMINDERS_STORAGE_KEY);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -130,9 +83,13 @@ function Lembretes() {
         if (isMounted && Array.isArray(data)) {
           const normalizedReminders = data.map((item, index) => normalizeReminder(item, Date.now() + index));
           setReminders(normalizedReminders);
+          setStatusMessage('');
         }
       } catch {
-        // Mantem os lembretes locais quando a API nao estiver disponivel.
+        if (isMounted) {
+          setReminders([]);
+          setStatusMessage('Nao foi possivel carregar os lembretes da base de dados.');
+        }
       }
     };
 
@@ -142,10 +99,6 @@ function Lembretes() {
       isMounted = false;
     };
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem(REMINDERS_STORAGE_KEY, JSON.stringify(reminders));
-  }, [reminders]);
 
   const modalTitle = editingId ? 'Editar Lembrete' : 'Novo Lembrete';
   const saveLabel = editingId ? 'Salvar Alteracoes' : 'Criar Lembrete';
@@ -238,54 +191,39 @@ function Lembretes() {
 
     if (editingId) {
       const targetId = editingId;
-      const updatedLocalReminder = {
-        id: targetId,
-        ...payload,
-      };
-
-      setReminders((prev) =>
-        prev.map((item) => (hasSameId(item.id, targetId) ? updatedLocalReminder : item)),
-      );
-      closeModal();
 
       try {
         const updatedReminder = await updateReminderRequest(targetId, payload);
         setReminders((prev) =>
           prev.map((item) => (hasSameId(item.id, targetId) ? normalizeReminder(updatedReminder, Number(targetId)) : item)),
         );
+        setStatusMessage('');
+        closeModal();
       } catch {
-        // O estado local ja foi atualizado; ignorar falhas da API.
+        setStatusMessage('Nao foi possivel atualizar o lembrete.');
       }
 
       return;
     }
 
-    const localId = Date.now();
-    const localReminder = {
-      id: localId,
-      ...payload,
-    };
-
-    setReminders((prev) => [localReminder, ...prev]);
-    closeModal();
-
     try {
       const createdReminder = await createReminderRequest(payload);
-      setReminders((prev) =>
-        prev.map((item) => (hasSameId(item.id, localId) ? normalizeReminder(createdReminder, localId) : item)),
-      );
+      const normalizedCreatedReminder = normalizeReminder(createdReminder, Date.now());
+      setReminders((prev) => [normalizedCreatedReminder, ...prev]);
+      setStatusMessage('');
+      closeModal();
     } catch {
-      // O lembrete local permanece mesmo com falha de sincronizacao.
+      setStatusMessage('Nao foi possivel criar o lembrete.');
     }
   };
 
   const onDeleteReminder = async (id) => {
-    setReminders((prev) => prev.filter((item) => !hasSameId(item.id, id)));
-
     try {
       await deleteReminderRequest(id);
+      setReminders((prev) => prev.filter((item) => !hasSameId(item.id, id)));
+      setStatusMessage('');
     } catch {
-      // Mantem a remocao local mesmo quando a API falha.
+      setStatusMessage('Nao foi possivel apagar o lembrete.');
     }
   };
 
@@ -300,6 +238,12 @@ function Lembretes() {
         </header>
 
         <section className="reminders-shell">
+          {statusMessage && (
+            <div className="alert alert-warning py-2" role="status">
+              {statusMessage}
+            </div>
+          )}
+
           <button type="button" className="reminders-new-btn" onClick={openNewReminderModal}>
             <Plus size={18} />
             <span>Novo Lembrete</span>

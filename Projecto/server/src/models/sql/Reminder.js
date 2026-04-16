@@ -9,6 +9,17 @@ export const Reminder = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
+    accountId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'account_id',
+      references: {
+        model: 'accounts',
+        key: 'id',
+      },
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+    },
     title: {
       type: DataTypes.STRING,
       allowNull: false,

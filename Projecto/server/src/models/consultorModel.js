@@ -1,4 +1,5 @@
 import { Reminder } from './sql/Reminder.js';
+import { sequelize } from '../config/database.js';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
@@ -218,11 +219,29 @@ const profileData = {
 
 const mapReminder = (reminder) => ({
   id: reminder.id,
+  accountId: reminder.accountId,
   title: reminder.title,
   description: reminder.description,
   date: reminder.date,
   color: reminder.color,
 });
+
+const getNextReminderId = async () => {
+  const maxId = Number(await Reminder.max('id')) || 0;
+  return maxId + 1;
+};
+
+const syncReminderIdSequence = async (lastId) => {
+  const safeLastId = Number(lastId) > 0 ? Number(lastId) : 1;
+  const isCalled = Number(lastId) > 0;
+
+  await sequelize.query(
+    "SELECT setval(pg_get_serial_sequence('reminders', 'id'), :safeLastId, :isCalled)",
+    {
+      replacements: { safeLastId, isCalled },
+    },
+  );
+};
 
 export const consultorModel = {
   getCatalogBadges() {
@@ -241,24 +260,34 @@ export const consultorModel = {
     return clone(rankingConsultores);
   },
 
-  async getReminders() {
-    const reminders = await Reminder.findAll({ order: [['createdAt', 'DESC']] });
+  async getReminders(accountId) {
+    const reminders = await Reminder.findAll({
+      where: { accountId: Number(accountId) },
+      order: [['createdAt', 'DESC']],
+    });
+
     return reminders.map(mapReminder);
   },
 
-  async createReminder(payload) {
+  async createReminder(accountId, payload) {
+    const nextReminderId = await getNextReminderId();
+
     const reminder = await Reminder.create({
+      id: nextReminderId,
+      accountId: Number(accountId),
       title: payload.title.trim(),
       description: payload.description.trim(),
       date: payload.date,
       color: payload.color,
     });
 
+    await syncReminderIdSequence(nextReminderId);
+
     return mapReminder(reminder);
   },
 
-  async updateReminder(id, payload) {
-    const reminder = await Reminder.findByPk(Number(id));
+  async updateReminder(id, accountId, payload) {
+    const reminder = await Reminder.findOne({ where: { id: Number(id), accountId: Number(accountId) } });
     if (!reminder) {
       return null;
     }
@@ -273,8 +302,8 @@ export const consultorModel = {
     return mapReminder(reminder);
   },
 
-  async deleteReminder(id) {
-    const deletedRows = await Reminder.destroy({ where: { id: Number(id) } });
+  async deleteReminder(id, accountId) {
+    const deletedRows = await Reminder.destroy({ where: { id: Number(id), accountId: Number(accountId) } });
     return deletedRows > 0;
   },
 

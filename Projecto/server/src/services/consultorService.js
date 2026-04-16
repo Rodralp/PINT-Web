@@ -17,20 +17,20 @@ export const consultorService = {
     return consultorModel.getRankingConsultores();
   },
 
-  async getReminders() {
-    return consultorModel.getReminders();
+  async getReminders(accountId) {
+    return consultorModel.getReminders(accountId);
   },
 
-  async createReminder(payload) {
-    return consultorModel.createReminder(payload);
+  async createReminder(accountId, payload) {
+    return consultorModel.createReminder(accountId, payload);
   },
 
-  async updateReminder(id, payload) {
-    return consultorModel.updateReminder(id, payload);
+  async updateReminder(id, accountId, payload) {
+    return consultorModel.updateReminder(id, accountId, payload);
   },
 
-  async deleteReminder(id) {
-    return consultorModel.deleteReminder(id);
+  async deleteReminder(id, accountId) {
+    return consultorModel.deleteReminder(id, accountId);
   },
 
   getProfileData() {

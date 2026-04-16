@@ -30,13 +30,22 @@ export const login = async (req, res) => {
   }
 
   try {
-    const account = await authService.loginAccount({ email, senha });
-    if (!account) {
+    const loginResult = await authService.loginAccount({ email, senha });
+
+    if (!loginResult || loginResult.status === 'invalid_credentials') {
       res.status(401).json({ message: 'Invalid credentials.' });
       return;
     }
 
-    res.status(200).json(account);
+    if (loginResult.status === 'pending_approval') {
+      res.status(403).json({
+        message: 'A aprovacao da conta ainda esta pendente.',
+        code: 'ACCOUNT_PENDING_APPROVAL',
+      });
+      return;
+    }
+
+    res.status(200).json(loginResult.account);
   } catch {
     res.status(500).json({ message: 'Failed to login.' });
   }

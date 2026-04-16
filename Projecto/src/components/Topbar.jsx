@@ -37,9 +37,8 @@ function Topbar({ onToggleSidebar }) {
   }, [dropdownRef]);
 
   const handleLogout = () => {
-    // Remover dados de login de sessionStorage e localStorage
+    // Limpar apenas a sessao ativa para manter "Guardar dados de login" no localStorage.
     sessionStorage.removeItem('loginData');
-    localStorage.removeItem('loginData');
 
     navigate('/');
   };

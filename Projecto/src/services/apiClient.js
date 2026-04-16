@@ -28,7 +28,19 @@ const request = async (path, options = {}) => {
     };
   } catch (error) {
     const message = error?.response?.data?.message || error?.message || 'HTTP request failed';
-    throw new Error(message);
+    const requestError = new Error(message);
+    const errorCode = error?.response?.data?.code;
+    const statusCode = error?.response?.status;
+
+    if (errorCode) {
+      requestError.code = errorCode;
+    }
+
+    if (statusCode) {
+      requestError.status = statusCode;
+    }
+
+    throw requestError;
   }
 };
 

@@ -49,17 +49,35 @@ Configura as variaveis em .env (podes copiar de .env.example):
 - PORT=4000
 - DB_HOST=localhost
 - DB_PORT=5432
-- DB_NAME=pint_web
+- DB_NAME=BD-PINT
 - DB_USER=postgres
 - DB_PASSWORD=postgres
 - DB_LOGGING=false
 
 Depois cria a base de dados no PostgreSQL e inicia o servidor. As tabelas sao sincronizadas automaticamente no arranque.
 
+## Script da base de dados
+
+O script convertido para PostgreSQL esta em:
+
+- server/database/schema_postgresql.sql
+
+Para criar a base e aplicar o schema automaticamente:
+
+- npm run db:create
+- npm run db:init
+
+Ou tudo de uma vez:
+
+- npm run db:setup
+
 ## Scripts
 
 - npm run dev:client: inicia frontend Vite em modo desenvolvimento
 - npm run dev:server: inicia backend Express (watch mode)
+- npm run db:create: cria a base de dados PostgreSQL se nao existir
+- npm run db:init: aplica o script SQL da base de dados
+- npm run db:setup: executa db:create e db:init
 - npm run build: gera build de producao do frontend
 - npm run preview: preview da build do frontend
 

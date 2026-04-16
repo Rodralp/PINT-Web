@@ -1,14 +1,36 @@
 import { Account } from './sql/Account.js';
 
-const sanitizeAccount = (account) => ({
-  id: account.id,
-  nome: account.nome,
-  email: account.email,
-  role: account.role,
-  status: account.status,
-});
+const DEFAULT_ROLE = 'consultor';
 
 const normalizeEmail = (value) => value.trim().toLowerCase();
+
+const normalizeRoles = (rolesValue) => {
+  const rawRoles = Array.isArray(rolesValue)
+    ? rolesValue
+    : typeof rolesValue === 'string'
+      ? rolesValue.split(';')
+      : [];
+
+  const parsedRoles = rawRoles
+    .map((role) => String(role).trim().toLowerCase())
+    .filter(Boolean);
+
+  const uniqueRoles = [...new Set(parsedRoles)];
+  return uniqueRoles.length > 0 ? uniqueRoles : [DEFAULT_ROLE];
+};
+
+const sanitizeAccount = (account) => {
+  const roles = normalizeRoles(account.role);
+
+  return {
+    id: account.id,
+    nome: account.nome,
+    email: account.email,
+    role: roles[0],
+    roles,
+    status: account.status,
+  };
+};
 
 export const authModel = {
   async register({ nome, email, senha }) {
@@ -35,7 +57,21 @@ export const authModel = {
 
     const account = await Account.findOne({ where: { email: normalizedEmail, senha } });
 
-    return account ? sanitizeAccount(account) : null;
+    if (!account) {
+      return { status: 'invalid_credentials' };
+    }
+
+    if (String(account.status).toLowerCase() === 'pendente') {
+      return {
+        status: 'pending_approval',
+        account: sanitizeAccount(account),
+      };
+    }
+
+    return {
+      status: 'ok',
+      account: sanitizeAccount(account),
+    };
   },
 
   async findByEmail(email) {
