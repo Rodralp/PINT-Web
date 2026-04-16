@@ -12,6 +12,8 @@ import CatalogoBadges from './pages/CatalogoBadges/CatalogoBadges'
 import MeusBadges from './pages/Consultor/MeusBadges'
 import BadgeDetalhe from './pages/Consultor/BadgeDetalhe'
 import Exportacoes from './pages/Consultor/Exportacoes'
+import MensagensAvisos from './pages/Consultor/MensagensAvisos'
+import Notificacoes from './pages/Consultor/Notificacoes'
 import Profile from './pages/profile'
 import MeusPedidos from './pages/Consultor/MeusPedidos'
 import RankingConsultores from './pages/Consultor/RankingConsultores'
@@ -35,6 +37,8 @@ function App() {
         <Route path='/consultor/ranking' element={<RankingConsultores />} />
         <Route path='/consultor/lembretes' element={<Lembretes />} />
         <Route path='/consultor/exportacoes' element={<Exportacoes />} />
+        <Route path='/consultor/mensagens-avisos' element={<MensagensAvisos />} />
+        <Route path='/consultor/notificacoes' element={<Notificacoes />} />
 
         <Route path='/talent-manager/dashboard' element={<DashboardTM />} />
 
@@ -53,6 +57,8 @@ function App() {
         <Route path='/dashboard/ranking' element={<Navigate to='/consultor/ranking' replace />} />
         <Route path='/dashboard/lembretes' element={<Navigate to='/consultor/lembretes' replace />} />
         <Route path='/dashboard/exportacoes' element={<Navigate to='/consultor/exportacoes' replace />} />
+        <Route path='/dashboard/mensagens-avisos' element={<Navigate to='/consultor/mensagens-avisos' replace />} />
+        <Route path='/dashboard/notificacoes' element={<Navigate to='/consultor/notificacoes' replace />} />
 
         <Route path='/dashboard/talent-manager' element={<Navigate to='/talent-manager/dashboard' replace />} />
 

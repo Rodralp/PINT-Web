@@ -48,6 +48,14 @@ function Topbar({ onToggleSidebar }) {
     navigate('/profile');
   }
 
+  const handleMessagesClick = () => {
+    navigate('/consultor/mensagens-avisos');
+  };
+
+  const handleNotificationsClick = () => {
+    navigate('/consultor/notificacoes');
+  };
+
   const handleLanguageChange = (languageCode) => {
     i18n.changeLanguage(languageCode);
     setShowLanguageMenu(false);
@@ -67,10 +75,10 @@ function Topbar({ onToggleSidebar }) {
         <img src="/SoftinsaLogo.png" alt="Softinsa Logo" className="topbar-logo-img" />
       </div>
       <div className="topbar-right">
-        <button className="topbar-icon-btn">
+        <button className="topbar-icon-btn" onClick={handleNotificationsClick} aria-label={t('notifications_title')}>
           <Bell size={20} strokeWidth={2} />
         </button>
-        <button className="topbar-icon-btn">
+        <button className="topbar-icon-btn" onClick={handleMessagesClick} aria-label={t('sidebar_announcements')}>
           <MessageSquare size={20} strokeWidth={2} />
         </button>
         <div className="topbar-user-info" onClick={handleProfileClick} style={{ cursor: 'pointer' }}>
