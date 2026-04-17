@@ -1,5 +1,6 @@
 import app from './app.js';
 import { connectToDatabase, syncDatabase } from './config/database.js';
+import { applySchema } from './config/schema.js';
 import { seedDatabase } from './config/seedData.js';
 
 const PORT = Number(globalThis.process?.env?.PORT) || 4000;
@@ -7,6 +8,7 @@ const PORT = Number(globalThis.process?.env?.PORT) || 4000;
 const startServer = async () => {
   try {
     await connectToDatabase();
+    await applySchema();
     await syncDatabase();
     await seedDatabase();
 
