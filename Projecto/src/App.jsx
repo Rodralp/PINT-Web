@@ -6,11 +6,15 @@ import CriarConta from './criar'
 import Entrar from './entrar'
 import DashboardC from './pages/Consultor/Dashboard_C'
 import DashboardTM from './pages/TalentManager/Dashboard_TM'
+import GestaoPedidosTM from './pages/TalentManager/GestaoPedidos_TM'
+import PedidoTM from './pages/TalentManager/Pedido_TM'
+import ExportacoesTM from './pages/TalentManager/Exportacoes_TM'
 import DashboardSLL from './pages/ServiceLineLeader/Dashboard_SLL'
 import DashboardAG from './pages/AdminGestor/Dashboard_AG'
 import CatalogoBadges from './pages/CatalogoBadges/CatalogoBadges'
 import MeusBadges from './pages/Consultor/MeusBadges'
 import BadgeDetalhe from './pages/Consultor/BadgeDetalhe'
+import PedidoDetalheC from './pages/Consultor/PedidoDetalhe_C'
 import Exportacoes from './pages/Consultor/Exportacoes'
 import MensagensAvisos from './pages/Consultor/MensagensAvisos'
 import Notificacoes from './pages/Consultor/Notificacoes'
@@ -34,6 +38,7 @@ function App() {
         <Route path='/consultor/meus-badges' element={<MeusBadges />} />
         <Route path='/consultor/badge/:badgeId' element={<BadgeDetalhe />} />
         <Route path='/consultor/meus-pedidos' element={<MeusPedidos />} />
+        <Route path='/consultor/meus-pedidos/:pedidoId' element={<PedidoDetalheC />} />
         <Route path='/consultor/ranking' element={<RankingConsultores />} />
         <Route path='/consultor/lembretes' element={<Lembretes />} />
         <Route path='/consultor/exportacoes' element={<Exportacoes />} />
@@ -41,6 +46,9 @@ function App() {
         <Route path='/consultor/notificacoes' element={<Notificacoes />} />
 
         <Route path='/talent-manager/dashboard' element={<DashboardTM />} />
+        <Route path='/talent-manager/pedidos' element={<GestaoPedidosTM />} />
+        <Route path='/talent-manager/pedidos/:pedidoId' element={<PedidoTM />} />
+        <Route path='/talent-manager/exportacoes' element={<ExportacoesTM />} />
 
         <Route path='/service-line-leader/dashboard' element={<DashboardSLL />} />
 
@@ -54,6 +62,7 @@ function App() {
         <Route path='/dashboard/meus-badges' element={<Navigate to='/consultor/meus-badges' replace />} />
         <Route path='/dashboard/badge/:badgeId' element={<BadgeDetalhe />} />
         <Route path='/dashboard/meus-pedidos' element={<Navigate to='/consultor/meus-pedidos' replace />} />
+        <Route path='/dashboard/meus-pedidos/:pedidoId' element={<PedidoDetalheC />} />
         <Route path='/dashboard/ranking' element={<Navigate to='/consultor/ranking' replace />} />
         <Route path='/dashboard/lembretes' element={<Navigate to='/consultor/lembretes' replace />} />
         <Route path='/dashboard/exportacoes' element={<Navigate to='/consultor/exportacoes' replace />} />
@@ -61,6 +70,9 @@ function App() {
         <Route path='/dashboard/notificacoes' element={<Navigate to='/consultor/notificacoes' replace />} />
 
         <Route path='/dashboard/talent-manager' element={<Navigate to='/talent-manager/dashboard' replace />} />
+        <Route path='/dashboard/talent-manager/pedidos' element={<Navigate to='/talent-manager/pedidos' replace />} />
+        <Route path='/dashboard/talent-manager/pedidos/:pedidoId' element={<Navigate to='/talent-manager/pedidos' replace />} />
+        <Route path='/dashboard/talent-manager/exportacoes' element={<Navigate to='/talent-manager/exportacoes' replace />} />
 
         <Route path='/dashboard/service-line-leader' element={<Navigate to='/service-line-leader/dashboard' replace />} />
         

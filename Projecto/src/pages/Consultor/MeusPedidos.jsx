@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import { fetchMyRequests } from '../../services/consultorService';
+import { defaultMyRequests } from './consultorRequestsData';
 import '../../css/Consultor/MeusPedidos.css';
 
 const statusConfig = {
@@ -40,19 +41,6 @@ const statusConfig = {
   },
 };
 
-const defaultRequests = [
-  { id: 1, badge: 'UX/UI Design', level: 'Especialista', date: '05/12/2025', status: 'pendente' },
-  { id: 2, badge: 'Data Analytics', level: 'Intermédio', date: '04/12/2025', status: 'rejeitado' },
-  { id: 3, badge: 'Cloud Architecture', level: 'Sénior', date: '03/12/2025', status: 'aprovado' },
-  { id: 4, badge: 'LowCode (Outsystems)', level: 'Júnior', date: '01/12/2025', status: 'pendente' },
-  { id: 5, badge: 'DevOps', level: 'Intermédio', date: '30/11/2025', status: 'pendente' },
-  { id: 6, badge: 'Cybersecurity', level: 'Líder de Conhecimento', date: '28/11/2025', status: 'aprovado' },
-  { id: 7, badge: 'Machine Learning', level: 'Sénior', date: '25/11/2025', status: 'aprovado' },
-  { id: 8, badge: 'Mobile Development', level: 'Júnior', date: '22/11/2025', status: 'rejeitado' },
-  { id: 9, badge: 'Blockchain', level: 'Especialista', date: '20/11/2025', status: 'aprovado' },
-  { id: 10, badge: 'IoT Solutions', level: 'Intermédio', date: '18/11/2025', status: 'pendente' },
-];
-
 const filters = [
   { id: 'aprovado', label: 'Aprovado' },
   { id: 'pendente', label: 'Pendente' },
@@ -63,7 +51,7 @@ const ITEMS_PER_PAGE = 10;
 
 function MeusPedidos() {
   const navigate = useNavigate();
-  const [allRequests, setAllRequests] = useState(defaultRequests);
+  const [allRequests, setAllRequests] = useState(defaultMyRequests);
   const [activeFilters, setActiveFilters] = useState(filters.map((filter) => filter.id));
   const [page, setPage] = useState(1);
 
@@ -142,6 +130,12 @@ function MeusPedidos() {
     setPage((current) => Math.min(totalPages, current + 1));
   };
 
+  const handleOpenRequestDetails = (request) => {
+    navigate(`/consultor/meus-pedidos/${request.id}`, {
+      state: { request },
+    });
+  };
+
   return (
     <Layout>
       <div className="orders-page">
@@ -158,7 +152,7 @@ function MeusPedidos() {
               <Clock3 size={26} strokeWidth={2} />
             </div>
             <div className="status-card-content">
-              <span>Submetidos</span>
+              <span>Todos</span>
               <strong>{counts.submitted}</strong>
             </div>
           </article>
@@ -245,7 +239,13 @@ function MeusPedidos() {
                         </span>
                       </td>
                       <td>
-                        <button type="button" className="orders-view-btn">Ver</button>
+                        <button
+                          type="button"
+                          className="orders-view-btn"
+                          onClick={() => handleOpenRequestDetails(request)}
+                        >
+                          Ver
+                        </button>
                       </td>
                     </tr>
                   );
