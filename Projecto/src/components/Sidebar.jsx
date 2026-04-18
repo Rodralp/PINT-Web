@@ -59,7 +59,7 @@ const sidebarConfig = [
       { id: 'ranking_SLL', labelKey: 'sidebar_service_line_ranking', icon: Crown },
       { id: 'pedidos_SLL', labelKey: 'sidebar_manage_requests', icon: FilePenLine },
       { id: 'historico_SLL', labelKey: 'sidebar_history', icon: History },
-      { id: 'exportacoes_SLL', labelKey: 'sidebar_exports_sll', icon: ArrowDownToLine },
+      { id: 'exportacoes_SLL', labelKey: 'sidebar_exports_sll', icon: ArrowDownToLine, route: '/service-line-leader/exportacoes' },
     ],
   },
   {

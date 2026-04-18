@@ -72,6 +72,17 @@
   margin-bottom: 14px;
 }
 
+.tm-export-scope-note {
+  margin: -2px 0 12px;
+  color: #6f7888;
+  font-size: 13px;
+}
+
+.tm-export-scope-note strong {
+  color: #334155;
+  font-weight: 700;
+}
+
 .tm-export-search,
 .tm-export-control-btn {
   height: 40px;

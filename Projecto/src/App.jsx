@@ -10,6 +10,7 @@ import GestaoPedidosTM from './pages/TalentManager/GestaoPedidos_TM'
 import PedidoTM from './pages/TalentManager/Pedido_TM'
 import ExportacoesTM from './pages/TalentManager/Exportacoes_TM'
 import DashboardSLL from './pages/ServiceLineLeader/Dashboard_SLL'
+import ExportacoesSLL from './pages/ServiceLineLeader/Exportacoes_SLL'
 import DashboardAG from './pages/AdminGestor/Dashboard_AG'
 import CatalogoBadges from './pages/CatalogoBadges/CatalogoBadges'
 import MeusBadges from './pages/Consultor/MeusBadges'
@@ -51,6 +52,7 @@ function App() {
         <Route path='/talent-manager/exportacoes' element={<ExportacoesTM />} />
 
         <Route path='/service-line-leader/dashboard' element={<DashboardSLL />} />
+        <Route path='/service-line-leader/exportacoes' element={<ExportacoesSLL />} />
 
         <Route path='/admin-gestor/dashboard' element={<DashboardAG />} />
         <Route path='/admin-gestor/catalogo-badges' element={<CatalogoBadges />} />
@@ -75,6 +77,7 @@ function App() {
         <Route path='/dashboard/talent-manager/exportacoes' element={<Navigate to='/talent-manager/exportacoes' replace />} />
 
         <Route path='/dashboard/service-line-leader' element={<Navigate to='/service-line-leader/dashboard' replace />} />
+        <Route path='/dashboard/service-line-leader/exportacoes' element={<Navigate to='/service-line-leader/exportacoes' replace />} />
         
         <Route path='/dashboard/admin-gestor' element={<Navigate to='/admin-gestor/dashboard' replace />} />
         <Route path='/dashboard/admin/catalogo-badges' element={<Navigate to='/admin-gestor/catalogo-badges' replace />} />
