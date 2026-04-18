@@ -3,6 +3,53 @@ import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import '../css/Navbar.css';
 
+const dashboardPathByRole = {
+  consultor: '/consultor/dashboard',
+  'talent-manager': '/talent-manager/dashboard',
+  'service-line-leader': '/service-line-leader/dashboard',
+  'admin-gestor': '/admin-gestor/dashboard',
+};
+
+const DEFAULT_ROLE = 'consultor';
+
+const normalizeRoles = (rolesValue) => {
+  const rawRoles = Array.isArray(rolesValue)
+    ? rolesValue
+    : typeof rolesValue === 'string'
+      ? rolesValue.split(';')
+      : [];
+
+  const parsedRoles = rawRoles
+    .map((role) => String(role).trim().toLowerCase())
+    .filter(Boolean);
+
+  const uniqueRoles = [...new Set(parsedRoles)];
+  return uniqueRoles.length > 0 ? uniqueRoles : [DEFAULT_ROLE];
+};
+
+const resolveDashboardPath = (rolesValue) => {
+  const roles = normalizeRoles(rolesValue);
+  const firstMatchingPath = roles
+    .map((role) => dashboardPathByRole[role])
+    .find(Boolean);
+
+  return firstMatchingPath || '/consultor/dashboard';
+};
+
+const getStoredLoginData = () => {
+  const storedLoginData = sessionStorage.getItem('loginData');
+
+  if (!storedLoginData) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(storedLoginData);
+  } catch {
+    return null;
+  }
+};
+
 const IconLink = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -38,8 +85,9 @@ function Navbar() {
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
-  const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
-  const isLoggedIn = !!storedLoginData;
+  const loginData = getStoredLoginData();
+  const isLoggedIn = Boolean(loginData);
+  const dashboardPath = resolveDashboardPath(loginData?.roles ?? loginData?.role);
 
   const languages = [
     { code: 'pt', label: 'Português', flag: FlagPortuguese },
@@ -93,12 +141,20 @@ function Navbar() {
             <a href="#galeria" className="nav-link text-dark fw-medium d-flex align-items-center gap-1 p-0">
               <IconSearch /> {t('nav_public_gallery')}
             </a>
-            <button className="btn btn-primary rounded-pill px-4 fw-semibold border-0" style={{ backgroundColor: '#0088FF' }} onClick={() => navigate('/entrar')}>
-              {t('nav_login')}
-            </button>
-            <button className="btn btn-dark rounded-pill px-4 fw-semibold" onClick={() => navigate('/criar')}>
-              {t('nav_register')}
-            </button>
+            {isLoggedIn ? (
+              <button className="btn btn-primary rounded-pill px-4 fw-semibold border-0" style={{ backgroundColor: '#0088FF' }} onClick={() => navigate(dashboardPath)}>
+                {t('nav_back_dashboard')}
+              </button>
+            ) : (
+              <>
+                <button className="btn btn-primary rounded-pill px-4 fw-semibold border-0" style={{ backgroundColor: '#0088FF' }} onClick={() => navigate('/entrar')}>
+                  {t('nav_login')}
+                </button>
+                <button className="btn btn-dark rounded-pill px-4 fw-semibold" onClick={() => navigate('/criar')}>
+                  {t('nav_register')}
+                </button>
+              </>
+            )}
             <div className="navbar-lang-dropdown-wrapper d-md-none">
               <button 
                 className="nav-link text-dark fw-medium d-flex align-items-center gap-1 navbar-lang-btn"

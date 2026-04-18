@@ -18,84 +18,71 @@ const sortOptions = [
   { id: 'titulo_asc', labelKey: 'notifications_sort_title_asc' },
 ];
 
+const notificationTypeLabels = {
+  alerta: 'notifications_filter_alert',
+  info: 'notifications_filter_info',
+  sucesso: 'notifications_filter_success',
+};
+
 const defaultNotifications = [
   {
     id: 'notif-1',
     typeId: 'alerta',
+    isRead: false,
     title: 'LowCode (Outsystems) sera removido',
-    sender: 'Maria Santos',
     date: '2025-04-20',
     summary: 'A badge LowCode (Outsystems) foi marcada para remocao no proximo ciclo.',
     accent: '#f4c20d',
-    details: [
-      'A badge LowCode (Outsystems) sera removida do fluxo atual durante a proxima atualizacao.',
-      'Recomenda-se rever o estado das candidaturas e guardar as evidencias necessarias.',
-    ],
+    actionPath: '/consultor/catalogo-badges',
   },
   {
     id: 'notif-2',
     typeId: 'info',
+    isRead: true,
     title: 'Novo nivel adicionado a LowCode (Outsystems)',
-    sender: 'Maria Santos',
     date: '2025-04-15',
     summary: 'Foi adicionado um novo nivel ao percurso de badges.',
     accent: '#1f8fe5',
-    details: [
-      'Foi adicionado um novo nivel ao percurso de LowCode (Outsystems).',
-      'Consulte a pagina de badges para ver os novos requisitos e o detalhe da candidatura.',
-    ],
+    actionPath: '/consultor/catalogo-badges',
   },
   {
     id: 'notif-3',
     typeId: 'sucesso',
+    isRead: true,
     title: 'Pedido aprovado',
-    sender: 'Maria Santos',
     date: '2025-03-30',
     summary: 'A tua candidatura foi aprovada com sucesso.',
     accent: '#4cd07d',
-    details: [
-      'A candidatura submetida foi validada e aprovada pela equipa responsavel.',
-      'Podes consultar os detalhes do badge na area de Meus Badges.',
-    ],
+    actionPath: '/consultor/meus-badges',
   },
   {
     id: 'notif-4',
     typeId: 'info',
+    isRead: false,
     title: 'Ranking mensal atualizado',
-    sender: 'Ranking Team',
     date: '2025-03-22',
     summary: 'A lista de ranking recebeu novos pontos e badges.',
     accent: '#9851e8',
-    details: [
-      'O ranking mensal foi atualizado com os dados mais recentes da plataforma.',
-      'Verifica a tua posicao e as mudancas introduzidas pela nova campanha.',
-    ],
+    actionPath: '/consultor/ranking',
   },
   {
     id: 'notif-5',
     typeId: 'alerta',
+    isRead: false,
     title: 'Badge expirando em breve',
-    sender: 'Sistema',
     date: '2025-03-18',
     summary: 'Existe uma badge com expiracao iminente.',
     accent: '#ef4444',
-    details: [
-      'Uma das badges ativas esta a aproximar-se da data de expiracao.',
-      'Revise as informacoes e revalide a candidatura, se necessario.',
-    ],
+    actionPath: '/consultor/meus-badges',
   },
   {
     id: 'notif-6',
     typeId: 'info',
+    isRead: true,
     title: 'Manutencao programada',
-    sender: 'IT Operations',
     date: '2025-03-12',
     summary: 'Havera uma janela de manutencao com indisponibilidade temporaria.',
     accent: '#3b82f6',
-    details: [
-      'Durante a janela de manutencao, algumas funcionalidades podem ficar temporariamente indisponiveis.',
-      'Planeie a sua atividade de acordo com esta janela de operacao.',
-    ],
   },
 ];
 
@@ -117,12 +104,11 @@ const formatNotificationDate = (value, locale = 'pt-PT') => {
 function Notificacoes() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const [notifications] = useState(defaultNotifications);
+  const [notifications, setNotifications] = useState(defaultNotifications);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('todos');
   const [sortBy, setSortBy] = useState('recentes');
   const [page, setPage] = useState(1);
-  const [selectedNotificationId, setSelectedNotificationId] = useState(defaultNotifications[0].id);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const filterDropdownRef = useRef(null);
@@ -176,13 +162,12 @@ function Notificacoes() {
       const searchMatch =
         normalizedSearch.length === 0
         || notification.title.toLowerCase().includes(normalizedSearch)
-        || notification.sender.toLowerCase().includes(normalizedSearch)
         || notification.summary.toLowerCase().includes(normalizedSearch)
-        || notification.details.some((detail) => detail.toLowerCase().includes(normalizedSearch));
+        || t(notificationTypeLabels[notification.typeId] || 'notifications_filter_all').toLowerCase().includes(normalizedSearch);
 
       return typeMatch && searchMatch;
     });
-  }, [notifications, activeFilter, searchTerm]);
+  }, [notifications, activeFilter, searchTerm, t]);
 
   const sortedNotifications = useMemo(() => {
     return [...filteredNotifications].sort((a, b) => {
@@ -211,17 +196,30 @@ function Notificacoes() {
   }, [searchTerm, activeFilter, sortBy]);
 
   useEffect(() => {
-    if (!pagedNotifications.length) {
-      setSelectedNotificationId(null);
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  const handleOpenNotification = (notification) => {
+    if (!notification.isRead) {
+      setNotifications((current) => current.map((item) => (
+        item.id === notification.id ? { ...item, isRead: true } : item
+      )));
+    }
+
+    if (!notification.actionPath) {
       return;
     }
 
-    if (!selectedNotificationId || !pagedNotifications.some((notification) => notification.id === selectedNotificationId)) {
-      setSelectedNotificationId(pagedNotifications[0].id);
-    }
-  }, [pagedNotifications, selectedNotificationId]);
+    navigate(notification.actionPath);
+  };
 
-  const selectedNotification = sortedNotifications.find((notification) => notification.id === selectedNotificationId) || sortedNotifications[0] || notifications[0];
+  const handleMarkAsRead = (notificationId) => {
+    setNotifications((current) => current.map((item) => (
+      item.id === notificationId ? { ...item, isRead: true } : item
+    )));
+  };
 
   const onPagePrev = () => setPage((current) => Math.max(1, current - 1));
   const onPageNext = () => setPage((current) => Math.min(totalPages, current + 1));
@@ -315,94 +313,96 @@ function Notificacoes() {
             </div>
           </div>
 
-          <div className="notifications-grid">
-            <aside className="notifications-list-panel">
-              <div className="notifications-panel-head">
-                <h2>{t('notifications_table_title')}</h2>
-                <span>{sortedNotifications.length} {t('notifications_items_label')}</span>
-              </div>
+          <div className="notifications-column">
+            <div className="notifications-panel-head">
+              <h2>{t('notifications_table_title')}</h2>
+              <span>{sortedNotifications.length} {t('notifications_items_label')}</span>
+            </div>
 
-              <div className="notifications-table-wrap">
-                <table className="notifications-table">
-                  <thead>
-                    <tr>
-                      <th>{t('notifications_column_title')}</th>
-                      <th>{t('notifications_column_sender')}</th>
-                      <th>
-                        <span className="notifications-sort-indicator">{t('notifications_column_date')}</span>
-                      </th>
-                      <th>{t('notifications_column_details')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pagedNotifications.map((notification) => {
-                      const isSelected = notification.id === selectedNotificationId;
+            <div className="notifications-table-wrap">
+              <table className="notifications-table">
+                <thead>
+                  <tr>
+                    <th className="notifications-col-seen">{t('notifications_column_seen')}</th>
+                    <th>{t('notifications_column_title')}</th>
+                    <th>{t('notifications_column_sender')}</th>
+                    <th>{t('notifications_column_date')}</th>
+                    <th>{t('notifications_column_details')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagedNotifications.map((notification) => {
+                    const canOpen = Boolean(notification.actionPath);
 
-                      return (
-                        <tr key={notification.id} className={isSelected ? 'selected' : ''}>
-                          <td>
-                            <button type="button" className="notifications-row-link" onClick={() => setSelectedNotificationId(notification.id)}>
-                              {notification.title}
+                    return (
+                      <tr key={notification.id}>
+                        <td>
+                          {notification.isRead ? (
+                            <span
+                              className={`notifications-seen-indicator ${notification.isRead ? 'is-read' : 'is-unread'}`}
+                              aria-label={t('notifications_seen_read')}
+                              title={t('notifications_seen_read')}
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              className="notifications-seen-btn"
+                              onClick={() => handleMarkAsRead(notification.id)}
+                              aria-label={t('notifications_seen_unread')}
+                              title={t('notifications_seen_unread')}
+                            >
+                              <span className="notifications-seen-indicator is-unread" />
                             </button>
-                          </td>
-                          <td>{notification.sender}</td>
-                          <td>{formatNotificationDate(notification.date, i18n.language === 'en' ? 'en-GB' : 'pt-PT')}</td>
-                          <td>
-                            <button type="button" className="notifications-view-btn" onClick={() => setSelectedNotificationId(notification.id)}>
+                          )}
+                        </td>
+                        <td>
+                          <div className="notification-table-title-wrap">
+                            <span className="notification-table-title">{notification.title}</span>
+                            <span className="notification-table-summary">{notification.summary}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className="notification-table-badge" style={{ backgroundColor: `${notification.accent}18`, color: notification.accent }}>
+                            {t(notificationTypeLabels[notification.typeId] || 'notifications_filter_all')}
+                          </span>
+                        </td>
+                        <td>{formatNotificationDate(notification.date, i18n.language === 'en' ? 'en-GB' : 'pt-PT')}</td>
+                        <td>
+                          {canOpen ? (
+                            <button type="button" className="notifications-view-btn" onClick={() => handleOpenNotification(notification)}>
                               {t('notifications_view_button')}
                             </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                          ) : (
+                            <span className="notifications-view-empty">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-              <div className="notifications-pagination" role="navigation" aria-label={t('pagination')}>
-                <button type="button" className="notifications-page-btn ghost" onClick={onPagePrev} disabled={page === 1} aria-label={t('previous_page')}>
-                  <ChevronLeft size={16} />
+            <div className="notifications-pagination" role="navigation" aria-label={t('pagination')}>
+              <button type="button" className="notifications-page-btn ghost" onClick={onPagePrev} disabled={page === 1} aria-label={t('previous_page')}>
+                <ChevronLeft size={16} />
+              </button>
+
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  className={`notifications-page-btn ${pageNumber === page ? 'active' : ''}`}
+                  onClick={() => setPage(pageNumber)}
+                >
+                  {pageNumber}
                 </button>
+              ))}
 
-                {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
-                  <button
-                    key={pageNumber}
-                    type="button"
-                    className={`notifications-page-btn ${pageNumber === page ? 'active' : ''}`}
-                    onClick={() => setPage(pageNumber)}
-                  >
-                    {pageNumber}
-                  </button>
-                ))}
-
-                <button type="button" className="notifications-page-btn ghost" onClick={onPageNext} disabled={page === totalPages} aria-label={t('next_page')}>
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            </aside>
-
-            <section className="notifications-detail-panel">
-              {selectedNotification ? (
-                <div className="notification-detail-card">
-                  <div className="notification-detail-badge" style={{ backgroundColor: `${selectedNotification.accent}18`, color: selectedNotification.accent }}>
-                    {selectedNotification.title}
-                  </div>
-
-                  <div className="notification-detail-meta">
-                    <span>{selectedNotification.sender}</span>
-                    <span>{formatNotificationDate(selectedNotification.date, i18n.language === 'en' ? 'en-GB' : 'pt-PT')}</span>
-                  </div>
-
-                  <div className="notification-detail-body">
-                    {selectedNotification.details.map((paragraph, index) => (
-                      <p key={`${selectedNotification.id}-${index}`}>{paragraph}</p>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="notifications-empty-state">{t('notifications_empty_state')}</div>
-              )}
-            </section>
+              <button type="button" className="notifications-page-btn ghost" onClick={onPageNext} disabled={page === totalPages} aria-label={t('next_page')}>
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
         </section>
       </div>

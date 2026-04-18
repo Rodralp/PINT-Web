@@ -147,17 +147,10 @@
   font-weight: 700;
 }
 
-.notifications-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-  gap: 14px;
-  align-items: stretch;
-}
-
-.notifications-list-panel {
+.notifications-column {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .notifications-panel-head {
@@ -180,11 +173,12 @@
   overflow-x: auto;
   border: 1px solid #e5eaf1;
   border-radius: 12px;
+  background: #ffffff;
 }
 
 .notifications-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 860px;
   border-collapse: collapse;
   background: #ffffff;
 }
@@ -200,6 +194,11 @@
   border-bottom: 1px solid #edf0f5;
 }
 
+.notifications-col-seen {
+  width: 46px;
+  text-align: center;
+}
+
 .notifications-table tbody td {
   color: #4b5563;
   font-size: 13px;
@@ -208,21 +207,93 @@
   vertical-align: middle;
 }
 
-.notifications-table tbody tr.selected {
-  background: #f6faff;
+.notifications-table tbody td:first-child {
+  text-align: center;
 }
 
-.notifications-row-link {
-  border: none;
-  background: transparent;
-  padding: 0;
+.notifications-table tbody td:nth-child(3) {
+  min-width: 130px;
+}
+
+.notifications-table tbody tr:nth-child(even) {
+  background: #fcfdff;
+}
+
+.notifications-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.notification-table-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.notification-table-title {
   color: #2f3747;
   font-size: 13px;
-  text-align: left;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.notification-table-summary {
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.notification-table-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #4b5563;
+}
+
+.notification-table-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.notifications-seen-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.notifications-seen-btn {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.notifications-seen-btn:hover {
+  background: rgba(27, 132, 244, 0.1);
+}
+
+.notifications-seen-indicator.is-unread {
+  background: #1b84f4;
+  box-shadow: 0 0 0 3px rgba(27, 132, 244, 0.16);
+}
+
+.notifications-seen-indicator.is-read {
+  background: #d1d5db;
 }
 
 .notifications-view-btn {
-  width: 110px;
+  width: 104px;
   height: 32px;
   border-radius: 8px;
   border: 2px solid #374151;
@@ -236,10 +307,9 @@
   background: #f9fafb;
 }
 
-.notifications-sort-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+.notifications-view-empty {
+  color: #9ca3af;
+  font-size: 12px;
 }
 
 .notifications-pagination {
@@ -279,77 +349,7 @@
   cursor: not-allowed;
 }
 
-.notifications-detail-panel {
-  background: #f8fafc;
-  border-radius: 14px;
-  padding: 18px;
-}
-
-.notification-detail-card {
-  min-height: 520px;
-  background: #ffffff;
-  border: 1px solid #e5eaf1;
-  border-radius: 14px;
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.notification-detail-badge {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  padding: 8px 12px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.notification-detail-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  color: #7f8794;
-  font-size: 13px;
-}
-
-.notification-detail-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.notification-detail-body p {
-  margin: 0;
-  background: #f8fafc;
-  border: 1px solid #edf0f5;
-  border-radius: 12px;
-  padding: 14px 16px;
-  color: #5e697c;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.notifications-empty-state {
-  min-height: 520px;
-  border: 1px dashed #d4dae5;
-  border-radius: 14px;
-  background: #ffffff;
-  color: #6b7280;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  font-size: 14px;
-  padding: 24px;
-}
-
 @media (max-width: 1200px) {
-  .notifications-grid {
-    grid-template-columns: 1fr;
-  }
-
   .notifications-table {
     min-width: 100%;
   }
@@ -375,8 +375,8 @@
     border-radius: 16px;
   }
 
-  .notifications-detail-card,
-  .notifications-empty-state {
-    min-height: auto;
+  .notifications-table thead th,
+  .notifications-table tbody td {
+    padding: 12px;
   }
 }
