@@ -44,9 +44,9 @@ const sidebarConfig = [
     allowedRoles: ['talent-manager'],
     items: [
       { id: 'dashboard_TM', labelKey: 'sidebar_dashboard', icon: Home, route: '/talent-manager/dashboard' },
-      { id: 'pedidos_TM', labelKey: 'sidebar_manage_requests', icon: FilePenLine },
+      { id: 'pedidos_TM', labelKey: 'sidebar_manage_requests', icon: FilePenLine, route: '/talent-manager/pedidos' },
       { id: 'historico_TM', labelKey: 'sidebar_history', icon: History },
-      { id: 'exportacoes_TM', labelKey: 'sidebar_exports_tm', icon: ArrowDownToLine },
+      { id: 'exportacoes_TM', labelKey: 'sidebar_exports_tm', icon: ArrowDownToLine, route: '/talent-manager/exportacoes' },
     ],
   },
   {
@@ -59,7 +59,7 @@ const sidebarConfig = [
       { id: 'ranking_SLL', labelKey: 'sidebar_service_line_ranking', icon: Crown },
       { id: 'pedidos_SLL', labelKey: 'sidebar_manage_requests', icon: FilePenLine },
       { id: 'historico_SLL', labelKey: 'sidebar_history', icon: History },
-      { id: 'exportacoes_SLL', labelKey: 'sidebar_exports_sll', icon: ArrowDownToLine },
+      { id: 'exportacoes_SLL', labelKey: 'sidebar_exports_sll', icon: ArrowDownToLine, route: '/service-line-leader/exportacoes' },
     ],
   },
   {
