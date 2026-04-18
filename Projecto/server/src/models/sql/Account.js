@@ -1,6 +1,8 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../../config/database.js';
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export const Account = sequelize.define(
   'Account',
   {
@@ -18,7 +20,11 @@ export const Account = sequelize.define(
       allowNull: false,
       unique: true,
       validate: {
-        isEmail: true,
+        isValidEmail(value) {
+          if (typeof value !== 'string' || !EMAIL_PATTERN.test(value)) {
+            throw new Error('Email must be a valid email address.');
+          }
+        },
       },
     },
     senha: {

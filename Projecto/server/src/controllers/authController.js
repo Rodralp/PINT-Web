@@ -1,4 +1,5 @@
 import { authService } from '../services/authService.js';
+import { UniqueConstraintError, ValidationError } from 'sequelize';
 
 export const register = async (req, res) => {
   const { nome, email, senha } = req.body ?? {};
@@ -11,12 +12,25 @@ export const register = async (req, res) => {
   try {
     const account = await authService.registerAccount({ nome, email, senha });
     if (!account) {
-      res.status(409).json({ message: 'Email already registered.' });
+      res.status(409).json({ message: 'Failed to register account.' });
       return;
     }
 
     res.status(201).json(account);
-  } catch {
+  } catch (error) {
+    if (error instanceof UniqueConstraintError) {
+      res.status(409).json({ message: 'Failed to register account.' });
+      return;
+    }
+
+    if (error instanceof ValidationError) {
+      res.status(400).json({
+        message: 'Failed to register account.',
+        details: error.errors.map((item) => item.message),
+      });
+      return;
+    }
+
     res.status(500).json({ message: 'Failed to register account.' });
   }
 };

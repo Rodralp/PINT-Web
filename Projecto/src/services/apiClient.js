@@ -29,8 +29,13 @@ const request = async (path, options = {}) => {
   } catch (error) {
     const message = error?.response?.data?.message || error?.message || 'HTTP request failed';
     const requestError = new Error(message);
+    const errorDetails = error?.response?.data?.details;
     const errorCode = error?.response?.data?.code;
     const statusCode = error?.response?.status;
+
+    if (errorDetails) {
+      requestError.details = errorDetails;
+    }
 
     if (errorCode) {
       requestError.code = errorCode;
