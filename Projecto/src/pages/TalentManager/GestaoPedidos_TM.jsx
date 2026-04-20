@@ -39,6 +39,37 @@ function GestaoPedidosTM() {
     sent: requests.filter((request) => request.status === 'enviado').length,
   }), [requests]);
 
+  const summaryCards = useMemo(() => ([
+    {
+      id: 'submitted',
+      tone: 'blue',
+      label: 'Todos',
+      value: summaryCounts.submitted,
+      icon: statusConfig.submetido.icon,
+    },
+    {
+      id: 'inReview',
+      tone: 'amber',
+      label: 'Em Validação',
+      value: summaryCounts.inReview,
+      icon: statusConfig.validacao.icon,
+    },
+    {
+      id: 'rejected',
+      tone: 'red',
+      label: 'Rejeitados',
+      value: summaryCounts.rejected,
+      icon: statusConfig.rejeitado.icon,
+    },
+    {
+      id: 'sent',
+      tone: 'green',
+      label: 'Enviado',
+      value: summaryCounts.sent,
+      icon: statusConfig.enviado.icon,
+    },
+  ]), [summaryCounts]);
+
   const filteredRequests = useMemo(() => {
     if (activeFilters.length === 0) {
       return [];
@@ -92,45 +123,21 @@ function GestaoPedidosTM() {
         </header>
 
         <section className="tm-orders-summary-grid">
-          <article className="tm-request-card blue">
-            <span className="tm-request-card-icon">
-              <Users size={26} strokeWidth={2} />
-            </span>
-            <div className="tm-request-card-content">
-              <span>Todos</span>
-              <strong>{summaryCounts.submitted}</strong>
-            </div>
-          </article>
+          {summaryCards.map((card) => {
+            const Icon = card.icon;
 
-          <article className="tm-request-card amber">
-            <span className="tm-request-card-icon">
-              <Users size={26} strokeWidth={2} />
-            </span>
-            <div className="tm-request-card-content">
-              <span>Em Validação</span>
-              <strong>{summaryCounts.inReview}</strong>
-            </div>
-          </article>
-
-          <article className="tm-request-card red">
-            <span className="tm-request-card-icon">
-              <Users size={26} strokeWidth={2} />
-            </span>
-            <div className="tm-request-card-content">
-              <span>Rejeitados</span>
-              <strong>{summaryCounts.rejected}</strong>
-            </div>
-          </article>
-
-          <article className="tm-request-card green">
-            <span className="tm-request-card-icon">
-              <Users size={26} strokeWidth={2} />
-            </span>
-            <div className="tm-request-card-content">
-              <span>Enviado</span>
-              <strong>{summaryCounts.sent}</strong>
-            </div>
-          </article>
+            return (
+              <article key={card.id} className={`tm-request-card ${card.tone}`}>
+                <span className="tm-request-card-icon">
+                  <Icon size={26} strokeWidth={2} />
+                </span>
+                <div className="tm-request-card-content">
+                  <span>{card.label}</span>
+                  <strong>{card.value}</strong>
+                </div>
+              </article>
+            );
+          })}
         </section>
 
         <section className="tm-orders-board">

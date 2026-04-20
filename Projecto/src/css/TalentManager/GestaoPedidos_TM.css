@@ -168,17 +168,17 @@
   cursor: pointer;
 }
 
-.tm-filter-chip.approved.active {
+.tm-filter-chip.aprovado.active {
   background: #d1fae5;
   color: #047857;
 }
 
-.tm-filter-chip.pending.active {
+.tm-filter-chip.pendente.active {
   background: #fef3c7;
   color: #b45309;
 }
 
-.tm-filter-chip.rejected.active {
+.tm-filter-chip.rejeitado.active {
   background: #fee2e2;
   color: #b91c1c;
 }
