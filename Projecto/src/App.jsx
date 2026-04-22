@@ -2,6 +2,7 @@ import './css/App.css'
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
 import './translations/i18n'
 import LandingPage from './LandingPage'
+import GaleriaPublica from './GaleriaPublica'
 import CriarConta from './criar'
 import Entrar from './entrar'
 import DashboardC from './pages/Consultor/Dashboard_C'
@@ -14,7 +15,7 @@ import ExportacoesSLL from './pages/ServiceLineLeader/Exportacoes_SLL'
 import GestaoPedidosSLL from './pages/ServiceLineLeader/GestaoPedidos_SLL'
 import PedidoSLL from './pages/ServiceLineLeader/Pedido_SLL'
 import DashboardAG from './pages/AdminGestor/Dashboard_AG'
-import CatalogoBadges from './pages/CatalogoBadges/CatalogoBadges'
+import CatalogoBadges from './pages/CatalogoBadges'
 import MeusBadges from './pages/Consultor/MeusBadges'
 import BadgeDetalhe from './pages/Consultor/BadgeDetalhe'
 import PedidoDetalheC from './pages/Consultor/PedidoDetalhe_C'
@@ -31,6 +32,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path='/' element={<LandingPage />} />
+        <Route path='/galeria-publica' element={<GaleriaPublica />} />
         <Route path='/criar' element={<CriarConta />} />
         <Route path='/entrar' element={<Entrar />} />
         <Route path='/dashboard' element={<Navigate to='/consultor/dashboard' replace />} />

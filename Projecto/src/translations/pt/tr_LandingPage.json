@@ -17,6 +17,13 @@
   "services_lead": "Soluções integradas e à medida do cliente.",
   "services_body": "Procuramos satisfazer as necessidades de negócios dos nossos clientes.",
 
+  "public_gallery_title": "Galeria Publica",
+  "public_gallery_subtitle": "Explore badges e consultores em destaque.",
+  "public_gallery_tab_aria": "Filtros de conteudo da galeria",
+  "public_gallery_badges": "Badges",
+  "public_gallery_consultores": "Consultores",
+  "public_gallery_level": "Nivel",
+
   "footer_title": "Vamos conversar?",
   "footer_button": "Nos Envie Sua Mensagem →",
 

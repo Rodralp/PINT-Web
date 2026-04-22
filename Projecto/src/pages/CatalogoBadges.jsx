@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Clock3, Filter, Search, SlidersHorizontal, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import Layout from '../../components/Layout';
-import { fetchCatalogBadges } from '../../services/consultorService';
-import '../../css/Consultor/CatalogoBadges_C.css';
+import Layout from '../components/Layout';
+import { fetchCatalogBadges } from '../services/consultorService';
+import '../css/Consultor/CatalogoBadges_C.css';
 
 const badgeLevels = [
   { levelKey: 'badge_level_junior', points: 100, badgeImage: '/badges/J%C3%BAnior.png' },

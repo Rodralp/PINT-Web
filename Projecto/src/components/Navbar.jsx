@@ -138,7 +138,14 @@ function Navbar() {
             <a href="https://www.softinsa.pt" className="nav-link text-dark fw-medium d-flex align-items-center gap-1 p-0" target="_blank" rel="noreferrer">
               <IconLink /> www.softinsa.pt
             </a>
-            <a href="#galeria" className="nav-link text-dark fw-medium d-flex align-items-center gap-1 p-0">
+            <a
+              href="/galeria-publica"
+              className="nav-link text-dark fw-medium d-flex align-items-center gap-1 p-0"
+              onClick={(event) => {
+                event.preventDefault();
+                navigate('/galeria-publica');
+              }}
+            >
               <IconSearch /> {t('nav_public_gallery')}
             </a>
             {isLoggedIn ? (
