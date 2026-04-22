@@ -15,6 +15,7 @@ import GestaoPedidosSLL from './pages/ServiceLineLeader/GestaoPedidos_SLL'
 import PedidoSLL from './pages/ServiceLineLeader/Pedido_SLL'
 import RankingSLL from './pages/ServiceLineLeader/Ranking_SLL'
 import DashboardAG from './pages/AdminGestor/Dashboard_AG'
+import GestaoPedidosAG from './pages/AdminGestor/GestaoPedidos_AG'
 import CatalogoBadges from './pages/CatalogoBadges/CatalogoBadges'
 import MeusBadges from './pages/Consultor/MeusBadges'
 import BadgeDetalhe from './pages/Consultor/BadgeDetalhe'
@@ -62,6 +63,7 @@ function App() {
 
         <Route path='/admin-gestor/dashboard' element={<DashboardAG />} />
         <Route path='/admin-gestor/catalogo-badges' element={<CatalogoBadges />} />
+        <Route path='/admin-gestor/pedidos' element={<GestaoPedidosAG />} />
 
 
 
@@ -89,6 +91,8 @@ function App() {
         <Route path='/dashboard/service-line-leader/exportacoes' element={<Navigate to='/service-line-leader/exportacoes' replace />} />
         
         <Route path='/dashboard/admin-gestor' element={<Navigate to='/admin-gestor/dashboard' replace />} />
+        <Route path='/dashboard/admin-gestor/pedidos' element={<Navigate to='/admin-gestor/pedidos' replace />} />
+        <Route path='/dashboard/admin/pedidos' element={<Navigate to='/admin-gestor/pedidos' replace />} />
         <Route path='/dashboard/admin/catalogo-badges' element={<Navigate to='/admin-gestor/catalogo-badges' replace />} />
       </Routes>
     </BrowserRouter>
