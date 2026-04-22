@@ -84,6 +84,29 @@ const getEvidencePrefix = (status) => {
   return 'C';
 };
 
+const createRequirementAttachments = (prefix, requirementNumber, filesCount) => {
+  const requirementCode = `${prefix}${requirementNumber}`;
+  const normalizedFiles = Math.max(1, Number(filesCount) || 1);
+
+  const attachments = [
+    {
+      id: `${requirementCode}-pdf`,
+      type: 'pdf',
+      label: `${requirementCode} - Evidencia tecnica.pdf`,
+    },
+  ];
+
+  if (normalizedFiles > 1) {
+    attachments.push({
+      id: `${requirementCode}-anexo`,
+      type: 'file',
+      label: `${requirementCode} - Anexo complementar.png`,
+    });
+  }
+
+  return attachments;
+};
+
 const createEvidence = (status) => {
   const prefix = getEvidencePrefix(status);
 
@@ -94,6 +117,7 @@ const createEvidence = (status) => {
       files: 2,
       description:
         'Demonstração prática da integração entre workloads cloud e on-premises com monitorização operacional.',
+      attachments: createRequirementAttachments(prefix, 1, 2),
     },
     {
       id: `${prefix}2`,
@@ -101,6 +125,7 @@ const createEvidence = (status) => {
       files: 1,
       description:
         'Implementação de métricas, alertas e evidências de resposta a incidentes em ambientes distribuídos.',
+      attachments: createRequirementAttachments(prefix, 2, 1),
     },
     {
       id: `${prefix}3`,
@@ -108,6 +133,7 @@ const createEvidence = (status) => {
       files: 2,
       description:
         'Plano de recuperação com testes de failover, RTO e RPO documentados para o contexto da Service Line.',
+      attachments: createRequirementAttachments(prefix, 3, 2),
     },
   ];
 };

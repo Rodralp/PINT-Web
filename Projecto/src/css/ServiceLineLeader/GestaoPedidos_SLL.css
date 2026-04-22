@@ -504,6 +504,41 @@
   line-height: 1.45;
 }
 
+.sll-order-requirement-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sll-order-requirement-files-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sll-order-requirement-files-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #2f3747;
+  font-size: 13px;
+}
+
+.sll-order-file-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
 .sll-order-sidebar {
   display: flex;
   flex-direction: column;

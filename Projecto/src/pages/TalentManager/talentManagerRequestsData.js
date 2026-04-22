@@ -28,7 +28,7 @@ export const statusConfig = {
   },
 };
 
-export const requestRows = [
+const requestRowsBase = [
   {
     id: 1,
     consultant: 'Ana Costa',
@@ -260,6 +260,43 @@ export const requestRows = [
     ],
   },
 ];
+
+const createRequirementAttachments = (requirementId, filesCount) => {
+  const safeId = String(requirementId || 'req').toLowerCase();
+  const prefix = String(requirementId || 'REQ').toUpperCase();
+  const normalizedFiles = Math.max(1, Number(filesCount) || 1);
+
+  const attachments = [
+    {
+      id: `${safeId}-pdf`,
+      type: 'pdf',
+      label: `${prefix} - Evidencia tecnica.pdf`,
+    },
+  ];
+
+  if (normalizedFiles > 1) {
+    attachments.push({
+      id: `${safeId}-anexo`,
+      type: 'file',
+      label: `${prefix} - Anexo complementar.png`,
+    });
+  }
+
+  return attachments;
+};
+
+const withRequirementAttachments = (evidence = []) =>
+  evidence.map((item) => ({
+    ...item,
+    attachments: Array.isArray(item.attachments)
+      ? item.attachments
+      : createRequirementAttachments(item.id, item.files),
+  }));
+
+export const requestRows = requestRowsBase.map((request) => ({
+  ...request,
+  evidence: withRequirementAttachments(request.evidence),
+}));
 
 export const filterOptions = [
   { id: 'submetido', label: 'Submetidos' },

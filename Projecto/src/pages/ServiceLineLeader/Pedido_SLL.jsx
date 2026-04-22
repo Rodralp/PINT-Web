@@ -8,6 +8,7 @@ import {
   Clock3,
   Eye,
   EyeOff,
+  File,
   FileText,
   SearchCheck,
   Square,
@@ -83,6 +84,14 @@ function PedidoSLL() {
     setOpenRequirementId((current) => (current === requirementId ? null : requirementId));
   };
 
+  const getRequirementFilesLabel = (attachments) => {
+    if (attachments.length === 1) {
+      return '01 arquivo carregado';
+    }
+
+    return `${String(attachments.length).padStart(2, '0')} arquivos carregados`;
+  };
+
   const showVerdict = request.status === 'validacao';
 
   return (
@@ -140,11 +149,6 @@ function PedidoSLL() {
 
               <div className="sll-order-requirements-list">
                 {request.evidence.map((item) => {
-                  const filesLabel =
-                    item.files === 1
-                      ? '01 Arquivo Submetido'
-                      : `${String(item.files).padStart(2, '0')} Arquivos Submetidos`;
-
                   return (
                     <article
                       key={item.id}
@@ -153,7 +157,7 @@ function PedidoSLL() {
                       <div className="sll-order-requirement-head">
                         <div>
                           <p>{item.title}</p>
-                          <span>{filesLabel}</span>
+                          <span>{getRequirementFilesLabel(item.attachments || [])}</span>
                         </div>
                         <button
                           type="button"
@@ -175,7 +179,20 @@ function PedidoSLL() {
                               className="sll-order-requirement-detail-image"
                             />
                           </div>
-                          <p>{item.description}</p>
+                          <div className="sll-order-requirement-detail-content">
+                            <p>{item.description}</p>
+
+                            <ul className="sll-order-requirement-files-list">
+                              {(item.attachments || []).map((attachment) => (
+                                <li key={attachment.id}>
+                                  <span className="sll-order-file-icon" aria-hidden="true">
+                                    {attachment.type === 'pdf' ? <FileText size={18} /> : <File size={18} />}
+                                  </span>
+                                  <span>{attachment.label}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         </div>
                       )}
                     </article>

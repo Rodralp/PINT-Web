@@ -7,6 +7,7 @@ import {
   Clock3,
   Eye,
   EyeOff,
+  File,
   FileText,
   SquareCheckBig,
   Users,
@@ -63,6 +64,14 @@ function PedidoTM() {
 
   const toggleRequirement = (requirementId) => {
     setOpenRequirementId((current) => (current === requirementId ? null : requirementId));
+  };
+
+  const getRequirementFilesLabel = (attachments) => {
+    if (attachments.length === 1) {
+      return '01 arquivo carregado';
+    }
+
+    return `${String(attachments.length).padStart(2, '0')} arquivos carregados`;
   };
 
   return (
@@ -124,7 +133,7 @@ function PedidoTM() {
                     <div className="tm-order-requirement-head">
                       <div>
                         <p>{item.title}</p>
-                        <span>{String(item.files).padStart(2, '0')} Arquivos Submetidos</span>
+                        <span>{getRequirementFilesLabel(item.attachments || [])}</span>
                       </div>
                       <button
                         type="button"
@@ -142,10 +151,23 @@ function PedidoTM() {
                         <div className="tm-order-requirement-detail-media">
                           <img src={request.badgeImage} alt={request.badge} className="tm-order-requirement-detail-image" />
                         </div>
-                        <p>
-                          {item.description ||
-                            'Texto de exemplo que resume o requisito selecionado do subnível, do nível, da service line, do learning path.'}
-                        </p>
+                        <div className="tm-order-requirement-detail-content">
+                          <p>
+                            {item.description ||
+                              'Texto de exemplo que resume o requisito selecionado do subnível, do nível, da service line, do learning path.'}
+                          </p>
+
+                          <ul className="tm-order-requirement-files-list">
+                            {(item.attachments || []).map((attachment) => (
+                              <li key={attachment.id}>
+                                <span className="tm-order-file-icon" aria-hidden="true">
+                                  {attachment.type === 'pdf' ? <FileText size={18} /> : <File size={18} />}
+                                </span>
+                                <span>{attachment.label}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
                     )}
                   </article>
