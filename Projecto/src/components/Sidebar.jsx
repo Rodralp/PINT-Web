@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -80,6 +80,7 @@ const sidebarConfig = [
 ];
 
 const DEFAULT_ROLE = 'consultor';
+const LAST_SIDEBAR_SECTION_KEY = 'lastSidebarSectionTitle';
 
 const getStoredLoginData = () => {
   const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
@@ -121,11 +122,45 @@ function Sidebar() {
   const visibleSidebarSections = filteredSections.length > 0
     ? filteredSections
     : sidebarConfig.filter((section) => section.allowedRoles.includes(DEFAULT_ROLE));
+
+  const normalizePath = (path) => {
+    if (!path) {
+      return '/';
+    }
+
+    const normalizedPath = path.replace(/\/+$/, '');
+    return normalizedPath || '/';
+  };
+
+  const isRouteMatch = (itemRoute) => {
+    if (!itemRoute) {
+      return false;
+    }
+
+    const currentPath = normalizePath(location.pathname);
+    const targetPath = normalizePath(itemRoute);
+
+    return currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
+  };
+
+  const normalizeHash = (hash) => String(hash || '').replace(/^#/, '');
+
+  const isHashMatch = (itemId) => normalizeHash(location.hash) === String(itemId || '');
+
+  const isItemActive = (item) => {
+    if (item.route) {
+      return isRouteMatch(item.route);
+    }
+
+    return isHashMatch(item.id);
+  };
+
   const userName = loginData?.nome || t('app_user_default');
   const matchedSectionTitle =
     visibleSidebarSections.find((section) =>
-      section.items.some((item) => item.route === location.pathname)
+      section.items.some((item) => isRouteMatch(item.route))
     )?.title || null;
+  const visibleSectionTitlesKey = visibleSidebarSections.map((section) => section.title).join('|');
 
   const buildSectionState = (expandedSectionTitle = null) => {
     const nextState = {};
@@ -140,18 +175,57 @@ function Sidebar() {
   };
 
   const getInitialExpandedSections = () => {
+    const storedSectionTitle = sessionStorage.getItem(LAST_SIDEBAR_SECTION_KEY);
+    const fallbackSection = visibleSidebarSections.find((section) => section.title === storedSectionTitle);
+
     const matchedSection = visibleSidebarSections.find((section) =>
-      section.items.some((item) => item.route === location.pathname)
+      section.items.some((item) => isRouteMatch(item.route))
     );
 
     if (matchedSection) {
       return buildSectionState(matchedSection.title);
     }
 
+    if (fallbackSection) {
+      return buildSectionState(fallbackSection.title);
+    }
+
     return buildSectionState();
   };
 
   const [expandedSections, setExpandedSections] = useState(getInitialExpandedSections);
+
+  useEffect(() => {
+    if (!matchedSectionTitle) {
+      return;
+    }
+
+    sessionStorage.setItem(LAST_SIDEBAR_SECTION_KEY, matchedSectionTitle);
+
+    setExpandedSections((current) => {
+      const visibleTitles = new Set(visibleSidebarSections.map((section) => section.title));
+      const nextState = { ...current, [matchedSectionTitle]: true };
+
+      visibleTitles.forEach((sectionTitle) => {
+        if (!(sectionTitle in nextState)) {
+          nextState[sectionTitle] = false;
+        }
+      });
+
+      Object.keys(nextState).forEach((sectionTitle) => {
+        if (!visibleTitles.has(sectionTitle)) {
+          delete nextState[sectionTitle];
+        }
+      });
+
+      const currentKeys = Object.keys(current);
+      const nextKeys = Object.keys(nextState);
+      const hasDifferentSize = currentKeys.length !== nextKeys.length;
+      const hasDifferentValues = nextKeys.some((key) => current[key] !== nextState[key]);
+
+      return hasDifferentSize || hasDifferentValues ? nextState : current;
+    });
+  }, [matchedSectionTitle, visibleSectionTitlesKey]);
 
   const toggleSection = (sectionTitle) => {
     setExpandedSections(prev => ({
@@ -194,12 +268,14 @@ function Sidebar() {
                 <ul className="sidebar-menu">
                   {section.items.map((item) => {
                     const Icon = item.icon;
+                    const itemActive = isItemActive(item);
+
                     return (
                       <li key={item.id} className="sidebar-menu-item">
                         {item.route ? (
                           <NavLink
                             to={item.route}
-                            className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                            className={`sidebar-link ${itemActive ? 'active' : ''}`}
                           >
                             <Icon size={20} strokeWidth={2} className="sidebar-link-icon" />
                             <span className="sidebar-link-label">{t(item.labelKey)}</span>
@@ -207,7 +283,7 @@ function Sidebar() {
                         ) : (
                           <a
                             href={`#${item.id}`}
-                            className="sidebar-link"
+                            className={`sidebar-link ${itemActive ? 'active' : ''}`}
                           >
                             <Icon size={20} strokeWidth={2} className="sidebar-link-icon" />
                             <span className="sidebar-link-label">{t(item.labelKey)}</span>
