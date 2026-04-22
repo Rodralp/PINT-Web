@@ -72,7 +72,7 @@ const sidebarConfig = [
       { id: 'catalogo_AG', labelKey: 'sidebar_catalog_badges', icon: Medal, route: '/admin-gestor/catalogo-badges' },
       { id: 'equipas_AG', labelKey: 'sidebar_teams_sla', icon: UsersRound },
       { id: 'comunicados_AG', labelKey: 'sidebar_announcements', icon: Megaphone },
-      { id: 'pedidos_AG', labelKey: 'sidebar_manage_requests', icon: FilePenLine },
+      { id: 'pedidos_AG', labelKey: 'sidebar_manage_requests', icon: FilePenLine, route: '/admin-gestor/pedidos' },
       { id: 'exportacoes_AG', labelKey: 'sidebar_exports_admin', icon: ArrowDownToLine },
       { id: 'gestao_AG', labelKey: 'sidebar_general_management', icon: Settings },
     ],
