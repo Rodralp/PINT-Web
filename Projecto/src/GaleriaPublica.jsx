@@ -169,6 +169,21 @@ function GaleriaPublica() {
     }
   };
 
+  const handleOpenConsultorProfile = (consultor) => {
+    navigate(`/galeria-publica/consultor/${encodeURIComponent(String(consultor.id))}`, {
+      state: {
+        consultor,
+      },
+    });
+  };
+
+  const handleConsultorCardKeyDown = (event, consultor) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleOpenConsultorProfile(consultor);
+    }
+  };
+
   return (
     <div className="gp-root">
       <Navbar />
@@ -260,7 +275,14 @@ function GaleriaPublica() {
           ) : (
             <section className="gp-grid" aria-label={t('public_gallery_consultores')}>
               {filteredConsultores.map((consultor, index) => (
-                <article key={consultor.id} className="gp-card gp-consultor-card">
+                <article
+                  key={consultor.id}
+                  className="gp-card gp-consultor-card"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleOpenConsultorProfile(consultor)}
+                  onKeyDown={(event) => handleConsultorCardKeyDown(event, consultor)}
+                >
                   <strong className="gp-rank">#{index + 1}</strong>
                   <h2>{consultor.name}</h2>
                   <p>{consultor.email}</p>

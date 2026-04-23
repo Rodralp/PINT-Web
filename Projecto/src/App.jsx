@@ -4,6 +4,7 @@ import './translations/i18n'
 import LandingPage from './LandingPage'
 import GaleriaPublica from './GaleriaPublica'
 import BadgePublica from './BadgePublica'
+import PerfilPublico from './PerfilPublico'
 import CriarConta from './criar'
 import Entrar from './entrar'
 import DashboardC from './pages/Consultor/Dashboard_C'
@@ -38,6 +39,7 @@ function App() {
         <Route path='/' element={<LandingPage />} />
         <Route path='/galeria-publica' element={<GaleriaPublica />} />
         <Route path='/galeria-publica/badge/:badgeId' element={<BadgePublica />} />
+        <Route path='/galeria-publica/consultor/:consultorId' element={<PerfilPublico />} />
         <Route path='/criar' element={<CriarConta />} />
         <Route path='/entrar' element={<Entrar />} />
         <Route path='/dashboard' element={<Navigate to='/consultor/dashboard' replace />} />
