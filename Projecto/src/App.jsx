@@ -31,6 +31,7 @@ import Profile from './pages/profile'
 import MeusPedidos from './pages/Consultor/MeusPedidos'
 import RankingConsultores from './pages/Consultor/RankingConsultores'
 import Lembretes from './pages/Consultor/Lembretes'
+import LearningPaths from './pages/Consultor/LearningPaths'
 
 function App() {
   return (
@@ -49,6 +50,7 @@ function App() {
         <Route path='/consultor/catalogo-badges' element={<CatalogoBadges />} />
         <Route path='/consultor/meus-badges' element={<MeusBadges />} />
         <Route path='/consultor/badge/:badgeId' element={<BadgeDetalhe />} />
+        <Route path='/consultor/learning-paths' element={<LearningPaths />} />
         <Route path='/consultor/meus-pedidos' element={<MeusPedidos />} />
         <Route path='/consultor/meus-pedidos/:pedidoId' element={<PedidoDetalheC />} />
         <Route path='/consultor/ranking' element={<RankingConsultores />} />
@@ -79,6 +81,7 @@ function App() {
         <Route path='/dashboard/catalogo-badges' element={<Navigate to='/consultor/catalogo-badges' replace />} />
         <Route path='/dashboard/meus-badges' element={<Navigate to='/consultor/meus-badges' replace />} />
         <Route path='/dashboard/badge/:badgeId' element={<BadgeDetalhe />} />
+        <Route path='/dashboard/learning-paths' element={<Navigate to='/consultor/learning-paths' replace />} />
         <Route path='/dashboard/meus-pedidos' element={<Navigate to='/consultor/meus-pedidos' replace />} />
         <Route path='/dashboard/meus-pedidos/:pedidoId' element={<PedidoDetalheC />} />
         <Route path='/dashboard/ranking' element={<Navigate to='/consultor/ranking' replace />} />
