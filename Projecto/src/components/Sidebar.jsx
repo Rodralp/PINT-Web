@@ -31,7 +31,7 @@ const sidebarConfig = [
       { id: 'dashboard_C', labelKey: 'sidebar_dashboard', icon: Home, route: '/consultor/dashboard' },
       { id: 'catalogo_C', labelKey: 'sidebar_catalog_badges', icon: Medal, route: '/consultor/catalogo-badges' },
       { id: 'meus_badges_C', labelKey: 'sidebar_my_badges', icon: Trophy, route: '/consultor/meus-badges' },
-      { id: 'learning_paths_C', labelKey: 'sidebar_learning_paths', icon: BookOpen },
+      { id: 'learning_paths_C', labelKey: 'sidebar_learning_paths', icon: BookOpen, route: '/consultor/learning-paths' },
       { id: 'pedidos_C', labelKey: 'sidebar_my_requests', icon: Clock, route: '/consultor/meus-pedidos' },
       { id: 'ranking_C', labelKey: 'sidebar_ranking', icon: Crown, route: '/consultor/ranking' },
       { id: 'lembretes_C', labelKey: 'sidebar_reminders', icon: Pin, route: '/consultor/lembretes' },
