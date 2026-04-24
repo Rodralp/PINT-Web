@@ -8,7 +8,7 @@ import {
   SearchCheck,
   TimerReset,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import '../../css/Consultor/LearningPaths_C.css';
 
@@ -41,11 +41,46 @@ const statusConfig = {
 };
 
 const levelTemplate = [
-  { id: 'nivel_a', title: 'Nivel Junior', subtitle: 'Nivel A' },
-  { id: 'nivel_b', title: 'Nivel Intermedio', subtitle: 'Nivel B' },
-  { id: 'nivel_c', title: 'Nivel Senior', subtitle: 'Nivel C' },
-  { id: 'nivel_d', title: 'Nivel Especialista', subtitle: 'Nivel D' },
-  { id: 'nivel_e', title: 'Nivel Lider de Conhecimento', subtitle: 'Nivel E' },
+  {
+    id: 'nivel_a',
+    title: 'Nivel Junior',
+    subtitle: 'Nivel A',
+    levelKey: 'badge_level_junior',
+    points: 100,
+    badgeImage: '/badges/J%C3%BAnior.png',
+  },
+  {
+    id: 'nivel_b',
+    title: 'Nivel Intermedio',
+    subtitle: 'Nivel B',
+    levelKey: 'badge_level_intermediate',
+    points: 150,
+    badgeImage: '/badges/Interm%C3%A9dio.png',
+  },
+  {
+    id: 'nivel_c',
+    title: 'Nivel Senior',
+    subtitle: 'Nivel C',
+    levelKey: 'badge_level_senior',
+    points: 200,
+    badgeImage: '/badges/S%C3%A9nior.png',
+  },
+  {
+    id: 'nivel_d',
+    title: 'Nivel Especialista',
+    subtitle: 'Nivel D',
+    levelKey: 'badge_level_specialist',
+    points: 250,
+    badgeImage: '/badges/Especialista.png',
+  },
+  {
+    id: 'nivel_e',
+    title: 'Nivel Lider de Conhecimento',
+    subtitle: 'Nivel E',
+    levelKey: 'badge_level_knowledge_lead',
+    points: 300,
+    badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png',
+  },
 ];
 
 const buildLevels = (statuses) =>
@@ -134,9 +169,16 @@ const calculateProgress = (levels) => {
 
 function LearningPaths() {
   const navigate = useNavigate();
-  const [selectedPathId, setSelectedPathId] = useState(learningPathsData[0]?.id || null);
-  const [selectedServiceLineId, setSelectedServiceLineId] = useState(null);
-  const [expandedAreaIds, setExpandedAreaIds] = useState([]);
+  const location = useLocation();
+  const [selectedPathId, setSelectedPathId] = useState(
+    () => (typeof location.state?.selectedPathId === 'string' ? location.state.selectedPathId : learningPathsData[0]?.id || null),
+  );
+  const [selectedServiceLineId, setSelectedServiceLineId] = useState(
+    () => (typeof location.state?.selectedServiceLineId === 'string' ? location.state.selectedServiceLineId : null),
+  );
+  const [expandedAreaIds, setExpandedAreaIds] = useState(
+    () => (Array.isArray(location.state?.expandedAreaIds) ? location.state.expandedAreaIds : []),
+  );
 
   const selectedPath = useMemo(
     () => learningPathsData.find((item) => item.id === selectedPathId) || learningPathsData[0],
@@ -168,6 +210,30 @@ function LearningPaths() {
     setExpandedAreaIds((current) =>
       current.includes(areaId) ? current.filter((id) => id !== areaId) : [...current, areaId],
     );
+  };
+
+  const openBadgeDetails = (area, level) => {
+    const badgeId = `${area.id}-${level.id}`;
+    const backToState = {
+      selectedPathId,
+      selectedServiceLineId,
+      expandedAreaIds: Array.from(new Set([...expandedAreaIds, area.id])),
+    };
+
+    navigate(`/consultor/badge/${encodeURIComponent(badgeId)}`, {
+      state: {
+        badge: {
+          id: badgeId,
+          area: area.name,
+          levelKey: level.levelKey,
+          points: level.points,
+          badgeImage: level.badgeImage,
+          date: '12 Jan 2026',
+        },
+        backTo: '/consultor/learning-paths',
+        backToState,
+      },
+    });
   };
 
   const renderLearningPathView = () => {
@@ -295,7 +361,13 @@ function LearningPaths() {
                           const StatusIcon = status.Icon;
 
                           return (
-                            <article key={`${area.id}-${level.id}`} className="lp-level-row">
+                            <button
+                              key={`${area.id}-${level.id}`}
+                              type="button"
+                              className="lp-level-row lp-level-row-action"
+                              onClick={() => openBadgeDetails(area, level)}
+                              aria-label={`Ver badge ${level.title}`}
+                            >
                               <div className="lp-level-copy">
                                 <strong>{level.title}</strong>
                                 <span>{level.subtitle}</span>
@@ -305,7 +377,7 @@ function LearningPaths() {
                                 {StatusIcon ? <StatusIcon size={16} /> : null}
                                 {status.label}
                               </span>
-                            </article>
+                            </button>
                           );
                         })}
                       </div>

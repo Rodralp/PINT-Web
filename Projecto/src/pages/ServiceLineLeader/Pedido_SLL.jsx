@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/ServiceLineLeader/GestaoPedidos_SLL.css';
-import { getRequestById } from './serviceLineLeaderRequestsData';
+import { getRequestById } from '../../data/requests/serviceLineLeaderRequestsData';
 
 const statusMeta = {
   validacao: {

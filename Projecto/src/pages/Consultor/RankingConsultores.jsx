@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
   Search,
   Filter,
   SlidersHorizontal,
@@ -32,7 +30,6 @@ const defaultConsultants = [
 const ITEMS_PER_PAGE = 12;
 
 function RankingConsultores() {
-  const navigate = useNavigate();
   const [consultants, setConsultants] = useState(defaultConsultants);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeServiceLine, setActiveServiceLine] = useState('all');
@@ -75,8 +72,19 @@ function RankingConsultores() {
     { id: 'points_desc', label: 'Pontos (Maior para Menor)' },
     { id: 'points_asc', label: 'Pontos (Menor para Maior)' },
     { id: 'badges_desc', label: 'Badges (Maior para Menor)' },
+    { id: 'badges_asc', label: 'Badges (Menor para Maior)' },
     { id: 'name_asc', label: 'Nome (A-Z)' },
+    { id: 'name_desc', label: 'Nome (Z-A)' },
   ], []);
+
+  const sortButtonLabels = useMemo(() => ({
+    points_desc: 'Pontos ↓',
+    points_asc: 'Pontos ↑',
+    badges_desc: 'Badges ↓',
+    badges_asc: 'Badges ↑',
+    name_asc: 'Nome A-Z',
+    name_desc: 'Nome Z-A',
+  }), []);
 
   const filteredConsultants = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -96,34 +104,77 @@ function RankingConsultores() {
   const sortedConsultants = useMemo(() => {
     return [...filteredConsultants].sort((a, b) => {
       if (sortBy === 'points_asc') {
-        return a.points - b.points || a.name.localeCompare(b.name);
+        return a.points - b.points || a.badges - b.badges || a.name.localeCompare(b.name);
       }
 
       if (sortBy === 'badges_desc') {
-        return b.badges - a.badges || b.points - a.points;
+        return b.badges - a.badges || b.points - a.points || a.name.localeCompare(b.name);
+      }
+
+      if (sortBy === 'badges_asc') {
+        return a.badges - b.badges || a.points - b.points || a.name.localeCompare(b.name);
       }
 
       if (sortBy === 'name_asc') {
         return a.name.localeCompare(b.name);
       }
 
-      return b.points - a.points || b.badges - a.badges;
+      if (sortBy === 'name_desc') {
+        return b.name.localeCompare(a.name);
+      }
+
+      return b.points - a.points || b.badges - a.badges || a.name.localeCompare(b.name);
     });
   }, [filteredConsultants, sortBy]);
+
+  const rankMode = useMemo(
+    () => (sortBy === 'badges_desc' || sortBy === 'badges_asc' ? 'badges' : 'points'),
+    [sortBy],
+  );
+
+  const rankingByConsultantId = useMemo(() => {
+    const rankingReference = [...filteredConsultants].sort((a, b) => {
+      if (rankMode === 'badges') {
+        return b.badges - a.badges || b.points - a.points || a.name.localeCompare(b.name);
+      }
+
+      return b.points - a.points || b.badges - a.badges || a.name.localeCompare(b.name);
+    });
+
+    const rankingMap = {};
+    let previous = null;
+    let currentRank = 0;
+
+    rankingReference.forEach((item, index) => {
+      const hasSameScoreAsPrevious =
+        previous
+        && previous.points === item.points
+        && previous.badges === item.badges;
+
+      if (!hasSameScoreAsPrevious) {
+        currentRank = index + 1;
+      }
+
+      rankingMap[item.id] = currentRank;
+      previous = item;
+    });
+
+    return rankingMap;
+  }, [filteredConsultants, rankMode]);
 
   const totalPages = Math.max(1, Math.ceil(sortedConsultants.length / ITEMS_PER_PAGE));
 
   const pagedConsultants = useMemo(() => {
     const start = (page - 1) * ITEMS_PER_PAGE;
     const end = start + ITEMS_PER_PAGE;
-    return sortedConsultants.slice(start, end).map((item, index) => ({
+    return sortedConsultants.slice(start, end).map((item) => ({
       ...item,
-      rank: start + index + 1,
+      rank: rankingByConsultantId[item.id] || 0,
     }));
-  }, [sortedConsultants, page]);
+  }, [sortedConsultants, page, rankingByConsultantId]);
 
   const activeFilterLabel = activeServiceLine === 'all' ? 'Todas as Service Lines' : activeServiceLine;
-  const activeSortLabel = sortOptions.find((item) => item.id === sortBy)?.label || sortOptions[0].label;
+  const activeSortLabel = sortButtonLabels[sortBy] || 'Pontos ↓';
   const hasActiveFilter = activeServiceLine !== 'all';
   const hasActiveSort = sortBy !== defaultSort;
 
@@ -144,15 +195,6 @@ function RankingConsultores() {
       document.removeEventListener('mousedown', handleOutsideClick);
     };
   }, []);
-
-  const handleGoBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
-    navigate('/consultor/dashboard');
-  };
 
   const onSearchChange = (event) => {
     setSearchTerm(event.target.value);
@@ -183,9 +225,6 @@ function RankingConsultores() {
     <Layout>
       <div className="ranking-page">
         <header className="ranking-header">
-          <button type="button" className="ranking-back-btn" onClick={handleGoBack} aria-label="Voltar">
-            <ArrowLeft size={22} />
-          </button>
           <h1>Ranking de Consultores</h1>
         </header>
 

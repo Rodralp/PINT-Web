@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Clock3, Filter, Search, SlidersHorizontal, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock3, Filter, Search, SlidersHorizontal, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../components/Layout';
@@ -82,19 +82,12 @@ function CatalogoBadges() {
     };
   }, []);
 
-  const handleGoBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
-    navigate('/consultor/dashboard');
-  };
-
   const handleOpenBadgeDetails = (item) => {
     navigate(`/consultor/badge/${encodeURIComponent(item.id)}`, {
       state: {
         badge: item,
+        backTo: '/consultor/catalogo-badges',
+        activeSidebarRoute: '/consultor/catalogo-badges',
       },
     });
   };
@@ -221,9 +214,6 @@ function CatalogoBadges() {
     <Layout>
       <div className="catalog-page">
         <header className="catalog-header">
-          <button type="button" className="catalog-back-btn" onClick={handleGoBack} aria-label={t('back')}>
-            <ArrowLeft size={22} />
-          </button>
           <h1>{t('catalog_title')}</h1>
         </header>
 

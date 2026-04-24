@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
-  ArrowLeft,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -11,7 +10,6 @@ import {
   SlidersHorizontal,
   UserRound,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
 import '../../css/Consultor/MensagensAvisos.css';
@@ -289,7 +287,6 @@ const formatDate = (value, locale = 'pt-PT') => {
 };
 
 function MensagensAvisos() {
-  const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const [messages] = useState(defaultMessages);
   const [searchTerm, setSearchTerm] = useState('');
@@ -301,15 +298,6 @@ function MensagensAvisos() {
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const filterDropdownRef = useRef(null);
   const sortDropdownRef = useRef(null);
-
-  const handleGoBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
-    navigate('/consultor/dashboard');
-  };
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -402,9 +390,6 @@ function MensagensAvisos() {
     <Layout>
       <div className="announcements-page">
         <header className="announcements-header">
-          <button type="button" className="announcements-back-btn" onClick={handleGoBack} aria-label={t('back')}>
-            <ArrowLeft size={22} />
-          </button>
           <h1>{t('announcements_title')}</h1>
         </header>
 

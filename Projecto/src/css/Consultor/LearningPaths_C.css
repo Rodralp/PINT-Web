@@ -51,7 +51,7 @@
 .lp-shell.lp-shell-surface {
   background: #ffffff;
   border-radius: 10px;
-  padding: 12px;
+  padding: 0;
 }
 
 .lp-path-banner {
@@ -295,6 +295,24 @@
   gap: 10px;
 }
 
+.lp-level-row-action {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.lp-level-row-action:hover {
+  border-color: #1b84f4;
+  background: #f1f6fd;
+}
+
+.lp-level-row-action:focus-visible {
+  outline: 2px solid #1b84f4;
+  outline-offset: 2px;
+}
+
 .lp-level-copy strong {
   display: block;
   margin: 0;
@@ -444,7 +462,7 @@
 
   .lp-shell.lp-shell-surface {
     border-radius: 8px;
-    padding: 12px;
+    padding: 0;
   }
 
   .lp-header-copy h1 {

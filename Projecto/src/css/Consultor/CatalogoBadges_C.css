@@ -94,6 +94,10 @@
   overflow: hidden;
 }
 
+.catalog-action-btn svg {
+  flex: 0 0 auto;
+}
+
 .catalog-action-btn.active {
   border-color: #1b84f4;
   color: #1b84f4;
@@ -113,12 +117,9 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: normal;
+  white-space: nowrap;
   flex: 1;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  word-break: break-word;
+  display: block;
 }
 
 .catalog-dropdown-menu {
@@ -148,6 +149,9 @@
   font-weight: 500;
   padding: 8px 10px;
   width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .catalog-dropdown-item:hover {
@@ -183,6 +187,10 @@
 .catalog-card:hover {
   transform: translateY(-1px);
   border-color: #eef1f6;
+}
+
+.catalog-card:focus {
+  outline: none;
 }
 
 .catalog-card:focus-visible {

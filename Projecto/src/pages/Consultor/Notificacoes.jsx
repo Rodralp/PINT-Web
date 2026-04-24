@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, Filter, Search, SlidersHorizontal } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Filter, Search, SlidersHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
@@ -132,15 +132,6 @@ function Notificacoes() {
     };
   }, []);
 
-  const handleGoBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
-    navigate('/consultor/dashboard');
-  };
-
   const filters = useMemo(() => notificationTypes, []);
 
   const activeFilterLabel = filters.find((item) => item.id === activeFilter)
@@ -228,9 +219,6 @@ function Notificacoes() {
     <Layout>
       <div className="notifications-page">
         <header className="notifications-header">
-          <button type="button" className="notifications-back-btn" onClick={handleGoBack} aria-label={t('back')}>
-            <ArrowLeft size={22} />
-          </button>
           <h1>{t('notifications_title')}</h1>
         </header>
 

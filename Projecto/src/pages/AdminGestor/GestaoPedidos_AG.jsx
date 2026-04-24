@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/AdminGestor/GestaoPedidos_AG.css';
-import { requestRows, statusConfig } from './adminGestorRequestsData';
+import { requestRows, statusConfig } from '../../data/requests/adminGestorRequestsData';
 
 const ITEMS_PER_PAGE = 10;
 
