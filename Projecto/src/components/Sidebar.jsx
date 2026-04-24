@@ -70,7 +70,7 @@ const sidebarConfig = [
       { id: 'dashboard_AG', labelKey: 'sidebar_dashboard', icon: Home, route: '/admin-gestor/dashboard' },
       { id: 'utilizadores_AG', labelKey: 'sidebar_users', icon: CircleUserRound },
       { id: 'catalogo_AG', labelKey: 'sidebar_catalog_badges', icon: Medal, route: '/admin-gestor/catalogo-badges' },
-      { id: 'equipas_AG', labelKey: 'sidebar_teams_sla', icon: UsersRound },
+      { id: 'equipas_AG', labelKey: 'sidebar_teams_sla', icon: UsersRound, route: '/admin-gestor/equipas-sla' },
       { id: 'comunicados_AG', labelKey: 'sidebar_announcements', icon: Megaphone },
       { id: 'pedidos_AG', labelKey: 'sidebar_manage_requests', icon: FilePenLine, route: '/admin-gestor/pedidos' },
       { id: 'exportacoes_AG', labelKey: 'sidebar_exports_admin', icon: ArrowDownToLine },
