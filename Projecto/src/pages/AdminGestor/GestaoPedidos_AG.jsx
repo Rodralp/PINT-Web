@@ -58,8 +58,8 @@ function GestaoPedidosAG() {
     () => [
       {
         id: 'submitted',
-        tone: statusConfig.submetido.tone,
-        label: statusConfig.submetido.label,
+        tone: 'gray',
+        label: 'Todos',
         value: summaryCounts.submitted,
         icon: statusConfig.submetido.icon,
       },

@@ -7,7 +7,6 @@ import {
   Plus,
   Search,
   Trash2,
-  UserCircle2,
   UserRoundPlus,
   X,
 } from 'lucide-react';
@@ -94,6 +93,19 @@ const getInitials = (name) =>
     .map((part) => part[0]?.toUpperCase() || '')
     .join('');
 
+const getMemberAvatarUrl = (name) => `https://i.pravatar.cc/120?u=${encodeURIComponent(name)}`;
+
+const getMemberAvatarFallback = (name) => {
+  const initials = getInitials(name) || 'U';
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><circle cx='60' cy='60' r='60' fill='#ede9fe'/><text x='50%' y='55%' text-anchor='middle' font-size='40' font-family='Arial, sans-serif' fill='#6d28d9' font-weight='700'>${initials}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
+const onMemberAvatarError = (event, name) => {
+  event.currentTarget.onerror = null;
+  event.currentTarget.src = getMemberAvatarFallback(name);
+};
+
 const getIsoDateFromDisplay = (dateValue) => {
   if (!dateValue) {
     return '';
@@ -121,19 +133,30 @@ function EquipasSLAAG() {
   const [newSlaDate, setNewSlaDate] = useState('');
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
+  const [showAddMemberList, setShowAddMemberList] = useState(false);
 
   const alertTeams = useMemo(() => teams.slice(0, 2), [teams]);
   const isEditing = Boolean(editingTeamId);
+
+  const selectedMemberObjects = useMemo(
+    () => selectableMembers.filter((member) => selectedMembers.includes(member.id)),
+    [selectedMembers],
+  );
+
+  const availableMembers = useMemo(
+    () => selectableMembers.filter((member) => !selectedMembers.includes(member.id)),
+    [selectedMembers],
+  );
 
   const filteredMembers = useMemo(() => {
     const normalizedTerm = memberSearchTerm.trim().toLowerCase();
 
     if (!normalizedTerm) {
-      return selectableMembers;
+      return availableMembers;
     }
 
-    return selectableMembers.filter((member) => member.name.toLowerCase().includes(normalizedTerm));
-  }, [memberSearchTerm]);
+    return availableMembers.filter((member) => member.name.toLowerCase().includes(normalizedTerm));
+  }, [availableMembers, memberSearchTerm]);
 
   const openCreateModal = () => {
     setEditingTeamId(null);
@@ -142,6 +165,7 @@ function EquipasSLAAG() {
     setNewSlaDate('');
     setSelectedMembers([]);
     setMemberSearchTerm('');
+    setShowAddMemberList(false);
     setModalOpen(true);
   };
 
@@ -152,6 +176,7 @@ function EquipasSLAAG() {
     setNewSlaDate(getIsoDateFromDisplay(team.expiryDate));
     setSelectedMembers(getMemberIdsFromTeam(team.members || []));
     setMemberSearchTerm('');
+    setShowAddMemberList(false);
     setModalOpen(true);
   };
 
@@ -163,16 +188,21 @@ function EquipasSLAAG() {
     setNewSlaDate('');
     setSelectedMembers([]);
     setMemberSearchTerm('');
+    setShowAddMemberList(false);
   };
 
-  const toggleSelectedMember = (memberId) => {
+  const addMemberToSelection = (memberId) => {
     setSelectedMembers((current) => {
       if (current.includes(memberId)) {
-        return current.filter((id) => id !== memberId);
+        return current;
       }
 
       return [...current, memberId];
     });
+  };
+
+  const removeMemberFromSelection = (memberId) => {
+    setSelectedMembers((current) => current.filter((id) => id !== memberId));
   };
 
   const formatInputDate = (dateValue) => {
@@ -319,14 +349,6 @@ function EquipasSLAAG() {
                     <div className="ag-team-actions">
                       <button
                         type="button"
-                        aria-label={`Gerir membros de ${team.name}`}
-                        className="ag-inline-icon-btn"
-                        onClick={() => openEditModal(team)}
-                      >
-                        <UserRoundPlus size={15} />
-                      </button>
-                      <button
-                        type="button"
                         aria-label={`Editar ${team.name}`}
                         className="ag-inline-icon-btn"
                         onClick={() => openEditModal(team)}
@@ -347,7 +369,12 @@ function EquipasSLAAG() {
                   <div className="ag-member-badges-row" role="list" aria-label={`Membros da ${team.name}`}>
                     {visibleMembers.map((member) => (
                       <div key={member.id} className="ag-member-pill" role="listitem" title={member.name}>
-                        <span>{getInitials(member.name)}</span>
+                        <img
+                          src={getMemberAvatarUrl(member.name)}
+                          alt={member.name}
+                          className="ag-member-avatar ag-member-avatar-pill"
+                          onError={(event) => onMemberAvatarError(event, member.name)}
+                        />
                         <small>{member.name}</small>
                       </div>
                     ))}
@@ -402,43 +429,82 @@ function EquipasSLAAG() {
                 </div>
 
                 <div className="ag-member-picker-column">
-                  <label htmlFor="member-search" className="ag-member-search-wrap">
-                    <Search size={14} />
-                    <input
-                      id="member-search"
-                      type="text"
-                      value={memberSearchTerm}
-                      onChange={(event) => setMemberSearchTerm(event.target.value)}
-                      placeholder="Pesquisar pessoa para adicionar"
-                    />
-                  </label>
-
-                  <button type="button" className="ag-member-add-tile" aria-label="Adicionar novo utilizador">
-                    <Plus size={34} />
-                  </button>
-
-                  <div className="ag-member-picker-list" role="list" aria-label="Selecionar membros da equipa">
-                    {filteredMembers.map((member) => {
-                      const selected = selectedMembers.includes(member.id);
-
-                      return (
-                        <button
-                          key={member.id}
-                          type="button"
-                          className={`ag-member-select-card ${selected ? 'selected' : ''}`}
-                          onClick={() => toggleSelectedMember(member.id)}
-                          aria-pressed={selected}
-                        >
-                          <UserCircle2 size={48} />
-                          <span>{member.name}</span>
-                        </button>
-                      );
-                    })}
-
-                    {filteredMembers.length === 0 && (
-                      <p className="ag-member-search-empty">Nenhuma pessoa encontrada.</p>
-                    )}
+                  <div className="ag-member-picker-head">
+                    <h3>{showAddMemberList ? 'Adicionar pessoas' : 'Pessoas selecionadas'}</h3>
+                    <button
+                      type="button"
+                      className={`ag-member-add-tile ${showAddMemberList ? 'active' : ''}`}
+                      aria-label="Adicionar pessoa"
+                      aria-expanded={showAddMemberList}
+                      onClick={() => setShowAddMemberList((current) => !current)}
+                    >
+                      <Plus size={22} />
+                    </button>
                   </div>
+
+                  {showAddMemberList ? (
+                    <div className="ag-member-picker-add-panel">
+                      <label htmlFor="member-search" className="ag-member-search-wrap">
+                        <Search size={14} />
+                        <input
+                          id="member-search"
+                          type="text"
+                          value={memberSearchTerm}
+                          onChange={(event) => setMemberSearchTerm(event.target.value)}
+                          placeholder="Pesquisar pessoa para adicionar"
+                        />
+                      </label>
+
+                      <div className="ag-member-picker-list" role="list" aria-label="Lista de pessoas para adicionar">
+                        {filteredMembers.map((member) => (
+                          <button
+                            key={member.id}
+                            type="button"
+                            className="ag-member-select-card"
+                            onClick={() => addMemberToSelection(member.id)}
+                          >
+                            <img
+                              src={getMemberAvatarUrl(member.name)}
+                              alt={member.name}
+                              className="ag-member-avatar ag-member-avatar-card"
+                              onError={(event) => onMemberAvatarError(event, member.name)}
+                            />
+                            <span>{member.name}</span>
+                          </button>
+                        ))}
+
+                        {filteredMembers.length === 0 && (
+                          <p className="ag-member-search-empty">Nenhuma pessoa disponivel para adicionar.</p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="ag-selected-member-list" role="list" aria-label="Membros selecionados da equipa">
+                      {selectedMemberObjects.map((member) => (
+                        <article key={member.id} className="ag-member-selected-card" role="listitem">
+                          <img
+                            src={getMemberAvatarUrl(member.name)}
+                            alt={member.name}
+                            className="ag-member-avatar ag-member-avatar-card"
+                            onError={(event) => onMemberAvatarError(event, member.name)}
+                          />
+                          <span>{member.name}</span>
+                          <button
+                            type="button"
+                            className="ag-member-remove-btn"
+                            onClick={() => removeMemberFromSelection(member.id)}
+                            aria-label={`Remover ${member.name}`}
+                          >
+                            Remover
+                          </button>
+                        </article>
+                      ))}
+
+                      {selectedMemberObjects.length === 0 && (
+                        <p className="ag-member-search-empty">Nenhuma pessoa selecionada.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

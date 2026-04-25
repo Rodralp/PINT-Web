@@ -96,6 +96,12 @@
   color: #1b84f4;
 }
 
+.ag-request-card.gray {
+  border-color: #d1d5db;
+  background: #f3f4f6;
+  color: #64748b;
+}
+
 .ag-request-card.amber {
   border-color: #f4b400;
   background: rgba(244, 180, 0, 0.16);
