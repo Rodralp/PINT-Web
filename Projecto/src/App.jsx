@@ -24,6 +24,7 @@ import PedidoAG from './pages/AdminGestor/Pedido_AG'
 import EquipasSLAAG from './pages/AdminGestor/EquipasSLA_AG'
 import ExportacoesAG from './pages/AdminGestor/Exportacoes_AG'
 import GestaoGeralAG from './pages/AdminGestor/GestaoGeral_AG'
+import ComunicadosAvisosAG from './pages/AdminGestor/ComunicadosAvisos_AG'
 import MeusBadges from './pages/Consultor/MeusBadges'
 import BadgeDetalhe from './pages/Consultor/BadgeDetalhe'
 import PedidoDetalheC from './pages/Consultor/PedidoDetalhe_C'
@@ -76,6 +77,7 @@ function App() {
         <Route path='/admin-gestor/dashboard' element={<DashboardAG />} />
         <Route path='/admin-gestor/catalogo-badges' element={<CatalogoBadges />} />
         <Route path='/admin-gestor/equipas-sla' element={<EquipasSLAAG />} />
+        <Route path='/admin-gestor/comunicados-avisos' element={<ComunicadosAvisosAG />} />
         <Route path='/admin-gestor/pedidos' element={<GestaoPedidosAG />} />
         <Route path='/admin-gestor/pedidos/:pedidoId' element={<PedidoAG />} />
         <Route path='/admin-gestor/exportacoes' element={<ExportacoesAG />} />
@@ -109,6 +111,7 @@ function App() {
         
         <Route path='/dashboard/admin-gestor' element={<Navigate to='/admin-gestor/dashboard' replace />} />
         <Route path='/dashboard/admin-gestor/equipas-sla' element={<Navigate to='/admin-gestor/equipas-sla' replace />} />
+        <Route path='/dashboard/admin-gestor/comunicados-avisos' element={<Navigate to='/admin-gestor/comunicados-avisos' replace />} />
         <Route path='/dashboard/admin-gestor/pedidos' element={<Navigate to='/admin-gestor/pedidos' replace />} />
         <Route path='/dashboard/admin-gestor/pedidos/:pedidoId' element={<Navigate to='/admin-gestor/pedidos' replace />} />
         <Route path='/dashboard/admin-gestor/exportacoes' element={<Navigate to='/admin-gestor/exportacoes' replace />} />
@@ -116,6 +119,7 @@ function App() {
         <Route path='/dashboard/admin/pedidos' element={<Navigate to='/admin-gestor/pedidos' replace />} />
         <Route path='/dashboard/admin/catalogo-badges' element={<Navigate to='/admin-gestor/catalogo-badges' replace />} />
         <Route path='/dashboard/admin/equipas-sla' element={<Navigate to='/admin-gestor/equipas-sla' replace />} />
+        <Route path='/dashboard/admin/comunicados-avisos' element={<Navigate to='/admin-gestor/comunicados-avisos' replace />} />
         <Route path='/dashboard/admin/exportacoes' element={<Navigate to='/admin-gestor/exportacoes' replace />} />
         <Route path='/dashboard/admin/gestao-geral' element={<Navigate to='/admin-gestor/gestao-geral' replace />} />
       </Routes>
