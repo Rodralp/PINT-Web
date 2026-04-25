@@ -3,6 +3,7 @@ import {
   createReminder,
   deleteReminder,
   getCatalogBadges,
+  getLearningPaths,
   getMyBadges,
   getMyRequests,
   getProfileData,
@@ -14,6 +15,7 @@ import {
 const router = Router();
 
 router.get('/catalog-badges', getCatalogBadges);
+router.get('/learning-paths', getLearningPaths);
 router.get('/meus-badges', getMyBadges);
 router.get('/meus-pedidos', getMyRequests);
 router.get('/ranking', getRankingConsultores);

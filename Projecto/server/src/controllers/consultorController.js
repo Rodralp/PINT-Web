@@ -10,6 +10,15 @@ export const getCatalogBadges = (_req, res) => {
   res.status(200).json(data);
 };
 
+export const getLearningPaths = async (_req, res) => {
+  try {
+    const data = await consultorService.getLearningPaths();
+    res.status(200).json(data);
+  } catch {
+    res.status(500).json({ message: 'Failed to fetch learning paths.' });
+  }
+};
+
 export const getMyBadges = (_req, res) => {
   const data = consultorService.getMyBadges();
   res.status(200).json(data);

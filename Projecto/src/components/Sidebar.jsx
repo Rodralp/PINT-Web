@@ -55,7 +55,7 @@ const sidebarConfig = [
     allowedRoles: ['service-line-leader'],
     items: [
       { id: 'dashboard_SLL', labelKey: 'sidebar_dashboard', icon: Home, route: '/service-line-leader/dashboard' },
-      { id: 'learning_paths_SLL', labelKey: 'sidebar_my_learning_path', icon: BookOpen },
+      { id: 'learning_paths_SLL', labelKey: 'sidebar_my_learning_path', icon: BookOpen, route: '/service-line-leader/minha-service-line' },
       { id: 'ranking_SLL', labelKey: 'sidebar_service_line_ranking', icon: Crown, route: '/service-line-leader/ranking' },
       { id: 'pedidos_SLL', labelKey: 'sidebar_manage_requests', icon: FilePenLine, route: '/service-line-leader/pedidos' },
       { id: 'historico_SLL', labelKey: 'sidebar_history', icon: History },

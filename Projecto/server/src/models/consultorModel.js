@@ -1,7 +1,60 @@
+import { QueryTypes } from 'sequelize';
 import { Reminder } from './sql/Reminder.js';
 import { sequelize } from '../config/database.js';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
+
+const badgeLevelTemplates = [
+  {
+    levelKey: 'badge_level_junior',
+    points: 100,
+    badgeImage: '/badges/J%C3%BAnior.png',
+  },
+  {
+    levelKey: 'badge_level_intermediate',
+    points: 150,
+    badgeImage: '/badges/Interm%C3%A9dio.png',
+  },
+  {
+    levelKey: 'badge_level_senior',
+    points: 200,
+    badgeImage: '/badges/S%C3%A9nior.png',
+  },
+  {
+    levelKey: 'badge_level_specialist',
+    points: 250,
+    badgeImage: '/badges/Especialista.png',
+  },
+  {
+    levelKey: 'badge_level_knowledge_lead',
+    points: 300,
+    badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png',
+  },
+];
+
+const normalizeLevelTitle = (value) => {
+  const rawTitle = String(value || '').trim();
+  if (!rawTitle.includes(' - ')) {
+    return rawTitle;
+  }
+
+  return rawTitle.split(' - ').slice(1).join(' - ');
+};
+
+const buildLevelsFromRows = (levels) =>
+  levels.map((level, index) => {
+    const template = badgeLevelTemplates[index % badgeLevelTemplates.length];
+
+    return {
+      id: `nivel-${level.nnivel}`,
+      title: normalizeLevelTitle(level.nivel),
+      subtitle: `Nivel ${index + 1}`,
+      levelKey: template.levelKey,
+      points: template.points,
+      badgeImage: template.badgeImage,
+      status: 'visualizar',
+    };
+  });
 
 const catalogBadges = [
   {
@@ -217,6 +270,95 @@ const profileData = {
   ],
 };
 
+const buildLearningPaths = async () => {
+  const rows = await sequelize.query(
+    `
+      SELECT
+        lp.nlpath,
+        lp.lpath,
+        lp.lp_desc,
+        sl.nsline,
+        sl.sline,
+        sl.sl_desc,
+        a.narea,
+        a.area,
+        a.a_desc,
+        n.nnivel,
+        n.nivel
+      FROM learning_path AS lp
+      INNER JOIN service_line AS sl
+        ON sl.nlpath = lp.nlpath
+      LEFT JOIN area AS a
+        ON a.nsline = sl.nsline
+      LEFT JOIN nivel AS n
+        ON n.narea = a.narea
+      ORDER BY lp.nlpath ASC, sl.nsline ASC, a.narea ASC, n.nnivel ASC
+    `,
+    { type: QueryTypes.SELECT },
+  );
+
+  const learningPathMap = new Map();
+
+  for (const row of rows) {
+    const pathId = `learning-path-${row.nlpath}`;
+    const serviceLineId = `service-line-${row.nsline}`;
+    const areaId = row.narea ? `area-${row.narea}` : null;
+
+    if (!learningPathMap.has(pathId)) {
+      learningPathMap.set(pathId, {
+        id: pathId,
+        name: row.lpath,
+        description: row.lp_desc,
+        serviceLines: [],
+      });
+    }
+
+    const learningPath = learningPathMap.get(pathId);
+    let serviceLine = learningPath.serviceLines.find((item) => item.id === serviceLineId);
+
+    if (!serviceLine) {
+      serviceLine = {
+        id: serviceLineId,
+        name: row.sline,
+        description: row.sl_desc,
+        image: '/LP_BG.png',
+        areas: [],
+      };
+
+      learningPath.serviceLines.push(serviceLine);
+    }
+
+    if (!areaId) {
+      continue;
+    }
+
+    let area = serviceLine.areas.find((item) => item.id === areaId);
+
+    if (!area) {
+      area = {
+        id: areaId,
+        name: row.area,
+        description: row.a_desc,
+        levels: [],
+      };
+
+      serviceLine.areas.push(area);
+    }
+
+    if (row.nnivel) {
+      area.levels.push({
+        id: `nivel-${row.nnivel}`,
+        title: normalizeLevelTitle(row.nivel),
+        subtitle: `Nivel ${area.levels.length + 1}`,
+        ...badgeLevelTemplates[area.levels.length % badgeLevelTemplates.length],
+        status: 'visualizar',
+      });
+    }
+  }
+
+  return Array.from(learningPathMap.values());
+};
+
 const mapReminder = (reminder) => ({
   id: reminder.id,
   accountId: reminder.accountId,
@@ -246,6 +388,11 @@ const syncReminderIdSequence = async (lastId) => {
 export const consultorModel = {
   getCatalogBadges() {
     return clone(catalogBadges);
+  },
+
+  async getLearningPaths() {
+    const data = await buildLearningPaths();
+    return clone(data);
   },
 
   getMyBadges() {

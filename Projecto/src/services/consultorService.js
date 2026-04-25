@@ -97,6 +97,11 @@ export async function fetchCatalogBadges() {
   return response.data;
 }
 
+export async function fetchLearningPaths() {
+  const response = await apiClient.get('/consultor/learning-paths');
+  return response.data;
+}
+
 export async function fetchMyBadges() {
   const response = await apiClient.get('/consultor/meus-badges');
   return response.data;

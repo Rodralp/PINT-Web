@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
+import { fetchLearningPaths } from '../../services/consultorService';
 import '../../css/Consultor/LearningPaths_C.css';
 
 const statusConfig = {
@@ -89,7 +90,7 @@ const buildLevels = (statuses) =>
     status: statuses[index] || 'visualizar',
   }));
 
-const learningPathsData = [
+const fallbackLearningPathsData = [
   {
     id: 'jornada-tecnica',
     name: 'Jornada Tecnica',
@@ -149,6 +150,20 @@ const learningPathsData = [
   },
 ];
 
+const getStoredLoginData = () => {
+  const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
+
+  if (!storedLoginData) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(storedLoginData);
+  } catch {
+    return null;
+  }
+};
+
 const flattenServiceLineLevels = (serviceLine) =>
   (serviceLine?.areas || []).flatMap((area) => area.levels || []);
 
@@ -170,8 +185,15 @@ const calculateProgress = (levels) => {
 function LearningPaths() {
   const navigate = useNavigate();
   const location = useLocation();
+  const loginData = useMemo(() => getStoredLoginData(), []);
+  const [learningPathsData, setLearningPathsData] = useState(fallbackLearningPathsData);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedPathId, setSelectedPathId] = useState(
-    () => (typeof location.state?.selectedPathId === 'string' ? location.state.selectedPathId : learningPathsData[0]?.id || null),
+    () => (
+      typeof location.state?.selectedPathId === 'string'
+        ? location.state.selectedPathId
+        : fallbackLearningPathsData[0]?.id || null
+    ),
   );
   const [selectedServiceLineId, setSelectedServiceLineId] = useState(
     () => (typeof location.state?.selectedServiceLineId === 'string' ? location.state.selectedServiceLineId : null),
@@ -194,6 +216,45 @@ function LearningPaths() {
   }, [selectedPath, selectedServiceLineId]);
 
   const pageTitle = selectedServiceLine ? 'Service Line' : 'Learning Paths';
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadLearningPaths = async () => {
+      try {
+        const data = await fetchLearningPaths();
+
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setLearningPathsData(data);
+        }
+      } catch {
+        if (isMounted) {
+          setLearningPathsData(fallbackLearningPathsData);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadLearningPaths();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [loginData]);
+
+  useEffect(() => {
+    if (!learningPathsData.length) {
+      return;
+    }
+
+    const hasSelectedPath = learningPathsData.some((item) => item.id === selectedPathId);
+    if (!hasSelectedPath) {
+      setSelectedPathId(learningPathsData[0].id);
+    }
+  }, [learningPathsData, selectedPathId]);
 
   const handleGoBack = () => {
     setSelectedServiceLineId(null);
@@ -409,7 +470,9 @@ function LearningPaths() {
           </div>
         </header>
 
-        {!selectedServiceLine && renderLearningPathView()}
+        {isLoading && <p className="lp-progress-label">A carregar Learning Paths...</p>}
+
+        {!isLoading && !selectedServiceLine && renderLearningPathView()}
         {selectedServiceLine && renderServiceLineView()}
       </div>
     </Layout>
