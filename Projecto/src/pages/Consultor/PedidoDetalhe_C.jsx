@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/TalentManager/GestaoPedidos_TM.css';
-import { getConsultorRequestById } from './consultorRequestsData';
+import { getConsultorRequestById } from '../../data/requests/consultorRequestsData';
 
 const statusMeta = {
   pendente: {

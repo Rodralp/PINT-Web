@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
   Plus,
   AlarmClock,
   CalendarDays,
@@ -61,7 +59,6 @@ const normalizeReminder = (reminder, fallbackId) => {
 };
 
 function Lembretes() {
-  const navigate = useNavigate();
   const [reminders, setReminders] = useState([]);
   const [statusMessage, setStatusMessage] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -107,15 +104,6 @@ function Lembretes() {
     () => colorOptions.reduce((acc, item) => ({ ...acc, [item.id]: item }), {}),
     []
   );
-
-  const handleGoBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
-    navigate('/consultor/dashboard');
-  };
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -231,9 +219,6 @@ function Lembretes() {
     <Layout>
       <div className="reminders-page">
         <header className="reminders-header">
-          <button type="button" className="reminders-back-btn" onClick={handleGoBack} aria-label="Voltar">
-            <ArrowLeft size={22} />
-          </button>
           <h1>Lembretes</h1>
         </header>
 

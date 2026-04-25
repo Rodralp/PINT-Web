@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/TalentManager/GestaoPedidos_TM.css';
-import { requestRows, statusConfig } from './talentManagerRequestsData';
+import { requestRows, statusConfig } from '../../data/requests/talentManagerRequestsData';
 
 const ITEMS_PER_PAGE = 10;
 

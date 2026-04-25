@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, Clock3, Download, FileDown, Filter, Search, SlidersHorizontal, Trophy } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Clock3, Download, FileDown, Filter, Search, SlidersHorizontal, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
 import { fetchMyBadges } from '../../services/consultorService';
@@ -67,7 +66,6 @@ const getLoginName = () => {
 };
 
 function Exportacoes() {
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('badges');
   const [badgeItems, setBadgeItems] = useState(defaultExportBadges);
@@ -122,15 +120,6 @@ function Exportacoes() {
       return badgeItems[0]?.id || null;
     });
   }, [badgeItems]);
-
-  const navigateBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
-    navigate('/consultor/dashboard');
-  };
 
   const filters = useMemo(() => badgeFilters, []);
 
@@ -255,15 +244,10 @@ function Exportacoes() {
   const selectedCertificate = badgeItems.find((item) => item.id === selectedCertificateId) || badgeItems[0];
   const userName = getLoginName() || t('app_user_default');
 
-  const handleGoBack = navigateBack;
-
   return (
     <Layout>
       <div className="exports-page">
         <header className="exports-header">
-          <button type="button" className="exports-back-btn" onClick={handleGoBack} aria-label={t('back')}>
-            <ArrowLeft size={22} />
-          </button>
           <h1>{t('exports_title')}</h1>
         </header>
 

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/TalentManager/GestaoPedidos_TM.css';
-import { getRequestById } from './talentManagerRequestsData';
+import { getRequestById } from '../../data/requests/talentManagerRequestsData';
 
 function PedidoTM() {
   const { pedidoId } = useParams();

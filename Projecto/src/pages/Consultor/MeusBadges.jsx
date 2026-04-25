@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle2, Clock3, Filter, SearchCheck, Search, SlidersHorizontal, Trophy, AlertTriangle, ChevronLeft, ChevronRight, TimerReset } from 'lucide-react';
+import { CheckCircle2, Clock3, Filter, SearchCheck, Search, SlidersHorizontal, Trophy, AlertTriangle, ChevronLeft, ChevronRight, TimerReset } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
@@ -235,6 +235,8 @@ function MeusBadges() {
     navigate(`/consultor/badge/${encodeURIComponent(item.id)}`, {
       state: {
         badge: item,
+        backTo: '/consultor/meus-badges',
+        activeSidebarRoute: '/consultor/meus-badges',
       },
     });
   };
@@ -244,15 +246,6 @@ function MeusBadges() {
       event.preventDefault();
       handleOpenBadgeDetails(item);
     }
-  };
-
-  const handleGoBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
-    navigate('/consultor/dashboard');
   };
 
   useEffect(() => {
@@ -277,9 +270,6 @@ function MeusBadges() {
     <Layout>
       <div className="catalog-page">
         <header className="catalog-header">
-          <button type="button" className="catalog-back-btn" onClick={handleGoBack} aria-label={t('back')}>
-            <ArrowLeft size={22} />
-          </button>
           <h1>{t('my_badges_title')}</h1>
         </header>
 

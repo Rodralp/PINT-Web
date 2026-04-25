@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/ServiceLineLeader/GestaoPedidos_SLL.css';
-import { requestRows, statusConfig } from './serviceLineLeaderRequestsData';
+import { requestRows, statusConfig } from '../../data/requests/serviceLineLeaderRequestsData';
 
 const ITEMS_PER_PAGE = 10;
 

@@ -130,13 +130,28 @@ function BadgeDetalhe() {
     return requirementsByArea[areaKey] || requirementsByArea['lowcode (outsystems)'];
   }, [badge.area]);
 
+  const fallbackBackRoute =
+    typeof location.state?.backTo === 'string' && location.state.backTo.trim().length > 0
+      ? location.state.backTo
+      : '/consultor/meus-badges';
+
+  const fallbackBackState =
+    location.state?.backToState && typeof location.state.backToState === 'object'
+      ? location.state.backToState
+      : undefined;
+
   const handleGoBack = () => {
+    if (typeof location.state?.backTo === 'string' && location.state.backTo.trim().length > 0) {
+      navigate(fallbackBackRoute, { state: fallbackBackState });
+      return;
+    }
+
     if (window.history.length > 1) {
       navigate(-1);
       return;
     }
 
-    navigate('/consultor/meus-badges');
+    navigate(fallbackBackRoute);
   };
 
   const toggleRequirement = (requirementId) => {
@@ -179,10 +194,6 @@ function BadgeDetalhe() {
             </div>
           </div>
         </section>
-
-        <p className="badge-details-breadcrumb">
-          Jornada Tecnica {'>'} Application Operations {'>'} {badge.area} {'>'} {t(badge.levelKey)}
-        </p>
 
         <section className="badge-requirements-card">
           <h3>Requisitos</h3>

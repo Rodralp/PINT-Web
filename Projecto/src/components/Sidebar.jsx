@@ -132,15 +132,23 @@ function Sidebar() {
     return normalizedPath || '/';
   };
 
+  const currentPath = normalizePath(location.pathname);
+  const hintedActiveRoute =
+    typeof location.state?.activeSidebarRoute === 'string'
+      ? normalizePath(location.state.activeSidebarRoute)
+      : currentPath.startsWith('/consultor/badge/') && typeof location.state?.backTo === 'string'
+        ? normalizePath(location.state.backTo)
+        : null;
+  const effectiveActivePath = hintedActiveRoute || currentPath;
+
   const isRouteMatch = (itemRoute) => {
     if (!itemRoute) {
       return false;
     }
 
-    const currentPath = normalizePath(location.pathname);
     const targetPath = normalizePath(itemRoute);
 
-    return currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
+    return effectiveActivePath === targetPath || effectiveActivePath.startsWith(`${targetPath}/`);
   };
 
   const normalizeHash = (hash) => String(hash || '').replace(/^#/, '');

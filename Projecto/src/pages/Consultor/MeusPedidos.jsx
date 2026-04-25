@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
   AlertTriangle,
   CheckCircle2,
   Clock3,
@@ -12,7 +11,7 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import { fetchMyRequests } from '../../services/consultorService';
-import { defaultMyRequests } from './consultorRequestsData';
+import { defaultMyRequests } from '../../data/requests/consultorRequestsData';
 import '../../css/Consultor/MeusPedidos.css';
 
 const statusConfig = {
@@ -113,15 +112,6 @@ function MeusPedidos() {
     setPage(1);
   };
 
-  const handleGoBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
-    navigate('/consultor/dashboard');
-  };
-
   const previousPage = () => {
     setPage((current) => Math.max(1, current - 1));
   };
@@ -140,9 +130,6 @@ function MeusPedidos() {
     <Layout>
       <div className="orders-page">
         <header className="orders-header">
-          <button type="button" className="orders-back-btn" onClick={handleGoBack} aria-label="Voltar">
-            <ArrowLeft size={22} />
-          </button>
           <h1>Meus Pedidos</h1>
         </header>
 

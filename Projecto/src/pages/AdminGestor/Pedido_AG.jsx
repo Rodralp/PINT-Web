@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/AdminGestor/GestaoPedidos_AG.css';
-import { getRequestById } from './adminGestorRequestsData';
+import { getRequestById } from '../../data/requests/adminGestorRequestsData';
 
 const statusMeta = {
   validacao: {
