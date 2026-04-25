@@ -74,7 +74,7 @@ const sidebarConfig = [
       { id: 'comunicados_AG', labelKey: 'sidebar_announcements', icon: Megaphone },
       { id: 'pedidos_AG', labelKey: 'sidebar_manage_requests', icon: FilePenLine, route: '/admin-gestor/pedidos' },
       { id: 'exportacoes_AG', labelKey: 'sidebar_exports_admin', icon: ArrowDownToLine, route: '/admin-gestor/exportacoes' },
-      { id: 'gestao_AG', labelKey: 'sidebar_general_management', icon: Settings },
+      { id: 'gestao_AG', labelKey: 'sidebar_general_management', icon: Settings, route: '/admin-gestor/gestao-geral' },
     ],
   },
 ];
