@@ -34,27 +34,138 @@ const badgeLevelTemplates = [
 
 const normalizeLevelTitle = (value) => {
   const rawTitle = String(value || '').trim();
-  if (!rawTitle.includes(' - ')) {
-    return rawTitle;
-  }
+  const withoutPathPrefix = rawTitle.includes(' - ')
+    ? rawTitle.split(' - ').slice(1).join(' - ').trim()
+    : rawTitle;
 
-  return rawTitle.split(' - ').slice(1).join(' - ');
+  return withoutPathPrefix.replace(/^nivel\s+/i, '').trim();
 };
 
-const buildLevelsFromRows = (levels) =>
-  levels.map((level, index) => {
-    const template = badgeLevelTemplates[index % badgeLevelTemplates.length];
+const mapPedidoEstadoToLearningPathStatus = (estado) => {
+  const normalized = String(estado || '').trim().toLowerCase();
 
-    return {
-      id: `nivel-${level.nnivel}`,
-      title: normalizeLevelTitle(level.nivel),
-      subtitle: `Nivel ${index + 1}`,
-      levelKey: template.levelKey,
-      points: template.points,
-      badgeImage: template.badgeImage,
-      status: 'visualizar',
-    };
-  });
+  if (normalized === 'candidatura_em_progresso') {
+    return 'candidatura_em_progresso';
+  }
+
+  if (normalized === 'em_validacao') {
+    return 'em_validacao';
+  }
+
+  if (normalized === 'evidencias_insuficientes') {
+    return 'evidencias_insuficientes';
+  }
+
+  return 'visualizar';
+};
+
+const mapPedidoEstadoToMyBadgeState = (estado) => {
+  const normalized = String(estado || '').trim().toLowerCase();
+
+  if (normalized === 'candidatura_em_progresso') {
+    return 'candidatura_em_progresso';
+  }
+
+  if (normalized === 'em_validacao') {
+    return 'em_validacao';
+  }
+
+  if (normalized === 'evidencias_insuficientes') {
+    return 'rejeitado';
+  }
+
+  return 'em_validacao';
+};
+
+const resolveBadgeTemplate = (levelName, fallbackIndex = 0) => {
+  const normalizedLevelName = String(levelName || '').trim().toLowerCase();
+
+  if (normalizedLevelName.includes('junior')) {
+    return badgeLevelTemplates[0];
+  }
+
+  if (normalizedLevelName.includes('intermedio') || normalizedLevelName.includes('interm')) {
+    return badgeLevelTemplates[1];
+  }
+
+  if (normalizedLevelName.includes('senior')) {
+    return badgeLevelTemplates[2];
+  }
+
+  if (normalizedLevelName.includes('especialista')) {
+    return badgeLevelTemplates[3];
+  }
+
+  if (normalizedLevelName.includes('lider')) {
+    return badgeLevelTemplates[4];
+  }
+
+  return badgeLevelTemplates[fallbackIndex % badgeLevelTemplates.length];
+};
+
+const formatDate = (value) => {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) {
+    return '12 Jan 2026';
+  }
+
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = date.toLocaleString('en-US', { month: 'short' });
+  const year = date.getFullYear();
+  return `${day} ${month} ${year}`;
+};
+
+const getUtilizadorIdByAccountId = async (accountId) => {
+  const [utilizador] = await sequelize.query(
+    `
+      SELECT u.nutilizador
+      FROM utilizador AS u
+      INNER JOIN accounts AS a
+        ON LOWER(u.email) = LOWER(a.email)
+      WHERE a.id = :accountId
+      LIMIT 1
+    `,
+    {
+      replacements: { accountId: Number(accountId) },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return utilizador?.nutilizador ? Number(utilizador.nutilizador) : null;
+};
+
+const ensureEstadoId = async (estadoNome) => {
+  const [existing] = await sequelize.query(
+    `
+      SELECT nestado
+      FROM estado
+      WHERE LOWER(estado) = LOWER(:estadoNome)
+      LIMIT 1
+    `,
+    {
+      replacements: { estadoNome },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  if (existing?.nestado) {
+    return Number(existing.nestado);
+  }
+
+  const [inserted] = await sequelize.query(
+    `
+      INSERT INTO estado (estado)
+      VALUES (:estadoNome)
+      RETURNING nestado
+    `,
+    {
+      replacements: { estadoNome },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return Number(inserted.nestado);
+};
 
 const catalogBadges = [
   {
@@ -139,63 +250,6 @@ const catalogBadges = [
   },
 ];
 
-const myBadges = [
-  {
-    id: 'my-1',
-    area: 'LowCode (Outsystems)',
-    levelKey: 'badge_level_specialist',
-    points: 250,
-    badgeImage: '/badges/Especialista.png',
-    date: '12 Jan 2026',
-    stateId: 'aprovado',
-  },
-  {
-    id: 'my-2',
-    area: 'LowCode (Outsystems)',
-    levelKey: 'badge_level_senior',
-    points: 200,
-    badgeImage: '/badges/S%C3%A9nior.png',
-    date: '11 Jan 2026',
-    stateId: 'em_validacao',
-  },
-  {
-    id: 'my-3',
-    area: 'LowCode (Outsystems)',
-    levelKey: 'badge_level_intermediate',
-    points: 150,
-    badgeImage: '/badges/Interm%C3%A9dio.png',
-    date: '10 Jan 2026',
-    stateId: 'candidatura_em_progresso',
-  },
-  {
-    id: 'my-4',
-    area: 'Cloud Architecture',
-    levelKey: 'badge_level_specialist',
-    points: 250,
-    badgeImage: '/badges/Especialista.png',
-    date: '09 Jan 2026',
-    stateId: 'rejeitado',
-  },
-  {
-    id: 'my-5',
-    area: 'Cloud Architecture',
-    levelKey: 'badge_level_senior',
-    points: 200,
-    badgeImage: '/badges/S%C3%A9nior.png',
-    date: '08 Jan 2026',
-    stateId: 'aprovado',
-  },
-  {
-    id: 'my-6',
-    area: 'Cloud Architecture',
-    levelKey: 'badge_level_intermediate',
-    points: 150,
-    badgeImage: '/badges/Interm%C3%A9dio.png',
-    date: '07 Jan 2026',
-    stateId: 'em_validacao',
-  },
-];
-
 const myRequests = [
   { id: 1, badge: 'UX/UI Design', level: 'Especialista', date: '05/12/2025', status: 'pendente' },
   { id: 2, badge: 'Data Analytics', level: 'Intermedio', date: '04/12/2025', status: 'rejeitado' },
@@ -270,7 +324,7 @@ const profileData = {
   ],
 };
 
-const buildLearningPaths = async () => {
+const buildLearningPaths = async (accountId) => {
   const rows = await sequelize.query(
     `
       SELECT
@@ -284,7 +338,8 @@ const buildLearningPaths = async () => {
         a.area,
         a.a_desc,
         n.nnivel,
-        n.nivel
+        n.nivel,
+        nb.nbadge
       FROM learning_path AS lp
       INNER JOIN service_line AS sl
         ON sl.nlpath = lp.nlpath
@@ -292,17 +347,74 @@ const buildLearningPaths = async () => {
         ON a.nsline = sl.nsline
       LEFT JOIN nivel AS n
         ON n.narea = a.narea
+      LEFT JOIN nivel_contem_b AS nb
+        ON nb.nnivel = n.nnivel
       ORDER BY lp.nlpath ASC, sl.nsline ASC, a.narea ASC, n.nnivel ASC
     `,
     { type: QueryTypes.SELECT },
   );
 
+  let userBadges = [];
+  let userRequests = [];
+
+  const utilizadorId = accountId ? await getUtilizadorIdByAccountId(accountId) : null;
+  if (utilizadorId) {
+    const [loadedBadges, loadedRequests] = await Promise.all([
+      sequelize.query(
+        `
+          SELECT nbadge
+          FROM c_obtem_b
+          WHERE nutilizador = :utilizadorId
+        `,
+        {
+          replacements: { utilizadorId },
+          type: QueryTypes.SELECT,
+        },
+      ),
+      sequelize.query(
+        `
+          SELECT p.nbadge, e.estado
+          FROM pedidos AS p
+          INNER JOIN estado AS e
+            ON e.nestado = p.estado
+          WHERE p.nutilizador = :utilizadorId
+          ORDER BY p.data_submissao DESC, p.npedido DESC
+        `,
+        {
+          replacements: { utilizadorId },
+          type: QueryTypes.SELECT,
+        },
+      ),
+    ]);
+
+    userBadges = loadedBadges;
+    userRequests = loadedRequests;
+  }
+
+  const obtainedBadgeIds = new Set(userBadges.map((b) => Number(b.nbadge)));
+  const requestStatusMap = new Map();
+  for (const r of userRequests) {
+    const badgeId = Number(r.nbadge);
+    if (!requestStatusMap.has(badgeId)) {
+      requestStatusMap.set(badgeId, mapPedidoEstadoToLearningPathStatus(r.estado));
+    }
+  }
+
+  const getStatusForBadge = (nbadge) => {
+    if (!nbadge) return 'visualizar';
+    if (obtainedBadgeIds.has(nbadge)) return 'obtido';
+    if (requestStatusMap.has(Number(nbadge))) return requestStatusMap.get(Number(nbadge));
+    return 'visualizar';
+  };
+
   const learningPathMap = new Map();
+  const serviceLineMap = new Map();
+  const areaMap = new Map();
 
   for (const row of rows) {
-    const pathId = `learning-path-${row.nlpath}`;
-    const serviceLineId = `service-line-${row.nsline}`;
-    const areaId = row.narea ? `area-${row.narea}` : null;
+    const pathId = `learning-path-${Number(row.nlpath)}`;
+    const serviceLineId = `service-line-${Number(row.nsline)}`;
+    const areaId = row.narea ? `area-${Number(row.narea)}` : null;
 
     if (!learningPathMap.has(pathId)) {
       learningPathMap.set(pathId, {
@@ -314,7 +426,8 @@ const buildLearningPaths = async () => {
     }
 
     const learningPath = learningPathMap.get(pathId);
-    let serviceLine = learningPath.serviceLines.find((item) => item.id === serviceLineId);
+    const serviceLineMapKey = `${pathId}:${serviceLineId}`;
+    let serviceLine = serviceLineMap.get(serviceLineMapKey);
 
     if (!serviceLine) {
       serviceLine = {
@@ -326,13 +439,15 @@ const buildLearningPaths = async () => {
       };
 
       learningPath.serviceLines.push(serviceLine);
+      serviceLineMap.set(serviceLineMapKey, serviceLine);
     }
 
     if (!areaId) {
       continue;
     }
 
-    let area = serviceLine.areas.find((item) => item.id === areaId);
+    const areaMapKey = `${serviceLineMapKey}:${areaId}`;
+    let area = areaMap.get(areaMapKey);
 
     if (!area) {
       area = {
@@ -343,20 +458,242 @@ const buildLearningPaths = async () => {
       };
 
       serviceLine.areas.push(area);
+      areaMap.set(areaMapKey, area);
     }
 
     if (row.nnivel) {
+      const template = badgeLevelTemplates[area.levels.length % badgeLevelTemplates.length];
       area.levels.push({
-        id: `nivel-${row.nnivel}`,
+        id: `nivel-${Number(row.nnivel)}`,
         title: normalizeLevelTitle(row.nivel),
         subtitle: `Nivel ${area.levels.length + 1}`,
-        ...badgeLevelTemplates[area.levels.length % badgeLevelTemplates.length],
-        status: 'visualizar',
+        ...template,
+        badgeDbId: row.nbadge ? Number(row.nbadge) : null,
+        status: getStatusForBadge(row.nbadge),
       });
     }
   }
 
   return Array.from(learningPathMap.values());
+};
+
+const buildMyBadges = async (accountId) => {
+  const utilizadorId = await getUtilizadorIdByAccountId(accountId);
+  if (!utilizadorId) {
+    return [];
+  }
+
+  const [obtainedRows, requestRows] = await Promise.all([
+    sequelize.query(
+      `
+        SELECT DISTINCT ON (cb.nbadge)
+          cb.nbadge,
+          a.area,
+          n.nivel,
+          cb.pontos_obtidos,
+          b.validade,
+          cb.nutilizador
+        FROM c_obtem_b AS cb
+        INNER JOIN badge AS b
+          ON b.nbadge = cb.nbadge
+        LEFT JOIN nivel_contem_b AS ncb
+          ON ncb.nbadge = cb.nbadge
+        LEFT JOIN nivel AS n
+          ON n.nnivel = ncb.nnivel
+        LEFT JOIN area AS a
+          ON a.narea = n.narea
+        WHERE cb.nutilizador = :utilizadorId
+        ORDER BY cb.nbadge
+      `,
+      {
+        replacements: { utilizadorId },
+        type: QueryTypes.SELECT,
+      },
+    ),
+    sequelize.query(
+      `
+        SELECT DISTINCT ON (p.nbadge)
+          p.nbadge,
+          p.data_submissao,
+          e.estado,
+          a.area,
+          n.nivel
+        FROM pedidos AS p
+        INNER JOIN estado AS e
+          ON e.nestado = p.estado
+        LEFT JOIN nivel_contem_b AS ncb
+          ON ncb.nbadge = p.nbadge
+        LEFT JOIN nivel AS n
+          ON n.nnivel = ncb.nnivel
+        LEFT JOIN area AS a
+          ON a.narea = n.narea
+        WHERE p.nutilizador = :utilizadorId
+        ORDER BY p.nbadge, p.data_submissao DESC, p.npedido DESC
+      `,
+      {
+        replacements: { utilizadorId },
+        type: QueryTypes.SELECT,
+      },
+    ),
+  ]);
+
+  const items = [];
+  const existingBadgeIds = new Set();
+
+  for (const row of obtainedRows) {
+    const template = resolveBadgeTemplate(row.nivel);
+    const badgeId = Number(row.nbadge);
+    existingBadgeIds.add(badgeId);
+
+    items.push({
+      id: `badge-${badgeId}`,
+      badgeDbId: badgeId,
+      area: row.area || 'Badge',
+      stateId: 'aprovado',
+      status: 'obtido',
+      levelKey: template.levelKey,
+      points: Number(row.pontos_obtidos) || template.points,
+      badgeImage: template.badgeImage,
+      date: formatDate(row.validade),
+    });
+  }
+
+  for (const row of requestRows) {
+    const badgeId = Number(row.nbadge);
+    if (existingBadgeIds.has(badgeId)) {
+      continue;
+    }
+
+    const template = resolveBadgeTemplate(row.nivel);
+    const mappedStatus = mapPedidoEstadoToLearningPathStatus(row.estado);
+
+    items.push({
+      id: `badge-${badgeId}`,
+      badgeDbId: badgeId,
+      area: row.area || 'Badge',
+      stateId: mapPedidoEstadoToMyBadgeState(row.estado),
+      status: mappedStatus,
+      levelKey: template.levelKey,
+      points: template.points,
+      badgeImage: template.badgeImage,
+      date: formatDate(row.data_submissao),
+    });
+  }
+
+  return items.sort((left, right) => right.points - left.points);
+};
+
+const requestBadgeAcquisition = async (accountId, badgeId) => {
+  const parsedBadgeId = Number(badgeId);
+  if (!Number.isInteger(parsedBadgeId) || parsedBadgeId <= 0) {
+    const error = new Error('Invalid badge id.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const utilizadorId = await getUtilizadorIdByAccountId(accountId);
+  if (!utilizadorId) {
+    const error = new Error('User not found for account.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const [badgeExists] = await sequelize.query(
+    `
+      SELECT nbadge
+      FROM badge
+      WHERE nbadge = :badgeId
+      LIMIT 1
+    `,
+    {
+      replacements: { badgeId: parsedBadgeId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  if (!badgeExists) {
+    const error = new Error('Badge not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const [alreadyObtained] = await sequelize.query(
+    `
+      SELECT 1
+      FROM c_obtem_b
+      WHERE nutilizador = :utilizadorId
+        AND nbadge = :badgeId
+      LIMIT 1
+    `,
+    {
+      replacements: { utilizadorId, badgeId: parsedBadgeId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  if (alreadyObtained) {
+    return { status: 'obtido' };
+  }
+
+  const candidaturaEstadoId = await ensureEstadoId('candidatura_em_progresso');
+  const [existingRequest] = await sequelize.query(
+    `
+      SELECT p.npedido, e.estado
+      FROM pedidos AS p
+      INNER JOIN estado AS e
+        ON e.nestado = p.estado
+      WHERE p.nutilizador = :utilizadorId
+        AND p.nbadge = :badgeId
+      ORDER BY p.data_submissao DESC, p.npedido DESC
+      LIMIT 1
+    `,
+    {
+      replacements: { utilizadorId, badgeId: parsedBadgeId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  if (existingRequest) {
+    const existingStatus = mapPedidoEstadoToLearningPathStatus(existingRequest.estado);
+    if (existingStatus === 'candidatura_em_progresso' || existingStatus === 'em_validacao') {
+      return { status: existingStatus };
+    }
+
+    await sequelize.query(
+      `
+        UPDATE pedidos
+        SET estado = :estadoId,
+            data_submissao = CURRENT_DATE
+        WHERE npedido = :pedidoId
+      `,
+      {
+        replacements: {
+          estadoId: candidaturaEstadoId,
+          pedidoId: Number(existingRequest.npedido),
+        },
+        type: QueryTypes.UPDATE,
+      },
+    );
+
+    return { status: 'candidatura_em_progresso' };
+  }
+
+  await sequelize.query(
+    `
+      INSERT INTO pedidos (nbadge, nutilizador, estado, data_submissao)
+      VALUES (:badgeId, :utilizadorId, :estadoId, CURRENT_DATE)
+    `,
+    {
+      replacements: {
+        badgeId: parsedBadgeId,
+        utilizadorId,
+        estadoId: candidaturaEstadoId,
+      },
+      type: QueryTypes.INSERT,
+    },
+  );
+
+  return { status: 'candidatura_em_progresso' };
 };
 
 const mapReminder = (reminder) => ({
@@ -390,13 +727,19 @@ export const consultorModel = {
     return clone(catalogBadges);
   },
 
-  async getLearningPaths() {
-    const data = await buildLearningPaths();
+  async getLearningPaths(accountId) {
+    const data = await buildLearningPaths(accountId);
     return clone(data);
   },
 
-  getMyBadges() {
-    return clone(myBadges);
+  async getMyBadges(accountId) {
+    const data = await buildMyBadges(accountId);
+    return clone(data);
+  },
+
+  async requestBadgeAcquisition(accountId, badgeId) {
+    const data = await requestBadgeAcquisition(accountId, badgeId);
+    return clone(data);
   },
 
   getMyRequests() {

@@ -1,14 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowLeft,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Clock3,
+  SearchCheck,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/ServiceLineLeader/GestaoPedidos_SLL.css';
-import { requestRows, statusConfig } from '../../data/requests/serviceLineLeaderRequestsData';
+import { fetchManagedRequests } from '../../services/requestManagementService';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -36,11 +40,68 @@ const getTableLabel = (tableStatus) => {
   return 'Pendente';
 };
 
+const statusConfig = {
+  submetido: {
+    label: 'Todos',
+    tone: 'gray',
+    icon: Clock3,
+  },
+  validacao: {
+    label: 'Em Validação',
+    tone: 'amber',
+    icon: SearchCheck,
+  },
+  rejeitado: {
+    label: 'Rejeitados',
+    tone: 'red',
+    icon: AlertTriangle,
+  },
+  aprovado: {
+    label: 'Aprovados',
+    tone: 'green',
+    icon: CheckCircle2,
+  },
+};
+
 function GestaoPedidosSLL() {
   const navigate = useNavigate();
-  const [requests] = useState(requestRows);
+  const [requests, setRequests] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [statusMessage, setStatusMessage] = useState('');
   const [activeFilters, setActiveFilters] = useState(tableFilters.map((filter) => filter.id));
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRequests = async () => {
+      try {
+        const data = await fetchManagedRequests('service-line-leader');
+        if (!isMounted) {
+          return;
+        }
+
+        setRequests(Array.isArray(data) ? data : []);
+        setStatusMessage('');
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setRequests([]);
+        setStatusMessage(error?.message || 'Nao foi possivel carregar os pedidos.');
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadRequests();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const summaryCounts = useMemo(
     () => ({
@@ -133,6 +194,9 @@ function GestaoPedidosSLL() {
         </section>
 
         <section className="sll-orders-main-card">
+          {isLoading && <p>A carregar pedidos...</p>}
+          {!isLoading && statusMessage && <p>{statusMessage}</p>}
+
           <div className="sll-orders-board-header">
             <div>
               <h2>Pedidos de Todos os Consultores</h2>

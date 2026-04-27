@@ -1,16 +1,20 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Clock3,
   Eye,
+  SearchCheck,
   Users,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/TalentManager/GestaoPedidos_TM.css';
-import { requestRows, statusConfig } from '../../data/requests/talentManagerRequestsData';
+import { fetchManagedRequests } from '../../services/requestManagementService';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -26,17 +30,66 @@ const tableStatusStyles = {
   rejeitado: 'rejected',
 };
 
+const statusConfig = {
+  submetido: {
+    icon: Clock3,
+  },
+  validacao: {
+    icon: SearchCheck,
+  },
+  rejeitado: {
+    icon: AlertTriangle,
+  },
+  aprovado: {
+    icon: CheckCircle2,
+  },
+};
+
 function GestaoPedidosTM() {
   const navigate = useNavigate();
-  const [requests] = useState(requestRows);
+  const [requests, setRequests] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [statusMessage, setStatusMessage] = useState('');
   const [activeFilters, setActiveFilters] = useState(tableFilters.map((filter) => filter.id));
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRequests = async () => {
+      try {
+        const data = await fetchManagedRequests('talent-manager');
+        if (!isMounted) {
+          return;
+        }
+
+        setRequests(Array.isArray(data) ? data : []);
+        setStatusMessage('');
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setStatusMessage(error?.message || 'Nao foi possivel carregar os pedidos.');
+        setRequests([]);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadRequests();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const summaryCounts = useMemo(() => ({
     submitted: requests.length,
     inReview: requests.filter((request) => request.status === 'validacao').length,
     rejected: requests.filter((request) => request.status === 'rejeitado').length,
-    sent: requests.filter((request) => request.status === 'enviado').length,
+    approved: requests.filter((request) => request.status === 'aprovado').length,
   }), [requests]);
 
   const summaryCards = useMemo(() => ([
@@ -62,11 +115,11 @@ function GestaoPedidosTM() {
       icon: statusConfig.rejeitado.icon,
     },
     {
-      id: 'sent',
+      id: 'approved',
       tone: 'green',
-      label: 'Enviado',
-      value: summaryCounts.sent,
-      icon: statusConfig.enviado.icon,
+      label: 'Aprovados',
+      value: summaryCounts.approved,
+      icon: statusConfig.aprovado.icon,
     },
   ]), [summaryCounts]);
 
@@ -142,6 +195,9 @@ function GestaoPedidosTM() {
 
         <section className="tm-orders-board">
           <div className="tm-orders-main-card">
+            {isLoading && <p>A carregar pedidos...</p>}
+            {!isLoading && statusMessage && <p>{statusMessage}</p>}
+
             <div className="tm-orders-board-header">
               <div>
                 <h2>Pedidos de Todos os Consultores</h2>

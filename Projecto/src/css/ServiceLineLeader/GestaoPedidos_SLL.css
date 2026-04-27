@@ -635,6 +635,37 @@
   background: #f8fafc;
 }
 
+.sll-order-submit-btn {
+  margin-top: 8px;
+  width: 100%;
+  height: 48px;
+  border: none;
+  border-radius: 8px;
+  background: #1b84f4;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sll-order-submit-btn:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
+
+.sll-order-submit-btn:not(:disabled):hover {
+  background: #1877dc;
+}
+
+.sll-order-feedback-note {
+  margin: 10px 0 0;
+  color: #4b5563;
+  font-size: 13px;
+}
+
 @media (max-width: 1200px) {
   .sll-orders-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

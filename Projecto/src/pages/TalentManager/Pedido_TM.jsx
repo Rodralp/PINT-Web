@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
+  AlertTriangle,
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
@@ -9,18 +10,83 @@ import {
   EyeOff,
   File,
   FileText,
+  SearchCheck,
+  SendHorizontal,
+  Square,
   SquareCheckBig,
-  Users,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/TalentManager/GestaoPedidos_TM.css';
-import { getRequestById } from '../../data/requests/talentManagerRequestsData';
+import {
+  fetchManagedRequestById,
+  submitManagedRequestDecision,
+} from '../../services/requestManagementService';
+
+const statusMeta = {
+  validacao: {
+    label: 'Em Validação',
+    className: 'validacao',
+    icon: SearchCheck,
+  },
+  rejeitado: {
+    label: 'Rejeitado',
+    className: 'rejeitado',
+    icon: AlertTriangle,
+  },
+  aprovado: {
+    label: 'Aprovado',
+    className: 'enviado',
+    icon: CheckCircle2,
+  },
+};
+
+const verdictOptions = [
+  { id: 'aprovar', label: 'Aprovar' },
+  { id: 'rejeitar', label: 'Rejeitar' },
+];
 
 function PedidoTM() {
   const { pedidoId } = useParams();
   const navigate = useNavigate();
   const [openRequirementId, setOpenRequirementId] = useState(null);
-  const request = getRequestById(pedidoId);
+  const [request, setRequest] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [selectedVerdict, setSelectedVerdict] = useState(null);
+  const [isSubmittingVerdict, setIsSubmittingVerdict] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRequest = async () => {
+      try {
+        const data = await fetchManagedRequestById('talent-manager', pedidoId);
+        if (!isMounted) {
+          return;
+        }
+
+        setRequest(data || null);
+        setStatusMessage('');
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setRequest(null);
+        setStatusMessage(error?.message || 'Nao foi possivel carregar o pedido.');
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadRequest();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [pedidoId]);
 
   const handleGoBack = () => {
     if (window.history.length > 1) {
@@ -30,6 +96,23 @@ function PedidoTM() {
 
     navigate('/talent-manager/pedidos');
   };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="tm-order-detail-page">
+          <header className="tm-order-detail-header">
+            <button type="button" className="tm-orders-back-btn" onClick={handleGoBack} aria-label="Voltar">
+              <ArrowLeft size={22} />
+            </button>
+            <div>
+              <h1>A carregar pedido...</h1>
+            </div>
+          </header>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!request) {
     return (
@@ -41,7 +124,7 @@ function PedidoTM() {
             </button>
             <div>
               <h1>Pedido não encontrado</h1>
-              <p>O pedido não existe ou foi removido.</p>
+              <p>{statusMessage || 'O pedido não existe ou foi removido.'}</p>
             </div>
           </header>
         </div>
@@ -49,16 +132,8 @@ function PedidoTM() {
     );
   }
 
-  const statusLabel =
-    request.status === 'validacao'
-      ? 'Em Validação'
-      : request.status === 'rejeitado'
-        ? 'Rejeitado'
-        : request.status === 'enviado'
-          ? 'Enviado a Service Line Leader'
-          : 'Submetido';
-
-  const StatusIcon = request.status === 'enviado' ? CheckCircle2 : request.status === 'validacao' ? Clock3 : FileText;
+  const currentStatus = statusMeta[request.status] || statusMeta.validacao;
+  const StatusIcon = currentStatus.icon;
   const reviewedBy = request.reviewer;
   const reviewedAt = request.reviewerDate;
 
@@ -66,12 +141,38 @@ function PedidoTM() {
     setOpenRequirementId((current) => (current === requirementId ? null : requirementId));
   };
 
-  const getRequirementFilesLabel = (attachments) => {
-    if (attachments.length === 1) {
+  const getRequirementFilesLabel = (item) => {
+    const filesCount = Number(item?.files);
+
+    if (Number.isInteger(filesCount) && filesCount > 1) {
+      return `${String(filesCount).padStart(2, '0')} arquivos carregados`;
+    }
+
+    if (filesCount === 1) {
       return '01 arquivo carregado';
     }
 
-    return `${String(attachments.length).padStart(2, '0')} arquivos carregados`;
+    return 'XX arquivos carregados';
+  };
+
+  const handleSubmitVerdict = async () => {
+    if (!selectedVerdict || isSubmittingVerdict) {
+      return;
+    }
+
+    try {
+      setIsSubmittingVerdict(true);
+      const updated = await submitManagedRequestDecision('talent-manager', pedidoId, {
+        decision: selectedVerdict,
+      });
+      setRequest(updated || request);
+      setStatusMessage('Decisão submetida com sucesso.');
+      setSelectedVerdict(null);
+    } catch (error) {
+      setStatusMessage(error?.message || 'Nao foi possivel submeter a decisão.');
+    } finally {
+      setIsSubmittingVerdict(false);
+    }
   };
 
   return (
@@ -101,21 +202,21 @@ function PedidoTM() {
                   <span>
                     <Clock3 size={16} />
                     <strong>Expira</strong>
-                    12 Jan 2026
+                    {request.expiresAt || '12 Jan 2026'}
                   </span>
                   <span>
-                    <Users size={16} />
-                    {request.status === 'rejeitado' ? '250 pontos' : request.status === 'enviado' ? '100 pontos' : '200 pontos'}
+                    <CheckCircle2 size={16} />
+                    {request.points} pontos
                   </span>
                   <span>
                     <FileText size={16} />
-                    3 requisitos
+                    {request.evidence.length} requisitos
                   </span>
                 </div>
 
-                <div className={`tm-order-status-banner ${request.status}`}>
+                <div className={`tm-order-status-banner ${currentStatus.className}`}>
                   <StatusIcon size={18} />
-                  <span>{statusLabel}</span>
+                  <span>{currentStatus.label}</span>
                 </div>
               </div>
             </div>
@@ -133,7 +234,7 @@ function PedidoTM() {
                     <div className="tm-order-requirement-head">
                       <div>
                         <p>{item.title}</p>
-                        <span>{getRequirementFilesLabel(item.attachments || [])}</span>
+                        <span>{getRequirementFilesLabel(item)}</span>
                       </div>
                       <button
                         type="button"
@@ -185,7 +286,7 @@ function PedidoTM() {
                   <strong>{request.consultant}</strong>
                   <span>
                     <CalendarDays size={14} />
-                    01 de dezembro de 2025
+                    {request.submittedDate}
                   </span>
                 </div>
               </div>
@@ -194,14 +295,32 @@ function PedidoTM() {
             {request.status === 'validacao' ? (
               <div className="tm-order-verdict-card">
                 <h3>Veredito da Candidatura:</h3>
-                <button type="button" className="tm-order-verdict-option">
-                  <SquareCheckBig size={18} />
-                  Aprovar
+
+                {verdictOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={`tm-order-verdict-option ${selectedVerdict === option.id ? 'active' : ''}`}
+                    onClick={() => setSelectedVerdict(option.id)}
+                  >
+                    {selectedVerdict === option.id ? <SquareCheckBig size={18} /> : <Square size={18} />}
+                    {option.label}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  className="tm-order-submit-btn"
+                  disabled={!selectedVerdict || isSubmittingVerdict}
+                  onClick={handleSubmitVerdict}
+                >
+                  <SendHorizontal size={18} />
+                  {isSubmittingVerdict ? 'A submeter...' : 'Submeter'}
                 </button>
-                <button type="button" className="tm-order-verdict-option">
-                  <SquareCheckBig size={18} />
-                  Rejeitar
-                </button>
+
+                {statusMessage && (
+                  <p className="tm-order-feedback-note">{statusMessage}</p>
+                )}
               </div>
             ) : (
               <div className="tm-order-evaluated-card">
@@ -216,7 +335,7 @@ function PedidoTM() {
                     </span>
                   </div>
                 </div>
-                <p>Evidências insuficientes para a conclusão da submissão.</p>
+                <p>{statusMessage || request.notes}</p>
               </div>
             )}
           </aside>

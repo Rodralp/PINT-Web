@@ -1,16 +1,20 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowLeft,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Clock3,
   Eye,
+  SearchCheck,
   Users,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/AdminGestor/GestaoPedidos_AG.css';
-import { requestRows, statusConfig } from '../../data/requests/adminGestorRequestsData';
+import { fetchManagedRequests } from '../../services/requestManagementService';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -38,11 +42,68 @@ const getTableLabel = (tableStatus) => {
   return 'Pendente';
 };
 
+const statusConfig = {
+  submetido: {
+    tone: 'gray',
+    label: 'Todos',
+    icon: Clock3,
+  },
+  validacao: {
+    tone: 'amber',
+    label: 'Em Validação',
+    icon: SearchCheck,
+  },
+  rejeitado: {
+    tone: 'red',
+    label: 'Rejeitados',
+    icon: AlertTriangle,
+  },
+  aprovado: {
+    tone: 'green',
+    label: 'Aprovados',
+    icon: CheckCircle2,
+  },
+};
+
 function GestaoPedidosAG() {
   const navigate = useNavigate();
-  const [requests] = useState(requestRows);
+  const [requests, setRequests] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [statusMessage, setStatusMessage] = useState('');
   const [activeFilters, setActiveFilters] = useState(tableFilters.map((filter) => filter.id));
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRequests = async () => {
+      try {
+        const data = await fetchManagedRequests('admin-gestor');
+        if (!isMounted) {
+          return;
+        }
+
+        setRequests(Array.isArray(data) ? data : []);
+        setStatusMessage('');
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setRequests([]);
+        setStatusMessage(error?.message || 'Nao foi possivel carregar os pedidos.');
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadRequests();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const summaryCounts = useMemo(
     () => ({
@@ -159,6 +220,9 @@ function GestaoPedidosAG() {
         </section>
 
         <section className="ag-orders-main-card">
+          {isLoading && <p>A carregar pedidos...</p>}
+          {!isLoading && statusMessage && <p>{statusMessage}</p>}
+
           <div className="ag-orders-board-header">
             <div>
               <h2>Pedidos de Todos os Consultores</h2>

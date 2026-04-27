@@ -5,12 +5,16 @@ export const consultorService = {
     return consultorModel.getCatalogBadges();
   },
 
-  getLearningPaths() {
-    return consultorModel.getLearningPaths();
+  getLearningPaths(accountId) {
+    return consultorModel.getLearningPaths(accountId);
   },
 
-  getMyBadges() {
-    return consultorModel.getMyBadges();
+  getMyBadges(accountId) {
+    return consultorModel.getMyBadges(accountId);
+  },
+
+  requestBadgeAcquisition(accountId, badgeId) {
+    return consultorModel.requestBadgeAcquisition(accountId, badgeId);
   },
 
   getMyRequests() {

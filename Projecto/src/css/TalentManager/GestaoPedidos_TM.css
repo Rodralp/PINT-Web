@@ -634,6 +634,37 @@
   background: #f8fafc;
 }
 
+.tm-order-verdict-option.active {
+  border-color: #1b84f4;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.tm-order-submit-btn {
+  margin-top: 8px;
+  width: 100%;
+  height: 48px;
+  border: none;
+  border-radius: 8px;
+  background: #1b84f4;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tm-order-submit-btn:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
+
+.tm-order-submit-btn:not(:disabled):hover {
+  background: #1877dc;
+}
+
 .tm-order-evaluated-card p {
   margin: 14px 0 0;
   padding: 12px 14px;
@@ -642,6 +673,12 @@
   color: #4b5563;
   font-size: 14px;
   line-height: 1.45;
+}
+
+.tm-order-feedback-note {
+  margin: 10px 0 0;
+  color: #4b5563;
+  font-size: 13px;
 }
 
 @media (max-width: 1200px) {

@@ -41,129 +41,6 @@ const statusConfig = {
   },
 };
 
-const levelTemplate = [
-  {
-    id: 'nivel_a',
-    title: 'Nivel Junior',
-    subtitle: 'Nivel A',
-    levelKey: 'badge_level_junior',
-    points: 100,
-    badgeImage: '/badges/J%C3%BAnior.png',
-  },
-  {
-    id: 'nivel_b',
-    title: 'Nivel Intermedio',
-    subtitle: 'Nivel B',
-    levelKey: 'badge_level_intermediate',
-    points: 150,
-    badgeImage: '/badges/Interm%C3%A9dio.png',
-  },
-  {
-    id: 'nivel_c',
-    title: 'Nivel Senior',
-    subtitle: 'Nivel C',
-    levelKey: 'badge_level_senior',
-    points: 200,
-    badgeImage: '/badges/S%C3%A9nior.png',
-  },
-  {
-    id: 'nivel_d',
-    title: 'Nivel Especialista',
-    subtitle: 'Nivel D',
-    levelKey: 'badge_level_specialist',
-    points: 250,
-    badgeImage: '/badges/Especialista.png',
-  },
-  {
-    id: 'nivel_e',
-    title: 'Nivel Lider de Conhecimento',
-    subtitle: 'Nivel E',
-    levelKey: 'badge_level_knowledge_lead',
-    points: 300,
-    badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png',
-  },
-];
-
-const buildLevels = (statuses) =>
-  levelTemplate.map((level, index) => ({
-    ...level,
-    status: statuses[index] || 'visualizar',
-  }));
-
-const fallbackLearningPathsData = [
-  {
-    id: 'jornada-tecnica',
-    name: 'Jornada Tecnica',
-    serviceLines: [
-      {
-        id: 'hybrid-cloud',
-        name: 'Hybrid Cloud',
-        description:
-          'Aprender nuvem hibrida envolve bases de arquitetura, seguranca e gestao, e uso de ferramentas como GKE, Anthos ou NetApp.',
-        image: '/LP_BG.png',
-        areas: [
-          {
-            id: 'lowcode-outsystems',
-            name: 'LowCode (Outsystems)',
-            levels: buildLevels([
-              'obtido',
-              'candidatura_em_progresso',
-              'em_validacao',
-              'evidencias_insuficientes',
-              'visualizar',
-            ]),
-          },
-          {
-            id: 'cloud-architecture',
-            name: 'Cloud Architecture',
-            levels: buildLevels(['obtido', 'obtido', 'candidatura_em_progresso', 'visualizar', 'visualizar']),
-          },
-        ],
-      },
-      {
-        id: 'application-operations',
-        name: 'Application Operations',
-        description: 'Desc.',
-        image: '/LP_BG.png',
-        areas: [
-          {
-            id: 'application-operations-core',
-            name: 'Application Operations',
-            levels: buildLevels(['visualizar', 'visualizar', 'visualizar', 'visualizar', 'visualizar']),
-          },
-        ],
-      },
-      {
-        id: 'sourcing-talent-management',
-        name: 'Sourcing & Talent Management',
-        description: 'Desc.',
-        image: '/LP_BG.png',
-        areas: [
-          {
-            id: 'sourcing-talent-management-core',
-            name: 'Sourcing & Talent Management',
-            levels: buildLevels(['obtido', 'obtido', 'obtido', 'obtido', 'obtido']),
-          },
-        ],
-      },
-    ],
-  },
-];
-
-const getStoredLoginData = () => {
-  const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
-
-  if (!storedLoginData) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(storedLoginData);
-  } catch {
-    return null;
-  }
-};
-
 const flattenServiceLineLevels = (serviceLine) =>
   (serviceLine?.areas || []).flatMap((area) => area.levels || []);
 
@@ -185,14 +62,14 @@ const calculateProgress = (levels) => {
 function LearningPaths() {
   const navigate = useNavigate();
   const location = useLocation();
-  const loginData = useMemo(() => getStoredLoginData(), []);
-  const [learningPathsData, setLearningPathsData] = useState(fallbackLearningPathsData);
+  const [learningPathsData, setLearningPathsData] = useState([]);
+  const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPathId, setSelectedPathId] = useState(
     () => (
       typeof location.state?.selectedPathId === 'string'
         ? location.state.selectedPathId
-        : fallbackLearningPathsData[0]?.id || null
+        : null
     ),
   );
   const [selectedServiceLineId, setSelectedServiceLineId] = useState(
@@ -204,7 +81,7 @@ function LearningPaths() {
 
   const selectedPath = useMemo(
     () => learningPathsData.find((item) => item.id === selectedPathId) || learningPathsData[0],
-    [selectedPathId],
+    [learningPathsData, selectedPathId],
   );
 
   const selectedServiceLine = useMemo(() => {
@@ -226,10 +103,16 @@ function LearningPaths() {
 
         if (isMounted && Array.isArray(data) && data.length > 0) {
           setLearningPathsData(data);
+          setErrorMessage('');
+        } else if (isMounted) {
+          setLearningPathsData([]);
+          setErrorMessage('Nao existem Learning Paths disponiveis para este utilizador.');
         }
-      } catch {
+      } catch (error) {
+        console.error('Failed to load learning paths:', error);
         if (isMounted) {
-          setLearningPathsData(fallbackLearningPathsData);
+          setLearningPathsData([]);
+          setErrorMessage('Nao foi possivel carregar os Learning Paths da base de dados.');
         }
       } finally {
         if (isMounted) {
@@ -243,7 +126,7 @@ function LearningPaths() {
     return () => {
       isMounted = false;
     };
-  }, [loginData]);
+  }, []);
 
   useEffect(() => {
     if (!learningPathsData.length) {
@@ -286,9 +169,13 @@ function LearningPaths() {
         badge: {
           id: badgeId,
           area: area.name,
+          serviceLineName: selectedServiceLine?.name || 'Service Line',
+          learningPathName: selectedPath?.name || 'Learning Path',
           levelKey: level.levelKey,
           points: level.points,
           badgeImage: level.badgeImage,
+          badgeDbId: level.badgeDbId || null,
+          status: level.status || 'visualizar',
           date: '12 Jan 2026',
         },
         backTo: '/consultor/learning-paths',
@@ -471,9 +358,10 @@ function LearningPaths() {
         </header>
 
         {isLoading && <p className="lp-progress-label">A carregar Learning Paths...</p>}
+        {!isLoading && errorMessage && <p className="lp-progress-label">{errorMessage}</p>}
 
-        {!isLoading && !selectedServiceLine && renderLearningPathView()}
-        {selectedServiceLine && renderServiceLineView()}
+        {!isLoading && !errorMessage && !selectedServiceLine && renderLearningPathView()}
+        {!errorMessage && selectedServiceLine && renderServiceLineView()}
       </div>
     </Layout>
   );

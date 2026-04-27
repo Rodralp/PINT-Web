@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -14,10 +14,14 @@ import {
   Square,
   SquareCheckBig,
   Trophy,
+  SendHorizontal,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/ServiceLineLeader/GestaoPedidos_SLL.css';
-import { getRequestById } from '../../data/requests/serviceLineLeaderRequestsData';
+import {
+  fetchManagedRequestById,
+  submitManagedRequestDecision,
+} from '../../services/requestManagementService';
 
 const statusMeta = {
   validacao: {
@@ -48,7 +52,43 @@ function PedidoSLL() {
   const navigate = useNavigate();
   const [openRequirementId, setOpenRequirementId] = useState(null);
   const [selectedVerdict, setSelectedVerdict] = useState(null);
-  const request = getRequestById(pedidoId);
+  const [request, setRequest] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmittingVerdict, setIsSubmittingVerdict] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRequest = async () => {
+      try {
+        const data = await fetchManagedRequestById('service-line-leader', pedidoId);
+        if (!isMounted) {
+          return;
+        }
+
+        setRequest(data || null);
+        setStatusMessage('');
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setRequest(null);
+        setStatusMessage(error?.message || 'Nao foi possivel carregar o pedido.');
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadRequest();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [pedidoId]);
 
   const handleGoBack = () => {
     if (window.history.length > 1) {
@@ -58,6 +98,23 @@ function PedidoSLL() {
 
     navigate('/service-line-leader/pedidos');
   };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="sll-order-detail-page">
+          <header className="sll-order-detail-header">
+            <button type="button" className="sll-orders-back-btn" onClick={handleGoBack} aria-label="Voltar">
+              <ArrowLeft size={22} />
+            </button>
+            <div>
+              <h1>A carregar pedido...</h1>
+            </div>
+          </header>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!request) {
     return (
@@ -69,7 +126,7 @@ function PedidoSLL() {
             </button>
             <div>
               <h1>Pedido não encontrado</h1>
-              <p>O pedido não existe ou foi removido.</p>
+              <p>{statusMessage || 'O pedido não existe ou foi removido.'}</p>
             </div>
           </header>
         </div>
@@ -84,15 +141,41 @@ function PedidoSLL() {
     setOpenRequirementId((current) => (current === requirementId ? null : requirementId));
   };
 
-  const getRequirementFilesLabel = (attachments) => {
-    if (attachments.length === 1) {
+  const getRequirementFilesLabel = (item) => {
+    const filesCount = Number(item?.files);
+
+    if (Number.isInteger(filesCount) && filesCount > 1) {
+      return `${String(filesCount).padStart(2, '0')} arquivos carregados`;
+    }
+
+    if (filesCount === 1) {
       return '01 arquivo carregado';
     }
 
-    return `${String(attachments.length).padStart(2, '0')} arquivos carregados`;
+    return 'XX arquivos carregados';
   };
 
   const showVerdict = request.status === 'validacao';
+
+  const handleSubmitVerdict = async () => {
+    if (!selectedVerdict || isSubmittingVerdict) {
+      return;
+    }
+
+    try {
+      setIsSubmittingVerdict(true);
+      const updated = await submitManagedRequestDecision('service-line-leader', pedidoId, {
+        decision: selectedVerdict,
+      });
+      setRequest(updated || request);
+      setStatusMessage('Decisão submetida com sucesso.');
+      setSelectedVerdict(null);
+    } catch (error) {
+      setStatusMessage(error?.message || 'Nao foi possivel submeter a decisão.');
+    } finally {
+      setIsSubmittingVerdict(false);
+    }
+  };
 
   return (
     <Layout>
@@ -121,7 +204,7 @@ function PedidoSLL() {
                   <span>
                     <Clock3 size={16} />
                     <strong>Expira</strong>
-                    12 Jan 2026
+                    {request.expiresAt || '12 Jan 2026'}
                   </span>
                   <span>
                     <Trophy size={16} />
@@ -157,7 +240,7 @@ function PedidoSLL() {
                       <div className="sll-order-requirement-head">
                         <div>
                           <p>{item.title}</p>
-                          <span>{getRequirementFilesLabel(item.attachments || [])}</span>
+                          <span>{getRequirementFilesLabel(item)}</span>
                         </div>
                         <button
                           type="button"
@@ -270,6 +353,20 @@ function PedidoSLL() {
                     {option.label}
                   </button>
                 ))}
+
+                <button
+                  type="button"
+                  className="sll-order-submit-btn"
+                  onClick={handleSubmitVerdict}
+                  disabled={!selectedVerdict || isSubmittingVerdict}
+                >
+                  <SendHorizontal size={18} />
+                  {isSubmittingVerdict ? 'A submeter...' : 'Submeter'}
+                </button>
+
+                {statusMessage && (
+                  <p className="sll-order-feedback-note">{statusMessage}</p>
+                )}
               </div>
             )}
           </aside>

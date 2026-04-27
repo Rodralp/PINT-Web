@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  acquireBadge,
   createReminder,
   deleteReminder,
   getCatalogBadges,
@@ -17,6 +18,7 @@ const router = Router();
 router.get('/catalog-badges', getCatalogBadges);
 router.get('/learning-paths', getLearningPaths);
 router.get('/meus-badges', getMyBadges);
+router.post('/badges/:badgeId/adquirir', acquireBadge);
 router.get('/meus-pedidos', getMyRequests);
 router.get('/ranking', getRankingConsultores);
 router.get('/lembretes', getReminders);

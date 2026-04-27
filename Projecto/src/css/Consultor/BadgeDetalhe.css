@@ -1,7 +1,7 @@
 .badge-details-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .badge-details-header {
@@ -39,31 +39,32 @@
   border: 1px solid rgba(148, 163, 184, 0.12);
   border-radius: 16px;
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02), 0 10px 30px rgba(15, 23, 42, 0.04);
-  padding: 16px 20px;
+  padding: 20px 24px;
   display: flex;
   align-items: center;
-  gap: 18px;
-  min-height: 154px;
+  gap: 22px;
+  min-height: 172px;
 }
 
 .badge-hero-media {
-  width: 132px;
-  height: 112px;
+  width: 220px;
+  height: 160px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
 .badge-hero-image {
-  width: 104px;
-  height: 104px;
+  width: 170px;
+  height: 150px;
   object-fit: contain;
 }
 
 .badge-hero-content {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
+  width: 100%;
 }
 
 .badge-hero-content h2 {
@@ -79,19 +80,20 @@
   color: #3c4454;
   font-size: 18px;
   line-height: 1.15;
+  font-weight: 400;
 }
 
 .badge-hero-meta {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 24px;
   flex-wrap: wrap;
 }
 
 .badge-hero-meta span {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: #6b7280;
   font-size: 13px;
 }
@@ -101,12 +103,57 @@
   font-weight: 700;
 }
 
+.badge-status-banner {
+  margin-top: 10px;
+  width: 100%;
+  min-height: 38px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.badge-status-banner.is-progress {
+  border-color: #1b84f4;
+  color: #1b84f4;
+  background: rgba(27, 132, 244, 0.16);
+}
+
+.badge-status-banner.is-validation {
+  border-color: #f4b400;
+  color: #a35f00;
+  background: rgba(244, 180, 0, 0.2);
+}
+
+.badge-status-banner.is-rejected {
+  border-color: #ff3b30;
+  color: #be1e2d;
+  background: rgba(255, 59, 48, 0.2);
+}
+
+.badge-status-banner.is-obtained {
+  border-color: #11c51d;
+  color: #118a20;
+  background: rgba(17, 197, 29, 0.2);
+}
+
+.badge-breadcrumb {
+  margin: 0;
+  color: #9aa3b2;
+  font-size: 13px;
+}
+
 .badge-requirements-card {
   background: #ffffff;
   border: 1px solid rgba(148, 163, 184, 0.12);
   border-radius: 16px;
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02), 0 10px 30px rgba(15, 23, 42, 0.04);
-  padding: 16px 20px;
+  padding: 22px 24px;
 }
 
 .badge-requirements-card h3 {
@@ -124,10 +171,10 @@
 }
 
 .badge-requirement-item {
-  min-height: 52px;
+  min-height: 76px;
   border: 1px solid #e5eaf1;
   border-radius: 12px;
-  padding: 8px 12px;
+  padding: 14px 16px;
   background: #ffffff;
 }
 
@@ -147,6 +194,13 @@
   color: #2f3747;
   font-size: 16px;
   line-height: 1.2;
+}
+
+.badge-requirement-head span {
+  display: block;
+  margin-top: 8px;
+  color: #9aa3b2;
+  font-size: 14px;
 }
 
 .badge-requirement-view-btn {
@@ -170,13 +224,13 @@
   align-items: center;
   gap: 18px;
   border-top: 1px solid #eef2f7;
-  margin-top: 8px;
+  margin-top: 12px;
   padding: 12px 6px 0;
 }
 
 .badge-requirement-detail-image {
-  width: 132px;
-  height: 76px;
+  width: 84px;
+  height: 84px;
   object-fit: contain;
   flex: 0 0 auto;
 }
@@ -184,8 +238,113 @@
 .badge-requirement-detail p {
   margin: 0;
   color: #7a8393;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.45;
+}
+
+.badge-review-card {
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02), 0 10px 30px rgba(15, 23, 42, 0.04);
+  padding: 20px 24px;
+}
+
+.badge-review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.badge-review-head h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.badge-review-head span {
+  color: #9aa3b2;
+  font-size: 15px;
+}
+
+.badge-review-card p {
+  margin: 14px 0 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #4b5563;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.badge-actions-row {
+  margin-top: 2px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.badge-submit-btn {
+  height: 58px;
+  min-width: 280px;
+  border: none;
+  border-radius: 10px;
+  background: #1b84f4;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 26px;
+}
+
+.badge-submit-btn:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
+
+.badge-submit-btn:not(:disabled):hover {
+  background: #1877dc;
+}
+
+.badge-share-icon-btn {
+  width: 72px;
+  height: 72px;
+  border: none;
+  border-radius: 10px;
+  background: #f3f4f6;
+  color: #1b84f4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge-share-primary-btn {
+  height: 72px;
+  border: none;
+  border-radius: 10px;
+  background: #1b84f4;
+  color: #ffffff;
+  min-width: 240px;
+  font-size: 18px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 24px;
+}
+
+.badge-feedback {
+  margin: 2px 0 0;
+  color: #4b5563;
+  font-size: 13px;
 }
 
 @media (max-width: 1400px) {
@@ -194,15 +353,15 @@
   }
 
   .badge-hero-content h2 {
-    font-size: 22px;
+    font-size: 24px;
   }
 
   .badge-hero-content p {
-    font-size: 17px;
+    font-size: 18px;
   }
 
   .badge-hero-meta span {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .badge-requirements-card h3 {
@@ -211,6 +370,15 @@
 
   .badge-requirement-head p {
     font-size: 15px;
+  }
+
+  .badge-requirement-head span {
+    font-size: 13px;
+  }
+
+  .badge-submit-btn,
+  .badge-share-primary-btn {
+    font-size: 18px;
   }
 }
 
@@ -224,21 +392,21 @@
 
   .badge-hero-media {
     width: 100%;
-    height: auto;
+    height: 140px;
     justify-content: flex-start;
   }
 
   .badge-hero-image {
-    width: 92px;
-    height: 92px;
+    width: 140px;
+    height: 120px;
   }
 
   .badge-hero-content h2 {
-    font-size: 22px;
+    font-size: 24px;
   }
 
   .badge-hero-content p {
-    font-size: 16px;
+    font-size: 20px;
   }
 
   .badge-requirements-card {
@@ -246,16 +414,20 @@
   }
 
   .badge-requirements-card h3 {
-    font-size: 22px;
+    font-size: 24px;
   }
 
   .badge-requirement-item {
-    min-height: 44px;
-    padding: 0 12px;
+    min-height: 52px;
+    padding: 10px 12px;
   }
 
   .badge-requirement-head p {
     font-size: 16px;
+  }
+
+  .badge-requirement-head span {
+    font-size: 14px;
   }
 
   .badge-requirement-detail {
@@ -264,12 +436,30 @@
   }
 
   .badge-requirement-detail-image {
-    width: 106px;
-    height: 62px;
+    width: 74px;
+    height: 74px;
   }
 
   .badge-requirement-detail p {
     font-size: 12px;
+  }
+
+  .badge-actions-row {
+    justify-content: stretch;
+  }
+
+  .badge-submit-btn,
+  .badge-share-primary-btn {
+    width: 100%;
+    min-width: 0;
+    height: 48px;
+    font-size: 18px;
+  }
+
+  .badge-share-icon-btn {
+    width: 48px;
+    height: 48px;
+    flex: 1 1 48px;
   }
 }
 
@@ -295,7 +485,7 @@
   }
 
   .badge-hero-meta span {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .badge-requirements-card h3 {

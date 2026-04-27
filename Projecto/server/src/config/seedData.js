@@ -82,6 +82,11 @@ const defaultServiceLines = [
     description: 'Foco em seguranca aplicacional, identidade e resposta a incidentes.',
     areas: ['Secure Development', 'Threat Detection'],
   },
+  {
+    name: 'Testing',
+    description: 'Foco em testes manuais e automatizados, quality assurance e performance.',
+    areas: ['Quality Assurance', 'Test Automation'],
+  },
 ];
 
 const defaultLevelNames = [
@@ -91,6 +96,42 @@ const defaultLevelNames = [
   'Nivel Especialista',
   'Nivel Lider de Conhecimento',
 ];
+
+const getLevelLabel = (rawLevelName) => {
+  const raw = String(rawLevelName || '').trim();
+  if (!raw.includes(' - ')) {
+    return raw || 'Nivel';
+  }
+
+  return raw.split(' - ').slice(1).join(' - ').trim() || 'Nivel';
+};
+
+const buildSafeBadgeName = (areaName, rawLevelName) => {
+  const MAX_BADGE_NAME_LENGTH = 25;
+  const levelLabel = getLevelLabel(rawLevelName);
+  const normalizedArea = String(areaName || 'Badge')
+    .replace(/\s*\([^)]*\)\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const candidate = `${normalizedArea} ${levelLabel}`.replace(/\s+/g, ' ').trim();
+  if (candidate.length <= MAX_BADGE_NAME_LENGTH) {
+    return candidate;
+  }
+
+  const initials = normalizedArea
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('');
+  const compactCandidate = `${initials} ${levelLabel}`.trim();
+
+  if (compactCandidate.length <= MAX_BADGE_NAME_LENGTH) {
+    return compactCandidate;
+  }
+
+  return candidate.slice(0, MAX_BADGE_NAME_LENGTH).trim();
+};
 
 const normalizeRoles = (rolesValue) => {
   const rawRoles = Array.isArray(rolesValue)
@@ -339,6 +380,197 @@ const assignServiceLineToEachLeader = async (accounts, serviceLineIds, utilizado
   }
 };
 
+const ensureDefaultBadgeType = async (transaction) => {
+  const defaultTypeName = 'Tecnico';
+
+  const [existingType] = await sequelize.query(
+    `
+      SELECT ntipo
+      FROM tipo
+      WHERE LOWER(tipo) = LOWER(:defaultTypeName)
+      LIMIT 1
+    `,
+    {
+      replacements: { defaultTypeName },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+
+  if (existingType?.ntipo) {
+    return Number(existingType.ntipo);
+  }
+
+  const [insertedType] = await sequelize.query(
+    `
+      INSERT INTO tipo (tipo)
+      VALUES (:defaultTypeName)
+      RETURNING ntipo
+    `,
+    {
+      replacements: { defaultTypeName },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+
+  return Number(insertedType.ntipo);
+};
+
+const ensureEstadosAndMockData = async (accounts, utilizadorByAccountId, transaction) => {
+  const estados = ['candidatura_em_progresso', 'em_validacao', 'evidencias_insuficientes'];
+  const estadoIds = {};
+  const defaultBadgeTypeId = await ensureDefaultBadgeType(transaction);
+  
+  for (const st of estados) {
+    const [existing] = await sequelize.query(
+      `SELECT nestado FROM estado WHERE estado = :st LIMIT 1`,
+      { replacements: { st }, type: QueryTypes.SELECT, transaction }
+    );
+    if (!existing) {
+      const [inserted] = await sequelize.query(
+        `INSERT INTO estado (estado) VALUES (:st) RETURNING nestado`,
+        { replacements: { st }, type: QueryTypes.SELECT, transaction }
+      );
+      estadoIds[st] = Number(inserted.nestado);
+    } else {
+      estadoIds[st] = Number(existing.nestado);
+    }
+  }
+
+  const niveis = await sequelize.query(`
+    SELECT n.nnivel, n.nivel, a.area, sl.sline, lp.nlpath, sl.nsline, a.narea
+    FROM nivel n
+    JOIN area a ON a.narea = n.narea
+    JOIN service_line sl ON sl.nsline = a.nsline
+    JOIN learning_path lp ON lp.nlpath = sl.nlpath
+    ORDER BY n.nnivel ASC
+  `, { type: QueryTypes.SELECT, transaction });
+
+  const badgesByNivel = {};
+
+  for (const n of niveis) {
+    const [existingCb] = await sequelize.query(`
+      SELECT nbadge FROM nivel_contem_b WHERE nnivel = :nnivel LIMIT 1
+    `, { replacements: { nnivel: n.nnivel }, type: QueryTypes.SELECT, transaction });
+
+    let nbadge = null;
+    if (!existingCb) {
+      const b_nome = buildSafeBadgeName(n.area, n.nivel);
+      const b_descricao = `${n.area} - ${getLevelLabel(n.nivel)}`;
+      const [insertedB] = await sequelize.query(`
+          INSERT INTO badge (b_nome, b_descricao, ntipo) VALUES (:b_nome, :b_descricao, :ntipo) RETURNING nbadge
+        `, { replacements: { b_nome, b_descricao, ntipo: defaultBadgeTypeId }, type: QueryTypes.SELECT, transaction });
+      nbadge = Number(insertedB.nbadge);
+
+      await sequelize.query(`INSERT INTO nivel_contem_b (nnivel, nbadge) VALUES (:nnivel, :nbadge)`,
+        { replacements: { nnivel: n.nnivel, nbadge }, type: QueryTypes.INSERT, transaction });
+      
+      await sequelize.query(`INSERT INTO b_pertence_a (narea, nbadge) VALUES (:narea, :nbadge)`, { replacements: { narea: n.narea, nbadge }, type: QueryTypes.INSERT, transaction });
+      await sequelize.query(`INSERT INTO b_pertence_sl (nsline, nbadge) VALUES (:nsline, :nbadge)`, { replacements: { nsline: n.nsline, nbadge }, type: QueryTypes.INSERT, transaction });
+      await sequelize.query(`INSERT INTO b_pertence_lp (nlpath, nbadge) VALUES (:nlpath, :nbadge)`, { replacements: { nlpath: n.nlpath, nbadge }, type: QueryTypes.INSERT, transaction });
+    } else {
+      nbadge = Number(existingCb.nbadge);
+    }
+    badgesByNivel[n.nnivel] = nbadge;
+  }
+
+  const consultorAccounts = accounts.filter((account) =>
+    normalizeRoles(account.role).includes('consultor'),
+  );
+
+  const untouchedServiceLine = 'Testing';
+
+  for (const account of consultorAccounts) {
+    const utilizadorId = utilizadorByAccountId.get(account.id);
+    if (!utilizadorId) {
+      continue;
+    }
+
+    for (const n of niveis) {
+      if (n.sline === untouchedServiceLine) {
+        continue;
+      }
+
+      const nbadge = badgesByNivel[n.nnivel];
+      if (!nbadge) {
+        continue;
+      }
+
+      const [hasCb] = await sequelize.query(
+        `
+          SELECT 1
+          FROM c_obtem_b
+          WHERE nutilizador = :utilizadorId
+            AND nbadge = :nbadge
+          LIMIT 1
+        `,
+        {
+          replacements: { utilizadorId, nbadge },
+          type: QueryTypes.SELECT,
+          transaction,
+        },
+      );
+      const [hasPed] = await sequelize.query(
+        `
+          SELECT 1
+          FROM pedidos
+          WHERE nutilizador = :utilizadorId
+            AND nbadge = :nbadge
+          LIMIT 1
+        `,
+        {
+          replacements: { utilizadorId, nbadge },
+          type: QueryTypes.SELECT,
+          transaction,
+        },
+      );
+
+      if (hasCb || hasPed) {
+        continue;
+      }
+
+      const seed = (Number(utilizadorId) + Number(n.nnivel)) % 7;
+      if (seed === 0 || seed === 4) {
+        continue;
+      }
+
+      if (seed === 1) {
+        await sequelize.query(
+          `
+            INSERT INTO c_obtem_b (nutilizador, nbadge, pontos_obtidos)
+            VALUES (:utilizadorId, :nbadge, 100)
+          `,
+          {
+            replacements: { utilizadorId, nbadge },
+            type: QueryTypes.INSERT,
+            transaction,
+          },
+        );
+        continue;
+      }
+
+      const estadoId = seed === 2
+        ? estadoIds.em_validacao
+        : seed === 3
+          ? estadoIds.evidencias_insuficientes
+          : estadoIds.candidatura_em_progresso;
+
+      await sequelize.query(
+        `
+          INSERT INTO pedidos (nutilizador, nbadge, estado, data_submissao)
+          VALUES (:utilizadorId, :nbadge, :estadoId, CURRENT_DATE)
+        `,
+        {
+          replacements: { utilizadorId, nbadge, estadoId },
+          type: QueryTypes.INSERT,
+          transaction,
+        },
+      );
+    }
+  }
+};
+
 const seedServiceLineData = async () => {
   const transaction = await sequelize.transaction();
 
@@ -358,6 +590,8 @@ const seedServiceLineData = async () => {
     const learningPathId = await getOrCreateLearningPathId(transaction);
     const serviceLineIds = await ensureServiceLinesAndAreas(learningPathId, transaction);
     await assignServiceLineToEachLeader(accounts, serviceLineIds, utilizadorByAccountId, transaction);
+    
+    await ensureEstadosAndMockData(accounts, utilizadorByAccountId, transaction);
 
     await transaction.commit();
   } catch (error) {

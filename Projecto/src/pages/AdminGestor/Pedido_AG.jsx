@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -18,7 +18,10 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/AdminGestor/GestaoPedidos_AG.css';
-import { getRequestById } from '../../data/requests/adminGestorRequestsData';
+import {
+  fetchManagedRequestById,
+  submitManagedRequestDecision,
+} from '../../services/requestManagementService';
 
 const statusMeta = {
   validacao: {
@@ -39,7 +42,7 @@ const statusMeta = {
 };
 
 const verdictOptions = [
-  { id: 'enviar-ssl', label: 'Enviar para SSL' },
+  { id: 'aprovar', label: 'Aprovar' },
   { id: 'rejeitar', label: 'Rejeitar' },
 ];
 
@@ -49,8 +52,43 @@ function PedidoAG() {
   const [openRequirementId, setOpenRequirementId] = useState(null);
   const [selectedVerdict, setSelectedVerdict] = useState(null);
   const [comment, setComment] = useState('');
+  const [request, setRequest] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmittingVerdict, setIsSubmittingVerdict] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
 
-  const request = useMemo(() => getRequestById(pedidoId), [pedidoId]);
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRequest = async () => {
+      try {
+        const data = await fetchManagedRequestById('admin-gestor', pedidoId);
+        if (!isMounted) {
+          return;
+        }
+
+        setRequest(data || null);
+        setStatusMessage('');
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setRequest(null);
+        setStatusMessage(error?.message || 'Nao foi possivel carregar o pedido.');
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadRequest();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [pedidoId]);
 
   const handleGoBack = () => {
     if (window.history.length > 1) {
@@ -60,6 +98,23 @@ function PedidoAG() {
 
     navigate('/admin-gestor/pedidos');
   };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="ag-order-detail-page">
+          <header className="ag-order-detail-header">
+            <button type="button" className="ag-orders-back-btn" onClick={handleGoBack} aria-label="Voltar">
+              <ArrowLeft size={22} />
+            </button>
+            <div>
+              <h1>A carregar pedido...</h1>
+            </div>
+          </header>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!request) {
     return (
@@ -71,7 +126,7 @@ function PedidoAG() {
             </button>
             <div>
               <h1>Pedido não encontrado</h1>
-              <p>O pedido não existe ou foi removido.</p>
+              <p>{statusMessage || 'O pedido não existe ou foi removido.'}</p>
             </div>
           </header>
         </div>
@@ -87,12 +142,40 @@ function PedidoAG() {
     setOpenRequirementId((current) => (current === requirementId ? null : requirementId));
   };
 
-  const getRequirementFilesLabel = (attachments) => {
-    if (attachments.length === 1) {
+  const getRequirementFilesLabel = (item) => {
+    const filesCount = Number(item?.files);
+
+    if (Number.isInteger(filesCount) && filesCount > 1) {
+      return `${String(filesCount).padStart(2, '0')} arquivos carregados`;
+    }
+
+    if (filesCount === 1) {
       return '01 arquivo carregado';
     }
 
-    return `${String(attachments.length).padStart(2, '0')} arquivos carregados`;
+    return 'XX arquivos carregados';
+  };
+
+  const handleSubmitVerdict = async () => {
+    if (!selectedVerdict || isSubmittingVerdict) {
+      return;
+    }
+
+    try {
+      setIsSubmittingVerdict(true);
+      const updated = await submitManagedRequestDecision('admin-gestor', pedidoId, {
+        decision: selectedVerdict,
+        comment,
+      });
+      setRequest(updated || request);
+      setStatusMessage('Decisão submetida com sucesso.');
+      setSelectedVerdict(null);
+      setComment('');
+    } catch (error) {
+      setStatusMessage(error?.message || 'Nao foi possivel submeter a decisão.');
+    } finally {
+      setIsSubmittingVerdict(false);
+    }
   };
 
   return (
@@ -122,7 +205,7 @@ function PedidoAG() {
                   <span>
                     <Clock3 size={16} />
                     <strong>Expira</strong>
-                    12 Jan 2026
+                    {request.expiresAt || '12 Jan 2026'}
                   </span>
                   <span>
                     <Trophy size={16} />
@@ -156,9 +239,9 @@ function PedidoAG() {
                   >
                     <div className="ag-order-requirement-head">
                       <div>
-                        <p>{item.title}</p>
-                        <span>{getRequirementFilesLabel(item.attachments || [])}</span>
-                      </div>
+                          <p>{item.title}</p>
+                          <span>{getRequirementFilesLabel(item)}</span>
+                        </div>
                       <button
                         type="button"
                         className="ag-order-requirement-view-btn"
@@ -246,11 +329,16 @@ function PedidoAG() {
                 <button
                   type="button"
                   className="ag-order-submit-btn"
-                  disabled={!selectedVerdict}
+                  disabled={!selectedVerdict || isSubmittingVerdict}
+                  onClick={handleSubmitVerdict}
                 >
                   <SendHorizontal size={18} />
-                  Submeter
+                  {isSubmittingVerdict ? 'A submeter...' : 'Submeter'}
                 </button>
+
+                {statusMessage && (
+                  <p className="ag-order-feedback-note">{statusMessage}</p>
+                )}
               </div>
             ) : (
               <div className="ag-order-reviewed-card">
@@ -272,7 +360,7 @@ function PedidoAG() {
 
                 {request.notes && (
                   <p className="ag-order-review-note">
-                    {request.notes}
+                    {statusMessage || request.notes}
                   </p>
                 )}
               </div>

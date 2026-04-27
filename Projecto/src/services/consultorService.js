@@ -98,12 +98,32 @@ export async function fetchCatalogBadges() {
 }
 
 export async function fetchLearningPaths() {
-  const response = await apiClient.get('/consultor/learning-paths');
+  const accountId = await ensureLoggedAccountId();
+  if (!accountId) {
+    throw new Error('Missing logged account id.');
+  }
+
+  const response = await apiClient.get(`/consultor/learning-paths?accountId=${accountId}`);
   return response.data;
 }
 
 export async function fetchMyBadges() {
-  const response = await apiClient.get('/consultor/meus-badges');
+  const accountId = await ensureLoggedAccountId();
+  if (!accountId) {
+    throw new Error('Missing logged account id.');
+  }
+
+  const response = await apiClient.get(`/consultor/meus-badges?accountId=${accountId}`);
+  return response.data;
+}
+
+export async function requestBadgeAcquisition(badgeId) {
+  const accountId = await ensureLoggedAccountId();
+  if (!accountId) {
+    throw new Error('Missing logged account id.');
+  }
+
+  const response = await apiClient.post(`/consultor/badges/${encodeURIComponent(badgeId)}/adquirir`, { accountId });
   return response.data;
 }
 

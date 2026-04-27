@@ -10,18 +10,54 @@ export const getCatalogBadges = (_req, res) => {
   res.status(200).json(data);
 };
 
-export const getLearningPaths = async (_req, res) => {
+export const getLearningPaths = async (req, res) => {
+  const accountId = parseAccountId(req.query?.accountId);
+  
+  if (!accountId) {
+    res.status(400).json({ message: 'Account id is required.' });
+    return;
+  }
+
   try {
-    const data = await consultorService.getLearningPaths();
+    const data = await consultorService.getLearningPaths(accountId);
     res.status(200).json(data);
-  } catch {
-    res.status(500).json({ message: 'Failed to fetch learning paths.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch learning paths.', error: error.message });
   }
 };
 
-export const getMyBadges = (_req, res) => {
-  const data = consultorService.getMyBadges();
-  res.status(200).json(data);
+export const getMyBadges = async (req, res) => {
+  const accountId = parseAccountId(req.query?.accountId);
+
+  if (!accountId) {
+    res.status(400).json({ message: 'Account id is required.' });
+    return;
+  }
+
+  try {
+    const data = await consultorService.getMyBadges(accountId);
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch badges.', error: error.message });
+  }
+};
+
+export const acquireBadge = async (req, res) => {
+  const accountId = parseAccountId(req.body?.accountId);
+  const badgeId = parseAccountId(req.params?.badgeId);
+
+  if (!accountId || !badgeId) {
+    res.status(400).json({ message: 'Account id and badge id are required.' });
+    return;
+  }
+
+  try {
+    const data = await consultorService.requestBadgeAcquisition(accountId, badgeId);
+    res.status(200).json(data);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode) || 500;
+    res.status(statusCode).json({ message: error?.message || 'Failed to submit badge request.' });
+  }
 };
 
 export const getMyRequests = (_req, res) => {

@@ -1,13 +1,31 @@
-import { useMemo, useState } from 'react';
-import { ArrowLeft, Clock3, Eye, EyeOff, FileText, Trophy } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  Clock3,
+  Eye,
+  EyeOff,
+  FileText,
+  Linkedin,
+  MessageSquare,
+  SearchCheck,
+  SendHorizontal,
+  TimerReset,
+  Trophy,
+  Share2,
+} from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
+import { requestBadgeAcquisition } from '../../services/consultorService';
 import '../../css/Consultor/BadgeDetalhe.css';
 
 const defaultBadgeDetails = {
   id: 'badge-default',
   area: 'LowCode (Outsystems)',
+  serviceLineName: 'Application Operations',
+  learningPathName: 'Jornada Técnica',
   levelKey: 'badge_level_knowledge_lead',
   points: 300,
   badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png',
@@ -18,6 +36,8 @@ const fallbackBadges = [
   {
     id: 'my-1',
     area: 'LowCode (Outsystems)',
+    serviceLineName: 'Application Operations',
+    learningPathName: 'Jornada Técnica',
     levelKey: 'badge_level_specialist',
     points: 250,
     badgeImage: '/badges/Especialista.png',
@@ -26,6 +46,8 @@ const fallbackBadges = [
   {
     id: 'my-2',
     area: 'LowCode (Outsystems)',
+    serviceLineName: 'Application Operations',
+    learningPathName: 'Jornada Técnica',
     levelKey: 'badge_level_senior',
     points: 200,
     badgeImage: '/badges/S%C3%A9nior.png',
@@ -34,6 +56,8 @@ const fallbackBadges = [
   {
     id: 'my-3',
     area: 'LowCode (Outsystems)',
+    serviceLineName: 'Application Operations',
+    learningPathName: 'Jornada Técnica',
     levelKey: 'badge_level_intermediate',
     points: 150,
     badgeImage: '/badges/Interm%C3%A9dio.png',
@@ -42,6 +66,8 @@ const fallbackBadges = [
   {
     id: 'my-4',
     area: 'Cloud Architecture',
+    serviceLineName: 'Hybrid Cloud',
+    learningPathName: 'Jornada Técnica',
     levelKey: 'badge_level_specialist',
     points: 250,
     badgeImage: '/badges/Especialista.png',
@@ -50,6 +76,8 @@ const fallbackBadges = [
   {
     id: 'my-5',
     area: 'Cloud Architecture',
+    serviceLineName: 'Hybrid Cloud',
+    learningPathName: 'Jornada Técnica',
     levelKey: 'badge_level_senior',
     points: 200,
     badgeImage: '/badges/S%C3%A9nior.png',
@@ -58,6 +86,8 @@ const fallbackBadges = [
   {
     id: 'my-6',
     area: 'Cloud Architecture',
+    serviceLineName: 'Hybrid Cloud',
+    learningPathName: 'Jornada Técnica',
     levelKey: 'badge_level_intermediate',
     points: 150,
     badgeImage: '/badges/Interm%C3%A9dio.png',
@@ -65,47 +95,80 @@ const fallbackBadges = [
   },
 ];
 
-const requirementsByArea = {
-  'lowcode (outsystems)': [
-    {
-      id: 'e1',
-      title: 'E1 - Implementar conectividade hibrida',
-      description: 'Texto de exemplo que resume o requisito selecionado do subnivel, do nivel, da service line, do learning path.',
-      image: '/badges/J%C3%BAnior.png',
-    },
-    {
-      id: 'e2',
-      title: 'E2 - Monitorizar infraestrutura hibrida',
-      description: 'Texto de exemplo com validacoes e evidencias necessarias para demonstrar monitorizacao de ponta a ponta.',
-      image: '/badges/Interm%C3%A9dio.png',
-    },
-    {
-      id: 'e3',
-      title: 'E3 - Implementar disaster recovery',
-      description: 'Texto de exemplo sobre recuperacao, redundancia e procedimentos de continuidade operacional do servico.',
-      image: '/badges/S%C3%A9nior.png',
-    },
-  ],
-  'cloud architecture': [
-    {
-      id: 'e1',
-      title: 'E1 - Configurar redes seguras multi-regiao',
-      description: 'Texto de exemplo sobre conectividade segura, segmentacao de rede e controlo de acesso em multiplas regioes.',
-      image: '/badges/J%C3%BAnior.png',
-    },
-    {
-      id: 'e2',
-      title: 'E2 - Implementar observabilidade de workloads cloud',
-      description: 'Texto de exemplo sobre monitorizacao continua, alertas e correlacao de logs para workloads cloud.',
-      image: '/badges/Interm%C3%A9dio.png',
-    },
-    {
-      id: 'e3',
-      title: 'E3 - Definir estrategia de resiliencia e backup',
-      description: 'Texto de exemplo que resume politicas de backup, recuperacao e testes de resiliencia em ambiente cloud.',
-      image: '/badges/S%C3%A9nior.png',
-    },
-  ],
+const requirementTemplate = [
+  {
+    id: 'req-1',
+    title: 'Implementar conectividade híbrida',
+    description: 'Texto de exemplo que resume o requisito selecionado do subnível, do nível, da service line e do learning path.',
+  },
+  {
+    id: 'req-2',
+    title: 'Monitorizar infraestrutura híbrida',
+    description: 'Texto de exemplo com validações e evidências necessárias para demonstrar monitorização de ponta a ponta.',
+  },
+  {
+    id: 'req-3',
+    title: 'Implementar disaster recovery',
+    description: 'Texto de exemplo sobre recuperação, redundância e procedimentos de continuidade operacional do serviço.',
+  },
+];
+
+const statusConfig = {
+  candidatura_em_progresso: {
+    label: 'Candidatura em progresso',
+    className: 'is-progress',
+    Icon: TimerReset,
+  },
+  em_validacao: {
+    label: 'Candidatura submetida - Em Validação',
+    className: 'is-validation',
+    Icon: SearchCheck,
+  },
+  evidencias_insuficientes: {
+    label: 'Candidatura submetida - Evidências Insuficientes',
+    className: 'is-rejected',
+    Icon: AlertTriangle,
+  },
+  obtido: {
+    label: 'Badge obtido',
+    className: 'is-obtained',
+    Icon: CheckCircle2,
+  },
+};
+
+const normalizeBadgeStatus = (badge) => {
+  const rawStatus = String(badge?.status || '').trim().toLowerCase();
+  if (rawStatus) {
+    return rawStatus;
+  }
+
+  const stateId = String(badge?.stateId || '').trim().toLowerCase();
+  if (stateId === 'aprovado') {
+    return 'obtido';
+  }
+
+  if (stateId === 'em_validacao') {
+    return 'em_validacao';
+  }
+
+  if (stateId === 'candidatura_em_progresso') {
+    return 'candidatura_em_progresso';
+  }
+
+  if (stateId === 'rejeitado') {
+    return 'evidencias_insuficientes';
+  }
+
+  return 'visualizar';
+};
+
+const getRequirementPrefixByLevel = (levelKey) => {
+  const normalized = String(levelKey || '').toLowerCase();
+  if (normalized.includes('junior')) return 'A';
+  if (normalized.includes('intermediate')) return 'B';
+  if (normalized.includes('senior')) return 'C';
+  if (normalized.includes('specialist')) return 'D';
+  return 'E';
 };
 
 function BadgeDetalhe() {
@@ -114,6 +177,8 @@ function BadgeDetalhe() {
   const location = useLocation();
   const { t } = useTranslation();
   const [openRequirementId, setOpenRequirementId] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
 
   const badge = useMemo(() => {
     if (location.state?.badge) {
@@ -124,11 +189,23 @@ function BadgeDetalhe() {
     const matchedBadge = fallbackBadges.find((item) => item.id === decodedId);
     return matchedBadge || defaultBadgeDetails;
   }, [location.state, badgeId]);
+  const [badgeStatus, setBadgeStatus] = useState(() => normalizeBadgeStatus(badge));
+
+  useEffect(() => {
+    setBadgeStatus(normalizeBadgeStatus(badge));
+  }, [badge]);
 
   const requirements = useMemo(() => {
-    const areaKey = (badge.area || '').trim().toLowerCase();
-    return requirementsByArea[areaKey] || requirementsByArea['lowcode (outsystems)'];
-  }, [badge.area]);
+    const prefix = getRequirementPrefixByLevel(badge.levelKey);
+    const showFiles = badgeStatus !== 'visualizar';
+
+    return requirementTemplate.map((item, index) => ({
+      ...item,
+      title: `${prefix}${index + 1} - ${item.title}`,
+      files: showFiles ? (index === 0 ? 2 : null) : null,
+      image: badge.badgeImage,
+    }));
+  }, [badge.levelKey, badgeStatus, badge.badgeImage]);
 
   const fallbackBackRoute =
     typeof location.state?.backTo === 'string' && location.state.backTo.trim().length > 0
@@ -157,6 +234,51 @@ function BadgeDetalhe() {
   const toggleRequirement = (requirementId) => {
     setOpenRequirementId((current) => (current === requirementId ? null : requirementId));
   };
+
+  const canRequestBadge = badgeStatus === 'visualizar' || badgeStatus === 'evidencias_insuficientes';
+  const isProgressStatus = badgeStatus === 'candidatura_em_progresso';
+  const canSubmitProgress = canRequestBadge || isProgressStatus;
+  const hasStatusBanner = badgeStatus !== 'visualizar';
+  const statusMeta = statusConfig[badgeStatus] || null;
+  const showReviewMessage = badgeStatus === 'evidencias_insuficientes';
+  const showShareActions = badgeStatus === 'obtido';
+
+  const handleRequestBadge = async () => {
+    if (!badge?.badgeDbId || isSubmitting || !canSubmitProgress) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setStatusMessage('');
+      const response = await requestBadgeAcquisition(badge.badgeDbId);
+      const nextStatus = String(response?.status || 'candidatura_em_progresso').toLowerCase();
+
+      setBadgeStatus(nextStatus);
+      if (nextStatus === 'obtido') {
+        setStatusMessage('Este badge ja foi adquirido.');
+      } else if (isProgressStatus) {
+        setStatusMessage('Candidatura já se encontra em progresso.');
+      } else {
+        setStatusMessage('Candidatura submetida com sucesso.');
+      }
+    } catch (error) {
+      setStatusMessage(error?.message || 'Nao foi possivel submeter a candidatura.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getFilesLabel = (files) => {
+    const filesCount = Number(files);
+    if (Number.isInteger(filesCount) && filesCount > 0) {
+      return `${String(filesCount).padStart(2, '0')} Arquivos Submetidos`;
+    }
+
+    return 'XX Arquivos Submetidos';
+  };
+
+  const breadcrumbPath = `${badge.learningPathName || 'Jornada Técnica'} -> ${badge.serviceLineName || 'Application Operations'} -> ${badge.area} -> ${t(badge.levelKey)}`;
 
   return (
     <Layout>
@@ -192,8 +314,17 @@ function BadgeDetalhe() {
                 {requirements.length} requisitos
               </span>
             </div>
+
+            {hasStatusBanner && statusMeta && (
+              <div className={`badge-status-banner ${statusMeta.className}`}>
+                <statusMeta.Icon size={20} />
+                <span>{statusMeta.label}</span>
+              </div>
+            )}
           </div>
         </section>
+
+        <p className="badge-breadcrumb">{breadcrumbPath}</p>
 
         <section className="badge-requirements-card">
           <h3>Requisitos</h3>
@@ -206,7 +337,12 @@ function BadgeDetalhe() {
               return (
                 <article key={`${badge.id}-${requirement.id}`} className={`badge-requirement-item ${isOpen ? 'is-open' : ''}`}>
                   <div className="badge-requirement-head">
-                    <p>{requirement.title}</p>
+                    <div>
+                      <p>{requirement.title}</p>
+                      {badgeStatus !== 'visualizar' && (
+                        <span>{getFilesLabel(requirement.files)}</span>
+                      )}
+                    </div>
                     <button
                       type="button"
                       className="badge-requirement-view-btn"
@@ -234,6 +370,51 @@ function BadgeDetalhe() {
             })}
           </div>
         </section>
+
+        {showReviewMessage && (
+          <section className="badge-review-card">
+            <div className="badge-review-head">
+              <h3>Mensagem do Talent Manager:</h3>
+              <span>{badge.reviewerDate || '23 de dezembro de 2025'}</span>
+            </div>
+            <p>{badge.reviewMessage || 'Evidências insuficientes para a conclusão da submissão.'}</p>
+          </section>
+        )}
+
+        <div className="badge-actions-row">
+          {showShareActions && (
+            <>
+              <button type="button" className="badge-share-icon-btn" aria-label="Partilhar no Teams">
+                <MessageSquare size={24} />
+              </button>
+              <button type="button" className="badge-share-icon-btn" aria-label="Partilhar no LinkedIn">
+                <Linkedin size={24} />
+              </button>
+              <button type="button" className="badge-share-primary-btn" aria-label="Partilhar">
+                <Share2 size={20} />
+                Partilhar
+              </button>
+            </>
+          )}
+
+          {!showShareActions && canSubmitProgress && (
+            <button
+              type="button"
+              className="badge-submit-btn"
+              disabled={!badge.badgeDbId || isSubmitting}
+              onClick={handleRequestBadge}
+            >
+              {badgeStatus === 'visualizar' ? null : <SendHorizontal size={20} />}
+              {isSubmitting
+                ? 'A submeter...'
+                : badgeStatus === 'visualizar'
+                  ? 'Iniciar Candidatura'
+                  : 'Submeter'}
+            </button>
+          )}
+        </div>
+
+        {statusMessage && <p className="badge-feedback">{statusMessage}</p>}
       </div>
     </Layout>
   );
