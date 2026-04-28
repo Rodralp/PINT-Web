@@ -64,6 +64,71 @@ export const acquireBadge = async (req, res) => {
   }
 };
 
+export const getPreferenceAreas = async (req, res) => {
+  const accountId = parseAccountId(req.query?.accountId);
+  if (!accountId) {
+    res.status(400).json({ message: 'Account id is required.' });
+    return;
+  }
+
+  try {
+    const data = await consultorService.getPreferenceAreas(accountId);
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch preference areas.', error: error.message });
+  }
+};
+
+export const getPreferences = async (req, res) => {
+  const accountId = parseAccountId(req.query?.accountId);
+  if (!accountId) {
+    res.status(400).json({ message: 'Account id is required.' });
+    return;
+  }
+
+  try {
+    const data = await consultorService.getPreferences(accountId);
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch preferences.', error: error.message });
+  }
+};
+
+export const savePreferences = async (req, res) => {
+  const accountId = parseAccountId(req.body?.accountId);
+  const areaIds = Array.isArray(req.body?.areaIds) ? req.body.areaIds : [];
+
+  if (!accountId) {
+    res.status(400).json({ message: 'Account id is required.' });
+    return;
+  }
+
+  try {
+    const data = await consultorService.savePreferences(accountId, areaIds);
+    res.status(200).json(data);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode) || 500;
+    res.status(statusCode).json({ message: error?.message || 'Failed to save preferences.' });
+  }
+};
+
+export const getBadgeSuggestions = async (req, res) => {
+  const accountId = parseAccountId(req.query?.accountId);
+  const limit = Number(req.query?.limit);
+
+  if (!accountId) {
+    res.status(400).json({ message: 'Account id is required.' });
+    return;
+  }
+
+  try {
+    const data = await consultorService.getBadgeSuggestions(accountId, limit);
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch suggestions.', error: error.message });
+  }
+};
+
 export const getMyRequests = (_req, res) => {
   const data = consultorService.getMyRequests();
   res.status(200).json(data);

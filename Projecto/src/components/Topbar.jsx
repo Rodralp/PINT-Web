@@ -4,6 +4,39 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import '../css/Topbar.css';
 
+const DEFAULT_ROLE = 'consultor';
+
+const settingsPathByRole = {
+  consultor: '/consultor/definicoes',
+  'talent-manager': '/talent-manager/definicoes',
+  'service-line-leader': '/service-line-leader/definicoes',
+  'admin-gestor': '/admin-gestor/definicoes',
+};
+
+const normalizeRoles = (rolesValue) => {
+  const rawRoles = Array.isArray(rolesValue)
+    ? rolesValue
+    : typeof rolesValue === 'string'
+      ? rolesValue.split(';')
+      : [];
+
+  const parsedRoles = rawRoles
+    .map((role) => String(role).trim().toLowerCase())
+    .filter(Boolean);
+
+  const uniqueRoles = [...new Set(parsedRoles)];
+  return uniqueRoles.length > 0 ? uniqueRoles : [DEFAULT_ROLE];
+};
+
+const resolveSettingsPath = (rolesValue) => {
+  const roles = normalizeRoles(rolesValue);
+  const path = roles
+    .map((role) => settingsPathByRole[role])
+    .find(Boolean);
+
+  return path || '/consultor/definicoes';
+};
+
 function Topbar({ onToggleSidebar }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
@@ -11,7 +44,17 @@ function Topbar({ onToggleSidebar }) {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
-  const loginData = storedLoginData ? JSON.parse(storedLoginData) : null;
+  const loginData = (() => {
+    if (!storedLoginData) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(storedLoginData);
+    } catch {
+      return null;
+    }
+  })();
   const userName = loginData?.nome || t('app_user_default');
 
   const languages = [
@@ -37,8 +80,9 @@ function Topbar({ onToggleSidebar }) {
   }, [dropdownRef]);
 
   const handleLogout = () => {
-    // Limpar apenas a sessao ativa para manter "Guardar dados de login" no localStorage.
+    // Termina a sessão autenticada em todos os armazenamentos.
     sessionStorage.removeItem('loginData');
+    localStorage.removeItem('loginData');
 
     navigate('/');
   };
@@ -59,6 +103,12 @@ function Topbar({ onToggleSidebar }) {
     i18n.changeLanguage(languageCode);
     setShowLanguageMenu(false);
     setDropdownOpen(false);
+  };
+
+  const handleOpenSettings = () => {
+    navigate(resolveSettingsPath(loginData?.roles ?? loginData?.role));
+    setDropdownOpen(false);
+    setShowLanguageMenu(false);
   };
 
   return (
@@ -95,7 +145,7 @@ function Topbar({ onToggleSidebar }) {
           
           {dropdownOpen && (
             <div className="topbar-dropdown-menu">
-              <button className="topbar-dropdown-item">
+              <button className="topbar-dropdown-item" onClick={handleOpenSettings}>
                 <Settings size={20} strokeWidth={2} />
                 <span>{t('topbar_settings')}</span>
               </button>

@@ -16,6 +16,8 @@ const dashboardPathByRole = {
 };
 
 const DEFAULT_ROLE = 'consultor';
+const CONSULTOR_PREFERENCES_PATH = '/consultor/preferencias';
+const REMEMBERED_LOGIN_KEY = 'rememberedLoginData';
 
 const normalizeRoles = (rolesValue) => {
   const rawRoles = Array.isArray(rolesValue)
@@ -43,8 +45,25 @@ const resolveDashboardPath = (rolesValue) => {
 
 const getRememberedLoginData = () => {
   try {
-    const savedLoginData = localStorage.getItem('loginData');
-    return savedLoginData ? JSON.parse(savedLoginData) : null;
+    const rememberedRaw = localStorage.getItem(REMEMBERED_LOGIN_KEY);
+    if (rememberedRaw) {
+      return JSON.parse(rememberedRaw);
+    }
+
+    // Compatibilidade com versões antigas que guardavam tudo no mesmo objeto.
+    const legacyLoginDataRaw = localStorage.getItem('loginData');
+    if (!legacyLoginDataRaw) {
+      return null;
+    }
+
+    const legacyLoginData = JSON.parse(legacyLoginDataRaw);
+    return legacyLoginData?.guardarDados
+      ? {
+          email: legacyLoginData.email || '',
+          senha: legacyLoginData.senha || '',
+          guardarDados: true,
+        }
+      : null;
   } catch {
     return null;
   }
@@ -127,6 +146,7 @@ function Entrar() {
       });
 
       const accountRoles = normalizeRoles(account.roles ?? account.role);
+      const hasPreferences = Boolean(account.hasPreferences);
 
       const dadosLogin = {
         ...formData,
@@ -136,17 +156,25 @@ function Entrar() {
         role: accountRoles[0],
         roles: accountRoles,
         status: account.status,
+        hasPreferences,
       };
 
       if (formData.guardarDados) {
-        localStorage.setItem('loginData', JSON.stringify(dadosLogin));
-        sessionStorage.removeItem('loginData');
+        localStorage.setItem(REMEMBERED_LOGIN_KEY, JSON.stringify({
+          email: formData.email,
+          senha: formData.senha,
+          guardarDados: true,
+        }));
       } else {
-        localStorage.removeItem('loginData');
-        sessionStorage.setItem('loginData', JSON.stringify(dadosLogin));
+        localStorage.removeItem(REMEMBERED_LOGIN_KEY);
       }
 
-      setRedirectPath(resolveDashboardPath(accountRoles));
+      // O estado autenticado fica apenas na sessão ativa.
+      localStorage.removeItem('loginData');
+      sessionStorage.setItem('loginData', JSON.stringify(dadosLogin));
+
+      const mustChoosePreferences = accountRoles.includes(DEFAULT_ROLE) && !hasPreferences;
+      setRedirectPath(mustChoosePreferences ? CONSULTOR_PREFERENCES_PATH : resolveDashboardPath(accountRoles));
       setLoginFeedbackType('success');
     } catch (error) {
       if (error?.code === 'ACCOUNT_PENDING_APPROVAL') {

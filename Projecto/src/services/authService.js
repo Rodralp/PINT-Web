@@ -30,6 +30,7 @@ const sanitizeAccount = (account) => {
     role: roles[0],
     roles,
     status: account.status || DEFAULT_STATUS,
+    hasPreferences: Boolean(account.hasPreferences),
   };
 };
 
@@ -58,5 +59,23 @@ export async function recoverPassword(payload) {
   const email = normalizeEmail(payload?.email || '');
 
   const response = await apiClient.post('/auth/recover-password', { email });
+  return response.data;
+}
+
+export async function changePassword(payload) {
+  const accountId = Number(payload?.accountId);
+  const currentPassword = String(payload?.currentPassword || '');
+  const newPassword = String(payload?.newPassword || '');
+
+  if (!Number.isInteger(accountId) || accountId <= 0 || !currentPassword || !newPassword) {
+    throw new Error('Missing required fields.');
+  }
+
+  const response = await apiClient.post('/auth/change-password', {
+    accountId,
+    currentPassword,
+    newPassword,
+  });
+
   return response.data;
 }

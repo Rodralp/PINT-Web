@@ -48,6 +48,18 @@ const persistLoginData = (source, data) => {
   }
 };
 
+const updateStoredLoginData = (patch) => {
+  const stored = getStoredLoginData();
+  if (!stored?.data) {
+    return;
+  }
+
+  persistLoginData(stored.source, {
+    ...stored.data,
+    ...patch,
+  });
+};
+
 const ensureLoggedAccountId = async () => {
   const stored = getStoredLoginData();
 
@@ -84,6 +96,9 @@ const ensureLoggedAccountId = async () => {
       role: refreshedAccount?.role || stored.data.role,
       roles: refreshedAccount?.roles || stored.data.roles,
       status: refreshedAccount?.status || stored.data.status,
+      hasPreferences: typeof refreshedAccount?.hasPreferences === 'boolean'
+        ? refreshedAccount.hasPreferences
+        : stored.data.hasPreferences,
     });
 
     return refreshedAccountId;
@@ -124,6 +139,49 @@ export async function requestBadgeAcquisition(badgeId) {
   }
 
   const response = await apiClient.post(`/consultor/badges/${encodeURIComponent(badgeId)}/adquirir`, { accountId });
+  return response.data;
+}
+
+export async function fetchPreferenceAreas() {
+  const accountId = await ensureLoggedAccountId();
+  if (!accountId) {
+    throw new Error('Missing logged account id.');
+  }
+
+  const response = await apiClient.get(`/consultor/preferencias/areas?accountId=${accountId}`);
+  return response.data;
+}
+
+export async function fetchUserPreferences() {
+  const accountId = await ensureLoggedAccountId();
+  if (!accountId) {
+    throw new Error('Missing logged account id.');
+  }
+
+  const response = await apiClient.get(`/consultor/preferencias?accountId=${accountId}`);
+  return response.data;
+}
+
+export async function saveUserPreferences(areaIds) {
+  const accountId = await ensureLoggedAccountId();
+  if (!accountId) {
+    throw new Error('Missing logged account id.');
+  }
+
+  const response = await apiClient.put('/consultor/preferencias', { accountId, areaIds });
+  updateStoredLoginData({ hasPreferences: true });
+  return response.data;
+}
+
+export async function fetchBadgeSuggestions(limit = 3) {
+  const accountId = await ensureLoggedAccountId();
+  if (!accountId) {
+    throw new Error('Missing logged account id.');
+  }
+
+  const parsedLimit = Number(limit);
+  const safeLimit = Number.isInteger(parsedLimit) && parsedLimit > 0 ? parsedLimit : 3;
+  const response = await apiClient.get(`/consultor/sugestoes?accountId=${accountId}&limit=${safeLimit}`);
   return response.data;
 }
 

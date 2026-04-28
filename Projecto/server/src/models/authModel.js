@@ -1,3 +1,5 @@
+import { QueryTypes } from 'sequelize';
+import { sequelize } from '../config/database.js';
 import { Account } from './sql/Account.js';
 
 const DEFAULT_ROLE = 'consultor';
@@ -19,7 +21,7 @@ const normalizeRoles = (rolesValue) => {
   return uniqueRoles.length > 0 ? uniqueRoles : [DEFAULT_ROLE];
 };
 
-const sanitizeAccount = (account) => {
+const sanitizeAccount = (account, hasPreferences = false) => {
   const roles = normalizeRoles(account.role);
 
   return {
@@ -29,7 +31,28 @@ const sanitizeAccount = (account) => {
     role: roles[0],
     roles,
     status: account.status,
+    hasPreferences: Boolean(hasPreferences),
   };
+};
+
+const getHasPreferences = async (accountId) => {
+  if (!Number.isInteger(Number(accountId)) || Number(accountId) <= 0) {
+    return false;
+  }
+
+  const [row] = await sequelize.query(
+    `
+      SELECT COUNT(*)::int AS total
+      FROM preferencias
+      WHERE nutilizador = :accountId
+    `,
+    {
+      replacements: { accountId: Number(accountId) },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return Number(row?.total) > 0;
 };
 
 export const authModel = {
@@ -49,7 +72,7 @@ export const authModel = {
       status: 'pendente',
     });
 
-    return sanitizeAccount(account);
+    return sanitizeAccount(account, false);
   },
 
   async login({ email, senha }) {
@@ -62,15 +85,18 @@ export const authModel = {
     }
 
     if (String(account.status).toLowerCase() === 'pendente') {
+      const hasPreferences = await getHasPreferences(account.id);
       return {
         status: 'pending_approval',
-        account: sanitizeAccount(account),
+        account: sanitizeAccount(account, hasPreferences),
       };
     }
 
+    const hasPreferences = await getHasPreferences(account.id);
+
     return {
       status: 'ok',
-      account: sanitizeAccount(account),
+      account: sanitizeAccount(account, hasPreferences),
     };
   },
 
@@ -82,5 +108,38 @@ export const authModel = {
   async recoverPassword(email) {
     const account = await this.findByEmail(email);
     return account ? account.senha : null;
+  },
+
+  async changePassword({ accountId, currentPassword, newPassword }) {
+    const parsedAccountId = Number(accountId);
+    if (!Number.isInteger(parsedAccountId) || parsedAccountId <= 0) {
+      const error = new Error('Invalid account id.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const account = await Account.findByPk(parsedAccountId);
+    if (!account) {
+      const error = new Error('Account not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (String(account.senha || '') !== String(currentPassword || '')) {
+      const error = new Error('Current password is invalid.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (String(currentPassword || '') === String(newPassword || '')) {
+      const error = new Error('New password must be different from current password.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    account.senha = String(newPassword || '');
+    await account.save();
+
+    return { updated: true };
   },
 };

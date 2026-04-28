@@ -12,4 +12,8 @@ export const authService = {
   async recoverPassword(email) {
     return authModel.recoverPassword(email);
   },
+
+  async changePassword(payload) {
+    return authModel.changePassword(payload);
+  },
 };

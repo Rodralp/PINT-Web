@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import {
   acquireBadge,
+  getBadgeSuggestions,
+  getPreferenceAreas,
+  getPreferences,
   createReminder,
   deleteReminder,
   getCatalogBadges,
@@ -10,6 +13,7 @@ import {
   getProfileData,
   getRankingConsultores,
   getReminders,
+  savePreferences,
   updateReminder,
 } from '../controllers/consultorController.js';
 
@@ -19,6 +23,10 @@ router.get('/catalog-badges', getCatalogBadges);
 router.get('/learning-paths', getLearningPaths);
 router.get('/meus-badges', getMyBadges);
 router.post('/badges/:badgeId/adquirir', acquireBadge);
+router.get('/preferencias/areas', getPreferenceAreas);
+router.get('/preferencias', getPreferences);
+router.put('/preferencias', savePreferences);
+router.get('/sugestoes', getBadgeSuggestions);
 router.get('/meus-pedidos', getMyRequests);
 router.get('/ranking', getRankingConsultores);
 router.get('/lembretes', getReminders);

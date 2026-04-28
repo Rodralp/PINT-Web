@@ -39,6 +39,8 @@ const badgeLevelTemplates = [
   },
 ];
 
+const suggestionAccentPalette = ['success', 'violet', 'amber', 'warning', 'info', 'yellow'];
+
 const normalizeLevelTitle = (value) => {
   const rawTitle = String(value || '').trim();
   const withoutPathPrefix = rawTitle.includes(' - ')
@@ -120,6 +122,11 @@ const resolveBadgeTemplate = (levelName, fallbackIndex = 0) => {
   return badgeLevelTemplates[fallbackIndex % badgeLevelTemplates.length];
 };
 
+const hasActiveBadgeRequest = (status) =>
+  status === 'candidatura_em_progresso'
+  || status === 'em_validacao'
+  || status === 'obtido';
+
 const formatDate = (value) => {
   const date = value ? new Date(value) : new Date();
   if (Number.isNaN(date.getTime())) {
@@ -181,89 +188,6 @@ const ensureEstadoId = async (estadoNome) => {
 
   return Number(inserted.nestado);
 };
-
-const catalogBadges = [
-  {
-    id: 'lowcode-junior',
-    area: 'LowCode (Outsystems)',
-    levelKey: 'badge_level_junior',
-    points: 100,
-    badgeImage: '/badges/J%C3%BAnior.png',
-    date: '12 Jan 2026',
-  },
-  {
-    id: 'lowcode-intermediate',
-    area: 'LowCode (Outsystems)',
-    levelKey: 'badge_level_intermediate',
-    points: 150,
-    badgeImage: '/badges/Interm%C3%A9dio.png',
-    date: '12 Jan 2026',
-  },
-  {
-    id: 'lowcode-senior',
-    area: 'LowCode (Outsystems)',
-    levelKey: 'badge_level_senior',
-    points: 200,
-    badgeImage: '/badges/S%C3%A9nior.png',
-    date: '12 Jan 2026',
-  },
-  {
-    id: 'lowcode-specialist',
-    area: 'LowCode (Outsystems)',
-    levelKey: 'badge_level_specialist',
-    points: 250,
-    badgeImage: '/badges/Especialista.png',
-    date: '12 Jan 2026',
-  },
-  {
-    id: 'lowcode-knowledge-lead',
-    area: 'LowCode (Outsystems)',
-    levelKey: 'badge_level_knowledge_lead',
-    points: 300,
-    badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png',
-    date: '12 Jan 2026',
-  },
-  {
-    id: 'cloud-junior',
-    area: 'Cloud Architecture',
-    levelKey: 'badge_level_junior',
-    points: 100,
-    badgeImage: '/badges/J%C3%BAnior.png',
-    date: '12 Jan 2026',
-  },
-  {
-    id: 'cloud-intermediate',
-    area: 'Cloud Architecture',
-    levelKey: 'badge_level_intermediate',
-    points: 150,
-    badgeImage: '/badges/Interm%C3%A9dio.png',
-    date: '12 Jan 2026',
-  },
-  {
-    id: 'cloud-senior',
-    area: 'Cloud Architecture',
-    levelKey: 'badge_level_senior',
-    points: 200,
-    badgeImage: '/badges/S%C3%A9nior.png',
-    date: '12 Jan 2026',
-  },
-  {
-    id: 'cloud-specialist',
-    area: 'Cloud Architecture',
-    levelKey: 'badge_level_specialist',
-    points: 250,
-    badgeImage: '/badges/Especialista.png',
-    date: '12 Jan 2026',
-  },
-  {
-    id: 'cloud-knowledge-lead',
-    area: 'Cloud Architecture',
-    levelKey: 'badge_level_knowledge_lead',
-    points: 300,
-    badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png',
-    date: '12 Jan 2026',
-  },
-];
 
 const myRequests = [
   { id: 1, badge: 'UX/UI Design', level: 'Especialista', date: '05/12/2025', status: 'pendente' },
@@ -598,6 +522,326 @@ const buildMyBadges = async (accountId) => {
   return items.sort((left, right) => right.points - left.points);
 };
 
+const getSelectedAreaRowsByUtilizadorId = async (utilizadorId) => {
+  if (!utilizadorId) {
+    return [];
+  }
+
+  return sequelize.query(
+    `
+      SELECT
+        a.narea,
+        a.area,
+        a.a_desc,
+        sl.sline
+      FROM preferencias AS p
+      INNER JOIN area AS a
+        ON a.narea = p.narea
+      LEFT JOIN service_line AS sl
+        ON sl.nsline = a.nsline
+      WHERE p.nutilizador = :utilizadorId
+      ORDER BY LOWER(a.area) ASC, a.narea ASC
+    `,
+    {
+      replacements: { utilizadorId: Number(utilizadorId) },
+      type: QueryTypes.SELECT,
+    },
+  );
+};
+
+const buildPreferenceAreas = async (accountId) => {
+  const utilizadorId = accountId ? await getUtilizadorIdByAccountId(accountId) : null;
+
+  const [areasRows, selectedRows] = await Promise.all([
+    sequelize.query(
+      `
+        SELECT
+          a.narea,
+          a.area,
+          a.a_desc,
+          sl.sline,
+          COUNT(DISTINCT bpa.nbadge) AS total_badges
+        FROM area AS a
+        LEFT JOIN service_line AS sl
+          ON sl.nsline = a.nsline
+        LEFT JOIN b_pertence_a AS bpa
+          ON bpa.narea = a.narea
+        GROUP BY a.narea, a.area, a.a_desc, sl.sline
+        ORDER BY LOWER(a.area) ASC, a.narea ASC
+      `,
+      {
+        type: QueryTypes.SELECT,
+      },
+    ),
+    getSelectedAreaRowsByUtilizadorId(utilizadorId),
+  ]);
+
+  const selectedAreaIds = new Set(selectedRows.map((row) => Number(row.narea)));
+
+  return areasRows.map((row) => ({
+    id: Number(row.narea),
+    name: row.area || 'Area',
+    description: row.a_desc || '',
+    serviceLine: row.sline || '',
+    badgeCount: Number(row.total_badges) || 0,
+    selected: selectedAreaIds.has(Number(row.narea)),
+  }));
+};
+
+const buildUserPreferences = async (accountId) => {
+  const utilizadorId = await getUtilizadorIdByAccountId(accountId);
+  if (!utilizadorId) {
+    return [];
+  }
+
+  const rows = await getSelectedAreaRowsByUtilizadorId(utilizadorId);
+  return rows.map((row) => ({
+    id: Number(row.narea),
+    name: row.area || 'Area',
+    description: row.a_desc || '',
+    serviceLine: row.sline || '',
+  }));
+};
+
+const saveUserPreferences = async (accountId, areaIds) => {
+  const parsedAreaIds = [...new Set(
+    (Array.isArray(areaIds) ? areaIds : [])
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0),
+  )];
+
+  if (parsedAreaIds.length === 0) {
+    const error = new Error('At least one area is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const utilizadorId = await getUtilizadorIdByAccountId(accountId);
+  if (!utilizadorId) {
+    const error = new Error('User not found for account.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const existingAreaRows = await sequelize.query(
+    `
+      SELECT narea
+      FROM area
+      WHERE narea IN (:areaIds)
+    `,
+    {
+      replacements: { areaIds: parsedAreaIds },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  const existingAreaIds = new Set(existingAreaRows.map((row) => Number(row.narea)));
+  if (existingAreaIds.size !== parsedAreaIds.length) {
+    const error = new Error('One or more selected areas are invalid.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const transaction = await sequelize.transaction();
+  try {
+    await sequelize.query(
+      `
+        DELETE FROM preferencias
+        WHERE nutilizador = :utilizadorId
+      `,
+      {
+        replacements: { utilizadorId },
+        type: QueryTypes.DELETE,
+        transaction,
+      },
+    );
+
+    for (const areaId of parsedAreaIds) {
+      await sequelize.query(
+        `
+          INSERT INTO preferencias (nutilizador, narea)
+          VALUES (:utilizadorId, :areaId)
+          ON CONFLICT (narea, nutilizador) DO NOTHING
+        `,
+        {
+          replacements: { utilizadorId, areaId },
+          type: QueryTypes.INSERT,
+          transaction,
+        },
+      );
+    }
+
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+
+  return buildUserPreferences(accountId);
+};
+
+const buildBadgeSuggestions = async (accountId, limit = 3) => {
+  const safeLimit = Number.isInteger(Number(limit)) && Number(limit) > 0 ? Number(limit) : 3;
+  const utilizadorId = await getUtilizadorIdByAccountId(accountId);
+  if (!utilizadorId) {
+    return [];
+  }
+
+  const preferredAreas = await getSelectedAreaRowsByUtilizadorId(utilizadorId);
+  if (preferredAreas.length === 0) {
+    return [];
+  }
+
+  const preferredAreaIds = preferredAreas.map((area) => Number(area.narea));
+
+  const [candidateRows, obtainedRows, requestRows] = await Promise.all([
+    sequelize.query(
+      `
+        SELECT DISTINCT ON (b.nbadge)
+          b.nbadge,
+          a.narea,
+          a.area,
+          n.nivel
+        FROM area AS a
+        INNER JOIN nivel AS n
+          ON n.narea = a.narea
+        INNER JOIN nivel_contem_b AS ncb
+          ON ncb.nnivel = n.nnivel
+        INNER JOIN badge AS b
+          ON b.nbadge = ncb.nbadge
+        WHERE a.narea IN (:areaIds)
+        ORDER BY b.nbadge ASC
+      `,
+      {
+        replacements: { areaIds: preferredAreaIds },
+        type: QueryTypes.SELECT,
+      },
+    ),
+    sequelize.query(
+      `
+        SELECT nbadge
+        FROM c_obtem_b
+        WHERE nutilizador = :utilizadorId
+      `,
+      {
+        replacements: { utilizadorId },
+        type: QueryTypes.SELECT,
+      },
+    ),
+    sequelize.query(
+      `
+        SELECT DISTINCT ON (p.nbadge)
+          p.nbadge,
+          e.estado
+        FROM pedidos AS p
+        INNER JOIN estado AS e
+          ON e.nestado = p.estado
+        WHERE p.nutilizador = :utilizadorId
+        ORDER BY p.nbadge, p.data_submissao DESC, p.npedido DESC
+      `,
+      {
+        replacements: { utilizadorId },
+        type: QueryTypes.SELECT,
+      },
+    ),
+  ]);
+
+  const obtainedBadgeIds = new Set(obtainedRows.map((row) => Number(row.nbadge)));
+  const requestStatusByBadge = new Map(
+    requestRows.map((row) => [Number(row.nbadge), mapPedidoEstadoToLearningPathStatus(row.estado)]),
+  );
+
+  const candidateRowsByArea = new Map();
+  for (const row of candidateRows) {
+    const areaId = Number(row.narea);
+    if (!candidateRowsByArea.has(areaId)) {
+      candidateRowsByArea.set(areaId, []);
+    }
+
+    candidateRowsByArea.get(areaId).push(row);
+  }
+
+  for (const rows of candidateRowsByArea.values()) {
+    rows.sort((left, right) => {
+      const leftTemplate = resolveBadgeTemplate(left.nivel);
+      const rightTemplate = resolveBadgeTemplate(right.nivel);
+      return rightTemplate.points - leftTemplate.points;
+    });
+  }
+
+  const suggestions = [];
+  const suggestedBadgeIds = new Set();
+  for (let index = 0; index < preferredAreas.length; index += 1) {
+    if (suggestions.length >= safeLimit) {
+      break;
+    }
+
+    const area = preferredAreas[index];
+    const areaRows = candidateRowsByArea.get(Number(area.narea)) || [];
+
+    const matchedRow = areaRows.find((row) => {
+      const badgeId = Number(row.nbadge);
+      if (obtainedBadgeIds.has(badgeId)) {
+        return false;
+      }
+
+      const latestRequestStatus = requestStatusByBadge.get(badgeId);
+      return !hasActiveBadgeRequest(latestRequestStatus);
+    });
+
+    if (!matchedRow) {
+      continue;
+    }
+
+    const template = resolveBadgeTemplate(matchedRow.nivel);
+    suggestedBadgeIds.add(Number(matchedRow.nbadge));
+    suggestions.push({
+      title: matchedRow.area || area.area || 'Area',
+      subtitleKey: template.levelKey,
+      accent: suggestionAccentPalette[index % suggestionAccentPalette.length],
+      badgeDbId: Number(matchedRow.nbadge),
+    });
+  }
+
+  if (suggestions.length < safeLimit) {
+    for (let areaIndex = 0; areaIndex < preferredAreas.length; areaIndex += 1) {
+      if (suggestions.length >= safeLimit) {
+        break;
+      }
+
+      const area = preferredAreas[areaIndex];
+      const areaRows = candidateRowsByArea.get(Number(area.narea)) || [];
+
+      for (const row of areaRows) {
+        if (suggestions.length >= safeLimit) {
+          break;
+        }
+
+        const badgeId = Number(row.nbadge);
+        if (suggestedBadgeIds.has(badgeId) || obtainedBadgeIds.has(badgeId)) {
+          continue;
+        }
+
+        const latestRequestStatus = requestStatusByBadge.get(badgeId);
+        if (hasActiveBadgeRequest(latestRequestStatus)) {
+          continue;
+        }
+
+        const template = resolveBadgeTemplate(row.nivel);
+        suggestedBadgeIds.add(badgeId);
+        suggestions.push({
+          title: row.area || area.area || 'Area',
+          subtitleKey: template.levelKey,
+          accent: suggestionAccentPalette[suggestions.length % suggestionAccentPalette.length],
+          badgeDbId: badgeId,
+        });
+      }
+    }
+  }
+
+  return suggestions;
+};
+
 const requestBadgeAcquisition = async (accountId, badgeId) => {
   const parsedBadgeId = Number(badgeId);
   if (!Number.isInteger(parsedBadgeId) || parsedBadgeId <= 0) {
@@ -806,6 +1050,26 @@ export const consultorModel = {
 
   async requestBadgeAcquisition(accountId, badgeId) {
     const data = await requestBadgeAcquisition(accountId, badgeId);
+    return clone(data);
+  },
+
+  async getPreferenceAreas(accountId) {
+    const data = await buildPreferenceAreas(accountId);
+    return clone(data);
+  },
+
+  async getPreferences(accountId) {
+    const data = await buildUserPreferences(accountId);
+    return clone(data);
+  },
+
+  async savePreferences(accountId, areaIds) {
+    const data = await saveUserPreferences(accountId, areaIds);
+    return clone(data);
+  },
+
+  async getBadgeSuggestions(accountId, limit) {
+    const data = await buildBadgeSuggestions(accountId, limit);
     return clone(data);
   },
 

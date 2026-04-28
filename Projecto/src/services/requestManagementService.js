@@ -71,6 +71,9 @@ const ensureLoggedAccountId = async () => {
       role: refreshedAccount?.role || stored.data.role,
       roles: refreshedAccount?.roles || stored.data.roles,
       status: refreshedAccount?.status || stored.data.status,
+      hasPreferences: typeof refreshedAccount?.hasPreferences === 'boolean'
+        ? refreshedAccount.hasPreferences
+        : stored.data.hasPreferences,
     });
 
     return refreshedAccountId;

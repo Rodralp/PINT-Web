@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
 import { fetchConsultorDashboard } from '../../services/dashboardService';
+import { fetchBadgeSuggestions } from '../../services/consultorService';
 import {
   Award,
   Flame,
@@ -90,7 +91,18 @@ function DashboardC() {
 
     const loadDashboardData = async () => {
       try {
-        const data = await fetchConsultorDashboard();
+        const [dashboardResult, suggestionsResult] = await Promise.allSettled([
+          fetchConsultorDashboard(),
+          fetchBadgeSuggestions(3),
+        ]);
+
+        if (dashboardResult.status !== 'fulfilled') {
+          throw dashboardResult.reason;
+        }
+
+        const data = dashboardResult.value;
+        const suggestionsData = suggestionsResult.status === 'fulfilled' ? suggestionsResult.value : [];
+
         if (!isMounted) {
           return;
         }
@@ -115,7 +127,9 @@ function DashboardC() {
           setInProgressItems(mappedInProgress);
         }
 
-        if (Array.isArray(data.suggestionItems) && data.suggestionItems.length > 0) {
+        if (Array.isArray(suggestionsData) && suggestionsData.length > 0) {
+          setSuggestionItems(suggestionsData);
+        } else if (Array.isArray(data.suggestionItems) && data.suggestionItems.length > 0) {
           setSuggestionItems(data.suggestionItems);
         }
 

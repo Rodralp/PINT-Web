@@ -37,7 +37,7 @@ const resolveDashboardPath = (rolesValue) => {
 };
 
 const getStoredLoginData = () => {
-  const storedLoginData = sessionStorage.getItem('loginData');
+  const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
 
   if (!storedLoginData) {
     return null;
@@ -86,7 +86,7 @@ function Navbar() {
   const dropdownRef = useRef(null);
 
   const loginData = getStoredLoginData();
-  const isLoggedIn = Boolean(loginData);
+  const isLoggedIn = Number.isInteger(Number(loginData?.id)) && Number(loginData.id) > 0;
   const dashboardPath = resolveDashboardPath(loginData?.roles ?? loginData?.role);
 
   const languages = [

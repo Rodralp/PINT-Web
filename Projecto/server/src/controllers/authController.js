@@ -85,3 +85,20 @@ export const recoverPassword = async (req, res) => {
     res.status(500).json({ message: 'Failed to recover password.' });
   }
 };
+
+export const changePassword = async (req, res) => {
+  const { accountId, currentPassword, newPassword } = req.body ?? {};
+
+  if (!accountId || !currentPassword || !newPassword) {
+    res.status(400).json({ message: 'Missing required fields.' });
+    return;
+  }
+
+  try {
+    await authService.changePassword({ accountId, currentPassword, newPassword });
+    res.status(200).json({ updated: true });
+  } catch (error) {
+    const statusCode = Number(error?.statusCode) || 500;
+    res.status(statusCode).json({ message: error?.message || 'Failed to update password.' });
+  }
+};

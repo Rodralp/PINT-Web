@@ -31,6 +31,7 @@ export const Account = sequelize.define(
     senha: {
       type: DataTypes.STRING,
       allowNull: false,
+      defaultValue: '',
     },
     role: {
       type: DataTypes.STRING,

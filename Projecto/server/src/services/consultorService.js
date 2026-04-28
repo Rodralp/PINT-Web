@@ -17,6 +17,22 @@ export const consultorService = {
     return consultorModel.requestBadgeAcquisition(accountId, badgeId);
   },
 
+  getPreferenceAreas(accountId) {
+    return consultorModel.getPreferenceAreas(accountId);
+  },
+
+  getPreferences(accountId) {
+    return consultorModel.getPreferences(accountId);
+  },
+
+  savePreferences(accountId, areaIds) {
+    return consultorModel.savePreferences(accountId, areaIds);
+  },
+
+  getBadgeSuggestions(accountId, limit) {
+    return consultorModel.getBadgeSuggestions(accountId, limit);
+  },
+
   getMyRequests() {
     return consultorModel.getMyRequests();
   },
