@@ -2,6 +2,7 @@ import { QueryTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
+const GLOBAL_SERVICE_LINE_ACCESS_USER_IDS = new Set([5]);
 
 const roleSet = new Set(['talent-manager', 'service-line-leader', 'admin-gestor']);
 const pedidoEstados = Object.freeze({
@@ -316,7 +317,10 @@ const buildRoleJoin = (role) => {
         ON bsl.nbadge = p.nbadge
       INNER JOIN sll_leader_sl AS sll
         ON sll.nsline = bsl.nsline
-       AND sll.nutilizador = :actorUtilizadorId
+       AND (
+         sll.nutilizador = :actorUtilizadorId
+         OR :hasGlobalServiceLineAccess = TRUE
+       )
     `;
   }
 
@@ -326,12 +330,20 @@ const buildRoleJoin = (role) => {
 const fetchRequestRows = async ({ role, actorUtilizadorId, requestId = null }) => {
   const roleJoin = buildRoleJoin(role);
   const roleStatusClause = buildRoleStatusClause(role);
+  const hasGlobalServiceLineAccess = GLOBAL_SERVICE_LINE_ACCESS_USER_IDS.has(Number(actorUtilizadorId));
   const whereClause = requestId
     ? `WHERE p.npedido = :requestId AND ${roleStatusClause}`
     : `WHERE ${roleStatusClause}`;
   const replacements = requestId
-    ? { actorUtilizadorId, requestId: Number(requestId) }
-    : { actorUtilizadorId };
+    ? {
+      actorUtilizadorId,
+      hasGlobalServiceLineAccess,
+      requestId: Number(requestId),
+    }
+    : {
+      actorUtilizadorId,
+      hasGlobalServiceLineAccess,
+    };
 
   const query = requestId
     ? `
@@ -439,7 +451,7 @@ const mapRequestListItem = (row, role) => {
   return {
     id: Number(row.npedido),
     consultant: row.consultor_nome,
-    badge: row.badge_nome || row.area_nome || 'Badge',
+    badge: row.area_nome || row.badge_nome || 'Badge',
     level: levelTitle,
     levelLabel: `Nível ${levelTitle}`,
     area: row.learning_path_nome || 'Jornada Técnica',
@@ -488,6 +500,10 @@ const getRequestByIdForRole = async (role, actorUtilizadorId, requestId) => {
 
 const ensureRoleAccessToRequest = async (role, actorUtilizadorId, request) => {
   if (role !== 'service-line-leader') {
+    return true;
+  }
+
+  if (GLOBAL_SERVICE_LINE_ACCESS_USER_IDS.has(Number(actorUtilizadorId))) {
     return true;
   }
 

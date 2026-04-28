@@ -122,8 +122,9 @@
 
 .sll-orders-board-header {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 12px;
 }
 
@@ -138,6 +139,12 @@
   margin: 0;
   color: #8b94a4;
   font-size: 14px;
+}
+
+.sll-orders-filter-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .sll-orders-filter-row {
@@ -197,6 +204,10 @@
   letter-spacing: 0.03em;
   padding: 12px 14px;
   border-bottom: 1px solid #edf0f5;
+}
+
+.sll-orders-table th.sortable {
+  cursor: pointer;
 }
 
 .sll-orders-sort-head {
@@ -690,6 +701,15 @@
 }
 
 @media (max-width: 768px) {
+  .sll-orders-board-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sll-orders-filter-inline {
+    flex-wrap: wrap;
+  }
+
   .sll-orders-page,
   .sll-order-detail-page {
     gap: 10px;

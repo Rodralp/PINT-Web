@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   ArrowDown,
+  ArrowUp,
   ArrowLeft,
   CheckCircle2,
   ChevronLeft,
@@ -70,6 +71,7 @@ function GestaoPedidosSLL() {
   const [statusMessage, setStatusMessage] = useState('');
   const [activeFilters, setActiveFilters] = useState(tableFilters.map((filter) => filter.id));
   const [page, setPage] = useState(1);
+  const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
 
   useEffect(() => {
     let isMounted = true;
@@ -128,8 +130,42 @@ function GestaoPedidosSLL() {
       return [];
     }
 
-    return requests.filter((request) => activeFilters.includes(request.tableStatus));
-  }, [activeFilters, requests]);
+    const parseRequestDate = (dateString) => {
+      const [day, month, year] = String(dateString || '').split('/');
+      const parsedDate = new Date(Number(year), Number(month) - 1, Number(day));
+      return Number.isNaN(parsedDate.getTime()) ? 0 : parsedDate.getTime();
+    };
+
+    const getSortValue = (request) => {
+      switch (sortConfig.key) {
+        case 'consultant':
+          return String(request.consultant || '').toLowerCase();
+        case 'badge':
+          return String(request.badge || '').toLowerCase();
+        case 'level':
+          return String(request.level || '').toLowerCase();
+        case 'status':
+          return getTableLabel(request.tableStatus).toLowerCase();
+        case 'date':
+        default:
+          return parseRequestDate(request.date);
+      }
+    };
+
+    return requests
+      .filter((request) => activeFilters.includes(request.tableStatus))
+      .sort((left, right) => {
+        const leftValue = getSortValue(left);
+        const rightValue = getSortValue(right);
+
+        if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+          return sortConfig.direction === 'asc' ? leftValue - rightValue : rightValue - leftValue;
+        }
+
+        const compare = String(leftValue).localeCompare(String(rightValue), 'pt');
+        return sortConfig.direction === 'asc' ? compare : -compare;
+      });
+  }, [activeFilters, requests, sortConfig]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRequests.length / ITEMS_PER_PAGE));
   const safePage = Math.min(page, totalPages);
@@ -162,6 +198,19 @@ function GestaoPedidosSLL() {
 
   const previousPage = () => setPage((current) => Math.max(1, current - 1));
   const nextPage = () => setPage((current) => Math.min(totalPages, current + 1));
+  const toggleSort = (key) => {
+    setSortConfig((current) => (
+      current.key === key
+        ? { key, direction: current.direction === 'desc' ? 'asc' : 'desc' }
+        : { key, direction: 'desc' }
+    ));
+  };
+  const renderSortIcon = (key) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === 'asc'
+      ? <ArrowUp size={12} aria-hidden="true" />
+      : <ArrowDown size={12} aria-hidden="true" />;
+  };
 
   return (
     <Layout>
@@ -200,21 +249,22 @@ function GestaoPedidosSLL() {
           <div className="sll-orders-board-header">
             <div>
               <h2>Pedidos de Todos os Consultores</h2>
-              <p>Filtrar por:</p>
-            </div>
-
-            <div className="sll-orders-filter-row">
-              {tableFilters.map((filter) => (
-                <button
-                  key={filter.id}
-                  type="button"
-                  className={`sll-filter-chip ${activeFilters.includes(filter.id) ? 'active' : 'inactive'} ${filter.id}`}
-                  onClick={() => toggleFilter(filter.id)}
-                  aria-pressed={activeFilters.includes(filter.id)}
-                >
-                  {filter.label}
-                </button>
-              ))}
+                <div className="sll-orders-filter-inline">
+                  <p>Filtrar por:</p>
+                  <div className="sll-orders-filter-row">
+                    {tableFilters.map((filter) => (
+                      <button
+                        key={filter.id}
+                        type="button"
+                        className={`sll-filter-chip ${activeFilters.includes(filter.id) ? 'active' : 'inactive'} ${filter.id}`}
+                        onClick={() => toggleFilter(filter.id)}
+                        aria-pressed={activeFilters.includes(filter.id)}
+                      >
+                        {filter.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
             </div>
           </div>
 
@@ -222,15 +272,21 @@ function GestaoPedidosSLL() {
             <table className="sll-orders-table">
               <thead>
                 <tr>
-                  <th>Nome do Consultor</th>
-                  <th>Badge Pedida</th>
-                  <th>Nível</th>
-                  <th>
-                    <span className="sll-orders-sort-head">
-                      Data do Pedido <ArrowDown size={12} aria-hidden="true" />
-                    </span>
+                  <th className="sortable" onClick={() => toggleSort('consultant')}>
+                    <span className="sll-orders-sort-head">Nome do Consultor {renderSortIcon('consultant')}</span>
                   </th>
-                  <th>Estado do Pedido</th>
+                  <th className="sortable" onClick={() => toggleSort('badge')}>
+                    <span className="sll-orders-sort-head">Badge Pedida {renderSortIcon('badge')}</span>
+                  </th>
+                  <th className="sortable" onClick={() => toggleSort('level')}>
+                    <span className="sll-orders-sort-head">Nível {renderSortIcon('level')}</span>
+                  </th>
+                  <th className="sortable" onClick={() => toggleSort('date')}>
+                    <span className="sll-orders-sort-head">Data do Pedido {renderSortIcon('date')}</span>
+                  </th>
+                  <th className="sortable" onClick={() => toggleSort('status')}>
+                    <span className="sll-orders-sort-head">Estado do Pedido {renderSortIcon('status')}</span>
+                  </th>
                   <th>Detalhes do Pedido</th>
                 </tr>
               </thead>

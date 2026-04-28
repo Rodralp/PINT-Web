@@ -45,7 +45,8 @@ const normalizeRows = (rows) => (Array.isArray(rows) ? rows : []);
 
 export const serviceLineLeaderModel = {
   async getMyServiceLine(accountId) {
-    const [serviceLineRow] = await sequelize.query(
+    const serviceLineRows = normalizeRows(
+      await sequelize.query(
       `
         SELECT
           sl.nsline,
@@ -63,97 +64,101 @@ export const serviceLineLeaderModel = {
           ON lp.nlpath = sl.nlpath
         WHERE u.nutilizador = :accountId
         ORDER BY sl.nsline ASC
-        LIMIT 1
       `,
-      {
-        replacements: { accountId: Number(accountId) },
-        type: QueryTypes.SELECT,
-      },
+        {
+          replacements: { accountId: Number(accountId) },
+          type: QueryTypes.SELECT,
+        },
+      ),
     );
 
-    if (!serviceLineRow) {
+    if (serviceLineRows.length === 0) {
       return null;
     }
 
-    const areas = normalizeRows(
-      await sequelize.query(
-        `
-          SELECT
-            a.narea,
-            a.area,
-            a.a_desc
-          FROM area AS a
-          WHERE a.nsline = :serviceLineId
-          ORDER BY a.narea ASC
-        `,
-        {
-          replacements: { serviceLineId: serviceLineRow.nsline },
-          type: QueryTypes.SELECT,
+    const payload = [];
+
+    for (const serviceLineRow of serviceLineRows) {
+      const areas = normalizeRows(
+        await sequelize.query(
+          `
+            SELECT
+              a.narea,
+              a.area,
+              a.a_desc
+            FROM area AS a
+            WHERE a.nsline = :serviceLineId
+            ORDER BY a.narea ASC
+          `,
+          {
+            replacements: { serviceLineId: serviceLineRow.nsline },
+            type: QueryTypes.SELECT,
+          },
+        ),
+      );
+
+      const levels = normalizeRows(
+        await sequelize.query(
+          `
+            SELECT
+              n.nnivel,
+              n.nivel,
+              n.narea
+            FROM nivel AS n
+            INNER JOIN area AS a
+              ON a.narea = n.narea
+            WHERE a.nsline = :serviceLineId
+            ORDER BY n.nnivel ASC
+          `,
+          {
+            replacements: { serviceLineId: serviceLineRow.nsline },
+            type: QueryTypes.SELECT,
+          },
+        ),
+      );
+
+      const levelsByArea = levels.reduce((accumulator, level) => {
+        const key = Number(level.narea);
+        if (!accumulator[key]) {
+          accumulator[key] = [];
+        }
+
+        const position = accumulator[key].length;
+        const template = badgeLevelTemplates[position % badgeLevelTemplates.length];
+        const rawTitle = String(level.nivel || '').trim();
+        const title = rawTitle.includes(' - ') ? rawTitle.split(' - ').slice(1).join(' - ') : rawTitle;
+
+        accumulator[key].push({
+          id: `nivel-${level.nnivel}`,
+          title,
+          subtitle: `Nivel ${position + 1}`,
+          levelKey: template.levelKey,
+          points: template.points,
+          badgeImage: template.badgeImage,
+          status: 'visualizar',
+        });
+
+        return accumulator;
+      }, {});
+
+      payload.push({
+        id: `service-line-${serviceLineRow.nsline}`,
+        name: serviceLineRow.sline,
+        description: serviceLineRow.sl_desc,
+        image: '/LP_BG.png',
+        learningPath: {
+          id: `learning-path-${serviceLineRow.nlpath}`,
+          name: serviceLineRow.lpath,
+          description: serviceLineRow.lp_desc,
         },
-      ),
-    );
-
-    const levels = normalizeRows(
-      await sequelize.query(
-        `
-          SELECT
-            n.nnivel,
-            n.nivel,
-            n.narea
-          FROM nivel AS n
-          INNER JOIN area AS a
-            ON a.narea = n.narea
-          WHERE a.nsline = :serviceLineId
-          ORDER BY n.nnivel ASC
-        `,
-        {
-          replacements: { serviceLineId: serviceLineRow.nsline },
-          type: QueryTypes.SELECT,
-        },
-      ),
-    );
-
-    const levelsByArea = levels.reduce((accumulator, level) => {
-      const key = Number(level.narea);
-      if (!accumulator[key]) {
-        accumulator[key] = [];
-      }
-
-      const position = accumulator[key].length;
-      const template = badgeLevelTemplates[position % badgeLevelTemplates.length];
-      const rawTitle = String(level.nivel || '').trim();
-      const title = rawTitle.includes(' - ') ? rawTitle.split(' - ').slice(1).join(' - ') : rawTitle;
-
-      accumulator[key].push({
-        id: `nivel-${level.nnivel}`,
-        title,
-        subtitle: `Nivel ${position + 1}`,
-        levelKey: template.levelKey,
-        points: template.points,
-        badgeImage: template.badgeImage,
-        status: 'visualizar',
+        areas: areas.map((area) => ({
+          id: `area-${area.narea}`,
+          name: area.area,
+          description: area.a_desc,
+          levels: levelsByArea[Number(area.narea)] || [],
+        })),
       });
-
-      return accumulator;
-    }, {});
-
-    const payload = {
-      id: `service-line-${serviceLineRow.nsline}`,
-      name: serviceLineRow.sline,
-      description: serviceLineRow.sl_desc,
-      image: '/LP_BG.png',
-      learningPath: {
-        id: `learning-path-${serviceLineRow.nlpath}`,
-        name: serviceLineRow.lpath,
-        description: serviceLineRow.lp_desc,
-      },
-      areas: areas.map((area) => ({
-        id: `area-${area.narea}`,
-        name: area.area,
-        description: area.a_desc,
-        levels: levelsByArea[Number(area.narea)] || [],
-      })),
-    };
+    }
 
     return clone(payload);
   },

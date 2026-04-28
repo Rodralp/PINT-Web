@@ -342,6 +342,7 @@ const ensureUtilizadorForAccounts = async (accounts, transaction) => {
 
 const assignServiceLineToEachLeader = async (accounts, serviceLineIds, transaction) => {
   const leaderAccounts = accounts.filter(isServiceLineLeader);
+  const globalAccessUserIds = new Set([5]);
 
   if (leaderAccounts.length === 0 || serviceLineIds.length === 0) {
     return;
@@ -365,6 +366,23 @@ const assignServiceLineToEachLeader = async (accounts, serviceLineIds, transacti
         transaction,
       },
     );
+
+    if (globalAccessUserIds.has(Number(utilizadorId))) {
+      for (const currentServiceLineId of serviceLineIds) {
+        await sequelize.query(
+          `
+            INSERT INTO sll_leader_sl (nutilizador, nsline)
+            VALUES (:utilizadorId, :serviceLineId)
+          `,
+          {
+            replacements: { utilizadorId, serviceLineId: currentServiceLineId },
+            type: QueryTypes.INSERT,
+            transaction,
+          },
+        );
+      }
+      continue;
+    }
 
     await sequelize.query(
       `
