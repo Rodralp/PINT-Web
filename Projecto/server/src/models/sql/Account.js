@@ -10,6 +10,7 @@ export const Account = sequelize.define(
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
+      field: 'nutilizador',
     },
     nome: {
       type: DataTypes.STRING,
@@ -43,8 +44,9 @@ export const Account = sequelize.define(
     },
   },
   {
-    tableName: 'accounts',
+    tableName: 'utilizador',
     underscored: true,
+    timestamps: false,
     hooks: {
       beforeValidate(account) {
         if (typeof account.email === 'string') {

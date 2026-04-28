@@ -340,7 +340,7 @@ const ensureUtilizadorForAccounts = async (accounts, transaction) => {
   return utilizadorByAccountId;
 };
 
-const assignServiceLineToEachLeader = async (accounts, serviceLineIds, utilizadorByAccountId, transaction) => {
+const assignServiceLineToEachLeader = async (accounts, serviceLineIds, transaction) => {
   const leaderAccounts = accounts.filter(isServiceLineLeader);
 
   if (leaderAccounts.length === 0 || serviceLineIds.length === 0) {
@@ -349,7 +349,7 @@ const assignServiceLineToEachLeader = async (accounts, serviceLineIds, utilizado
 
   for (let index = 0; index < leaderAccounts.length; index += 1) {
     const account = leaderAccounts[index];
-    const utilizadorId = utilizadorByAccountId.get(account.id);
+    const utilizadorId = account.id;
 
     if (!utilizadorId) {
       continue;
@@ -417,7 +417,7 @@ const ensureDefaultBadgeType = async (transaction) => {
   return Number(insertedType.ntipo);
 };
 
-const ensureEstadosAndMockData = async (accounts, utilizadorByAccountId, transaction) => {
+const ensureEstadosAndMockData = async (accounts, transaction) => {
   const estados = ['candidatura_em_progresso', 'em_validacao', 'evidencias_insuficientes'];
   const estadoIds = {};
   const defaultBadgeTypeId = await ensureDefaultBadgeType(transaction);
@@ -482,7 +482,7 @@ const ensureEstadosAndMockData = async (accounts, utilizadorByAccountId, transac
   const untouchedServiceLine = 'Testing';
 
   for (const account of consultorAccounts) {
-    const utilizadorId = utilizadorByAccountId.get(account.id);
+    const utilizadorId = account.id;
     if (!utilizadorId) {
       continue;
     }
@@ -589,9 +589,9 @@ const seedServiceLineData = async () => {
     const utilizadorByAccountId = await ensureUtilizadorForAccounts(accounts, transaction);
     const learningPathId = await getOrCreateLearningPathId(transaction);
     const serviceLineIds = await ensureServiceLinesAndAreas(learningPathId, transaction);
-    await assignServiceLineToEachLeader(accounts, serviceLineIds, utilizadorByAccountId, transaction);
+    await assignServiceLineToEachLeader(accounts, serviceLineIds, transaction);
     
-    await ensureEstadosAndMockData(accounts, utilizadorByAccountId, transaction);
+    await ensureEstadosAndMockData(accounts, transaction);
 
     await transaction.commit();
   } catch (error) {

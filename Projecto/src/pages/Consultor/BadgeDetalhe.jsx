@@ -7,7 +7,7 @@ import {
   Eye,
   EyeOff,
   FileText,
-  Linkedin,
+  Link,
   MessageSquare,
   SearchCheck,
   SendHorizontal,
@@ -388,7 +388,7 @@ function BadgeDetalhe() {
                 <MessageSquare size={24} />
               </button>
               <button type="button" className="badge-share-icon-btn" aria-label="Partilhar no LinkedIn">
-                <Linkedin size={24} />
+                <Link size={24} />
               </button>
               <button type="button" className="badge-share-primary-btn" aria-label="Partilhar">
                 <Share2 size={20} />

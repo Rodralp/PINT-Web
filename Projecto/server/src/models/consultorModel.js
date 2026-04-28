@@ -3,6 +3,13 @@ import { Reminder } from './sql/Reminder.js';
 import { sequelize } from '../config/database.js';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
+const pedidoEstados = Object.freeze({
+  candidaturaEmProgresso: 'candidatura_em_progresso',
+  emValidacaoTm: 'em_validacao',
+  emValidacaoSll: 'em_validacao_sll',
+  evidenciasInsuficientes: 'evidencias_insuficientes',
+  aprovado: 'aprovado',
+});
 
 const badgeLevelTemplates = [
   {
@@ -41,37 +48,47 @@ const normalizeLevelTitle = (value) => {
   return withoutPathPrefix.replace(/^nivel\s+/i, '').trim();
 };
 
-const mapPedidoEstadoToLearningPathStatus = (estado) => {
-  const normalized = String(estado || '').trim().toLowerCase();
+const normalizePedidoEstado = (estado) => String(estado || '').trim().toLowerCase();
 
-  if (normalized === 'candidatura_em_progresso') {
+const mapPedidoEstadoToLearningPathStatus = (estado) => {
+  const normalized = normalizePedidoEstado(estado);
+
+  if (normalized === pedidoEstados.candidaturaEmProgresso) {
     return 'candidatura_em_progresso';
   }
 
-  if (normalized === 'em_validacao') {
+  if (normalized === pedidoEstados.emValidacaoTm || normalized === pedidoEstados.emValidacaoSll) {
     return 'em_validacao';
   }
 
-  if (normalized === 'evidencias_insuficientes') {
+  if (normalized === pedidoEstados.evidenciasInsuficientes) {
     return 'evidencias_insuficientes';
+  }
+
+  if (normalized === pedidoEstados.aprovado) {
+    return 'obtido';
   }
 
   return 'visualizar';
 };
 
 const mapPedidoEstadoToMyBadgeState = (estado) => {
-  const normalized = String(estado || '').trim().toLowerCase();
+  const normalized = normalizePedidoEstado(estado);
 
-  if (normalized === 'candidatura_em_progresso') {
+  if (normalized === pedidoEstados.candidaturaEmProgresso) {
     return 'candidatura_em_progresso';
   }
 
-  if (normalized === 'em_validacao') {
+  if (normalized === pedidoEstados.emValidacaoTm || normalized === pedidoEstados.emValidacaoSll) {
     return 'em_validacao';
   }
 
-  if (normalized === 'evidencias_insuficientes') {
+  if (normalized === pedidoEstados.evidenciasInsuficientes) {
     return 'rejeitado';
+  }
+
+  if (normalized === pedidoEstados.aprovado) {
+    return 'aprovado';
   }
 
   return 'em_validacao';
@@ -118,11 +135,9 @@ const formatDate = (value) => {
 const getUtilizadorIdByAccountId = async (accountId) => {
   const [utilizador] = await sequelize.query(
     `
-      SELECT u.nutilizador
-      FROM utilizador AS u
-      INNER JOIN accounts AS a
-        ON LOWER(u.email) = LOWER(a.email)
-      WHERE a.id = :accountId
+      SELECT nutilizador
+      FROM utilizador
+      WHERE nutilizador = :accountId
       LIMIT 1
     `,
     {
@@ -654,10 +669,25 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
   );
 
   if (existingRequest) {
-    const existingStatus = mapPedidoEstadoToLearningPathStatus(existingRequest.estado);
-    if (existingStatus === 'candidatura_em_progresso' || existingStatus === 'em_validacao') {
-      return { status: existingStatus };
+    const existingEstado = normalizePedidoEstado(existingRequest.estado);
+    if (existingEstado === pedidoEstados.aprovado) {
+      return { status: 'obtido' };
     }
+
+    if (existingEstado === pedidoEstados.emValidacaoTm || existingEstado === pedidoEstados.emValidacaoSll) {
+      return { status: 'em_validacao' };
+    }
+
+    if (
+      existingEstado !== pedidoEstados.candidaturaEmProgresso
+      && existingEstado !== pedidoEstados.evidenciasInsuficientes
+    ) {
+      const currentStatus = mapPedidoEstadoToLearningPathStatus(existingEstado);
+      return { status: currentStatus === 'visualizar' ? 'candidatura_em_progresso' : currentStatus };
+    }
+
+    const nextStatus = pedidoEstados.emValidacaoTm;
+    const nextEstadoId = await ensureEstadoId(nextStatus);
 
     await sequelize.query(
       `
@@ -668,14 +698,14 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
       `,
       {
         replacements: {
-          estadoId: candidaturaEstadoId,
+          estadoId: nextEstadoId,
           pedidoId: Number(existingRequest.npedido),
         },
         type: QueryTypes.UPDATE,
       },
     );
 
-    return { status: 'candidatura_em_progresso' };
+    return { status: 'em_validacao' };
   }
 
   await sequelize.query(
@@ -723,8 +753,45 @@ const syncReminderIdSequence = async (lastId) => {
 };
 
 export const consultorModel = {
-  getCatalogBadges() {
-    return clone(catalogBadges);
+  async getCatalogBadges() {
+    const rawBadges = await sequelize.query(
+      `
+        SELECT
+          b.nbadge,
+          a.area,
+          n.nivel,
+          sl.sline
+        FROM badge AS b
+        LEFT JOIN nivel_contem_b AS ncb
+          ON b.nbadge = ncb.nbadge
+        LEFT JOIN nivel AS n
+          ON ncb.nnivel = n.nnivel
+        LEFT JOIN area AS a
+          ON n.narea = a.narea
+        LEFT JOIN service_line AS sl
+          ON a.nsline = sl.nsline
+        ORDER BY b.nbadge ASC
+      `,
+      { type: QueryTypes.SELECT }
+    );
+
+    const items = rawBadges.map((row) => {
+      const template = resolveBadgeTemplate(row.nivel);
+      return {
+        id: `badge-${row.nbadge}`,
+        badgeDbId: Number(row.nbadge),
+        area: row.area || 'Diversos',
+        stateId: 'candidatura_aberta',
+        status: 'visualizar',
+        levelKey: template.levelKey,
+        points: template.points,
+        badgeImage: template.badgeImage,
+        learningPathName: 'Jornada Técnica',
+        serviceLineName: row.sline || 'Application Operations',
+      };
+    });
+
+    return items;
   },
 
   async getLearningPaths(accountId) {

@@ -14,8 +14,8 @@ export const Reminder = sequelize.define(
       allowNull: true,
       field: 'account_id',
       references: {
-        model: 'accounts',
-        key: 'id',
+        model: 'utilizador',
+        key: 'nutilizador',
       },
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE',

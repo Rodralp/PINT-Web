@@ -43,7 +43,6 @@ const statusMeta = {
 
 const verdictOptions = [
   { id: 'aprovar', label: 'Aprovar' },
-  { id: 'enviar-atras', label: 'Enviar para trás' },
   { id: 'rejeitar', label: 'Rejeitar' },
 ];
 

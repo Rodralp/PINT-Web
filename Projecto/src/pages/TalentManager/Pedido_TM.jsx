@@ -41,7 +41,7 @@ const statusMeta = {
 };
 
 const verdictOptions = [
-  { id: 'aprovar', label: 'Aprovar' },
+  { id: 'aprovar', label: 'Enviar para SLL' },
   { id: 'rejeitar', label: 'Rejeitar' },
 ];
 

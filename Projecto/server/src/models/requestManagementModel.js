@@ -4,6 +4,13 @@ import { sequelize } from '../config/database.js';
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
 const roleSet = new Set(['talent-manager', 'service-line-leader', 'admin-gestor']);
+const pedidoEstados = Object.freeze({
+  candidaturaEmProgresso: 'candidatura_em_progresso',
+  emValidacaoTm: 'em_validacao',
+  emValidacaoSll: 'em_validacao_sll',
+  evidenciasInsuficientes: 'evidencias_insuficientes',
+  aprovado: 'aprovado',
+});
 
 const badgeLevelTemplates = [
   {
@@ -102,13 +109,49 @@ const formatLongDate = (value) => {
 
 const buildAvatar = (seed) => `https://i.pravatar.cc/120?u=${encodeURIComponent(String(seed || 'user').toLowerCase())}`;
 
-const mapRowStatus = (estadoNome, obtido) => {
-  if (obtido) {
+const normalizePedidoEstado = (estadoNome) => String(estadoNome || '').trim().toLowerCase();
+
+const isApprovedRequest = (estadoNome, obtido) => (
+  Boolean(obtido) || normalizePedidoEstado(estadoNome) === pedidoEstados.aprovado
+);
+
+const buildRoleStatusClause = (role) => {
+  if (role === 'service-line-leader') {
+    return `
+      LOWER(e.estado) IN (
+        '${pedidoEstados.emValidacaoSll}',
+        '${pedidoEstados.evidenciasInsuficientes}',
+        '${pedidoEstados.aprovado}'
+      )
+    `;
+  }
+
+  return `LOWER(e.estado) <> '${pedidoEstados.candidaturaEmProgresso}'`;
+};
+
+const mapRowStatus = (estadoNome, obtido, role) => {
+  const normalizedEstado = normalizePedidoEstado(estadoNome);
+
+  if (isApprovedRequest(normalizedEstado, obtido)) {
     return 'aprovado';
   }
 
-  if (String(estadoNome || '').trim().toLowerCase() === 'evidencias_insuficientes') {
+  if (normalizedEstado === pedidoEstados.evidenciasInsuficientes) {
     return 'rejeitado';
+  }
+
+  if (role === 'talent-manager') {
+    return normalizedEstado === pedidoEstados.emValidacaoTm ? 'validacao' : 'aprovado';
+  }
+
+  if (role === 'service-line-leader') {
+    return normalizedEstado === pedidoEstados.emValidacaoSll ? 'validacao' : 'aprovado';
+  }
+
+  if (role === 'admin-gestor') {
+    return normalizedEstado === pedidoEstados.emValidacaoTm || normalizedEstado === pedidoEstados.emValidacaoSll
+      ? 'validacao'
+      : 'aprovado';
   }
 
   return 'validacao';
@@ -120,10 +163,20 @@ const mapTableStatus = (status) => {
   return 'pendente';
 };
 
-const buildStatusNote = (status, description) => {
+const buildStatusNote = (status, estadoNome, description) => {
   const customDescription = String(description || '').trim();
   if (customDescription) {
     return customDescription;
+  }
+
+  const normalizedEstado = normalizePedidoEstado(estadoNome);
+
+  if (normalizedEstado === pedidoEstados.emValidacaoSll) {
+    return 'Candidatura validada pelo Talent Manager e enviada para SLL.';
+  }
+
+  if (normalizedEstado === pedidoEstados.emValidacaoTm) {
+    return 'Candidatura submetida e em validação.';
   }
 
   if (status === 'rejeitado') {
@@ -140,11 +193,9 @@ const buildStatusNote = (status, description) => {
 const getUtilizadorIdByAccountId = async (accountId) => {
   const [utilizador] = await sequelize.query(
     `
-      SELECT u.nutilizador
-      FROM utilizador AS u
-      INNER JOIN accounts AS a
-        ON LOWER(u.email) = LOWER(a.email)
-      WHERE a.id = :accountId
+      SELECT nutilizador
+      FROM utilizador
+      WHERE nutilizador = :accountId
       LIMIT 1
     `,
     {
@@ -274,7 +325,10 @@ const buildRoleJoin = (role) => {
 
 const fetchRequestRows = async ({ role, actorUtilizadorId, requestId = null }) => {
   const roleJoin = buildRoleJoin(role);
-  const whereClause = requestId ? 'WHERE p.npedido = :requestId' : '';
+  const roleStatusClause = buildRoleStatusClause(role);
+  const whereClause = requestId
+    ? `WHERE p.npedido = :requestId AND ${roleStatusClause}`
+    : `WHERE ${roleStatusClause}`;
   const replacements = requestId
     ? { actorUtilizadorId, requestId: Number(requestId) }
     : { actorUtilizadorId };
@@ -367,6 +421,7 @@ const fetchRequestRows = async ({ role, actorUtilizadorId, requestId = null }) =
       LEFT JOIN c_obtem_b AS cb
         ON cb.nutilizador = p.nutilizador
        AND cb.nbadge = p.nbadge
+      ${whereClause}
       ORDER BY p.data_submissao DESC, p.npedido DESC
     `;
 
@@ -376,10 +431,10 @@ const fetchRequestRows = async ({ role, actorUtilizadorId, requestId = null }) =
   });
 };
 
-const mapRequestListItem = (row) => {
+const mapRequestListItem = (row, role) => {
   const levelTitle = normalizeLevelTitle(row.nivel_nome) || 'Intermédio';
   const levelTemplate = resolveLevelTemplate(levelTitle);
-  const status = mapRowStatus(row.estado_nome, row.obtido);
+  const status = mapRowStatus(row.estado_nome, row.obtido, role);
 
   return {
     id: Number(row.npedido),
@@ -398,14 +453,14 @@ const mapRequestListItem = (row) => {
 };
 
 const mapRequestDetails = async (row, role) => {
-  const baseItem = mapRequestListItem(row);
+  const baseItem = mapRequestListItem(row, role);
   const requirements = await buildRequirements(row.npedido, row.nbadge, baseItem.level);
   const status = baseItem.status;
 
   const reviewerByRole = role === 'service-line-leader'
     ? 'Talent Manager'
     : role === 'admin-gestor'
-      ? 'Service Line Leader'
+      ? 'Administrador / Gestor'
       : 'Talent Manager';
 
   return {
@@ -418,7 +473,7 @@ const mapRequestDetails = async (row, role) => {
     reviewer: reviewerByRole,
     reviewerAvatar: buildAvatar(`reviewer-${role}`),
     reviewerDate: formatLongDate(row.data_submissao),
-    notes: buildStatusNote(status, row.descricao),
+    notes: buildStatusNote(status, row.estado_nome, row.descricao),
     finalReviewer: status === 'aprovado' ? reviewerByRole : null,
     finalReviewerAvatar: status === 'aprovado' ? buildAvatar(`final-${role}`) : null,
     finalReviewerDate: status === 'aprovado' ? formatLongDate(row.data_submissao) : null,
@@ -506,9 +561,7 @@ const insertManagerOwnership = async (role, actorUtilizadorId, requestId) => {
 
 const applyDecision = async ({ role, request, decision, comment }) => {
   const decisionKey = String(decision || '').trim().toLowerCase();
-  const allowedDecisions = role === 'service-line-leader'
-    ? new Set(['aprovar', 'enviar-atras', 'rejeitar'])
-    : new Set(['aprovar', 'rejeitar']);
+  const allowedDecisions = new Set(['aprovar', 'rejeitar']);
 
   if (!allowedDecisions.has(decisionKey)) {
     const error = new Error('Decision is not allowed for this role.');
@@ -516,23 +569,67 @@ const applyDecision = async ({ role, request, decision, comment }) => {
     throw error;
   }
 
+  const currentEstado = normalizePedidoEstado(request.estado_nome);
+
+  if (role === 'talent-manager' && currentEstado !== pedidoEstados.emValidacaoTm) {
+    const error = new Error('Request is not pending Talent Manager validation.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  if (role === 'service-line-leader' && currentEstado !== pedidoEstados.emValidacaoSll) {
+    const error = new Error('Request is not pending Service Line Leader validation.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  if (role === 'admin-gestor') {
+    const canAdminReview = currentEstado === pedidoEstados.emValidacaoTm
+      || currentEstado === pedidoEstados.emValidacaoSll;
+
+    if (!canAdminReview) {
+      const error = new Error('Request is not in a submitted state for admin review.');
+      error.statusCode = 409;
+      throw error;
+    }
+
+    if (isApprovedRequest(currentEstado, request.obtido)) {
+      const error = new Error('Request is already approved.');
+      error.statusCode = 409;
+      throw error;
+    }
+  }
+
   let targetEstado = null;
   let shouldObtainBadge = false;
+  let defaultDescription = '';
 
-  if (decisionKey === 'rejeitar' || decisionKey === 'enviar-atras') {
-    targetEstado = 'evidencias_insuficientes';
+  if (decisionKey === 'rejeitar') {
+    targetEstado = pedidoEstados.evidenciasInsuficientes;
+    defaultDescription = role === 'talent-manager'
+      ? 'Candidatura rejeitada pelo Talent Manager.'
+      : role === 'service-line-leader'
+        ? 'Candidatura rejeitada pelo Service Line Leader.'
+        : 'Candidatura rejeitada pelo Administrador/Gestor.';
   } else if (decisionKey === 'aprovar' && role === 'talent-manager') {
-    targetEstado = 'em_validacao';
+    targetEstado = pedidoEstados.emValidacaoSll;
+    defaultDescription = 'Candidatura validada pelo Talent Manager e enviada para SLL.';
   } else if (decisionKey === 'aprovar' && (role === 'service-line-leader' || role === 'admin-gestor')) {
-    targetEstado = 'em_validacao';
+    targetEstado = pedidoEstados.aprovado;
     shouldObtainBadge = true;
+    defaultDescription = role === 'service-line-leader'
+      ? 'Candidatura aprovada pelo Service Line Leader.'
+      : 'Candidatura aprovada pelo Administrador/Gestor.';
+  }
+
+  if (!targetEstado) {
+    const error = new Error('Unable to resolve next workflow state.');
+    error.statusCode = 500;
+    throw error;
   }
 
   const estadoId = await ensureEstadoId(targetEstado);
   const description = String(comment || '').trim();
-  const defaultDescription = decisionKey === 'rejeitar' || decisionKey === 'enviar-atras'
-    ? 'Evidências insuficientes para a conclusão da submissão.'
-    : 'Candidatura aprovada e encaminhada.';
 
   await sequelize.query(
     `
@@ -611,7 +708,7 @@ export const requestManagementModel = {
     }
 
     const rows = await fetchRequestRows({ role: parsedRole, actorUtilizadorId });
-    const items = rows.map(mapRequestListItem);
+    const items = rows.map((row) => mapRequestListItem(row, parsedRole));
     return clone(items);
   },
 

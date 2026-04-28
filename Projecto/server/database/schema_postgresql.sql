@@ -80,7 +80,10 @@ CREATE TABLE IF NOT EXISTS utilizador (
     nutilizador INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
-    data_registo DATE NOT NULL,
+    senha VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL DEFAULT 'consultor',
+    status VARCHAR(50) NOT NULL DEFAULT 'pendente',
+    data_registo DATE NOT NULL DEFAULT CURRENT_DATE,
     permissoes VARCHAR(60)
 );
 

@@ -54,16 +54,14 @@ export const serviceLineLeaderModel = {
           lp.nlpath,
           lp.lpath,
           lp.lp_desc
-        FROM accounts AS a
-        INNER JOIN utilizador AS u
-          ON LOWER(u.email) = LOWER(a.email)
+        FROM utilizador AS u
         INNER JOIN sll_leader_sl AS sll
           ON sll.nutilizador = u.nutilizador
         INNER JOIN service_line AS sl
           ON sl.nsline = sll.nsline
         INNER JOIN learning_path AS lp
           ON lp.nlpath = sl.nlpath
-        WHERE a.id = :accountId
+        WHERE u.nutilizador = :accountId
         ORDER BY sl.nsline ASC
         LIMIT 1
       `,

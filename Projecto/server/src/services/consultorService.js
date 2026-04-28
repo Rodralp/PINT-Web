@@ -1,7 +1,7 @@
 import { consultorModel } from '../models/consultorModel.js';
 
 export const consultorService = {
-  getCatalogBadges() {
+  async getCatalogBadges() {
     return consultorModel.getCatalogBadges();
   },
 

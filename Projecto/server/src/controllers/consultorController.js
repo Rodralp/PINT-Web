@@ -5,9 +5,13 @@ const parseAccountId = (value) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 };
 
-export const getCatalogBadges = (_req, res) => {
-  const data = consultorService.getCatalogBadges();
-  res.status(200).json(data);
+export const getCatalogBadges = async (_req, res) => {
+  try {
+    const data = await consultorService.getCatalogBadges();
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch catalog badges.', error: error.message });
+  }
 };
 
 export const getLearningPaths = async (req, res) => {
