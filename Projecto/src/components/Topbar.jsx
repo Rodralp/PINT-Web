@@ -132,7 +132,22 @@ function Topbar({ onToggleSidebar }) {
         </button>
         <div className="topbar-user-info" onClick={handleProfileClick} style={{ cursor: 'pointer' }}>
           <span className="topbar-user-name">{userName}</span>
-          <img src={`https://i.pravatar.cc/150?u=${loginData?.nome}`} alt="User Avatar" className="topbar-avatar" />
+          {
+            (() => {
+              const seed = String(loginData?.email || loginData?.nome || userName || '').toLowerCase().replace('@', '.');
+              const avatarUrl = loginData?.avatar || `https://i.pravatar.cc/120?u=${encodeURIComponent(seed)}`;
+              return (
+                <img
+                  src={avatarUrl}
+                  alt="User Avatar"
+                  className="topbar-avatar"
+                  onError={(event) => {
+                    event.currentTarget.src = `https://i.pravatar.cc/120?u=${encodeURIComponent(seed)}`;
+                  }}
+                />
+              );
+            })()
+          }
         </div>
         
         <div className="topbar-dropdown-container" ref={dropdownRef}>

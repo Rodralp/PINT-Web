@@ -279,11 +279,22 @@ function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-profile">
-        <img 
-          src={`https://i.pravatar.cc/150?u=${loginData?.nome}`} 
-          alt="Usuário" 
-          className="sidebar-avatar" 
-        />
+        {
+          (() => {
+            const seed = String(loginData?.email || loginData?.nome || userName || '').toLowerCase().replace('@', '.');
+            const avatarUrl = loginData?.avatar || `https://i.pravatar.cc/120?u=${encodeURIComponent(seed)}`;
+            return (
+              <img
+                src={avatarUrl}
+                alt="Usuário"
+                className="sidebar-avatar"
+                onError={(event) => {
+                  event.currentTarget.src = `https://i.pravatar.cc/120?u=${encodeURIComponent(seed)}`;
+                }}
+              />
+            );
+          })()
+        }
         <div className="sidebar-profile-info">
           <span className="sidebar-name">{userName}</span>
           <span className="sidebar-points">{userPoints} {t('app_points_suffix')}</span>

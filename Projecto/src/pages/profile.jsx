@@ -80,14 +80,15 @@ function Profile() {
   const [profileLocation, setProfileLocation] = useState('Portugal');
   const [profileJoined, setProfileJoined] = useState('2023');
   const [statusMessage, setStatusMessage] = useState('');
-  const [profileAvatar, setProfileAvatar] = useState(
-    loginData?.avatar || `https://i.pravatar.cc/150?u=${loginData?.email || userName}`,
-  );
-
   const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
   const loginData = storedLoginData ? JSON.parse(storedLoginData) : null;
   const userName = loginData?.nome || t('app_user_default');
   const userEmail = loginData?.email || 'user@example.com';
+
+  const initialSeed = String(loginData?.email || loginData?.nome || userName || '').toLowerCase().replace('@', '.');
+  const initialAvatar = loginData?.avatar || `https://i.pravatar.cc/120?u=${encodeURIComponent(initialSeed)}`;
+
+  const [profileAvatar, setProfileAvatar] = useState(initialAvatar);
 
   useEffect(() => {
     let isMounted = true;
