@@ -29,6 +29,10 @@ const defaultConsultants = [
 
 const ITEMS_PER_PAGE = 12;
 
+const buildAvatarUrl = (consultant) =>
+  consultant.avatar
+  || `https://i.pravatar.cc/120?u=${encodeURIComponent(consultant.email || consultant.name || consultant.id)}`;
+
 function RankingConsultores() {
   const [consultants, setConsultants] = useState(defaultConsultants);
   const [searchTerm, setSearchTerm] = useState('');
@@ -314,7 +318,14 @@ function RankingConsultores() {
                     {isTopThree ? <Trophy size={20} strokeWidth={2} /> : <span>#{consultant.rank}</span>}
                   </div>
 
-                  <img className="ranking-avatar" src={consultant.avatar} alt={consultant.name} />
+                  <img
+                    className="ranking-avatar"
+                    src={buildAvatarUrl(consultant)}
+                    alt={consultant.name}
+                    onError={(event) => {
+                      event.currentTarget.src = `https://i.pravatar.cc/120?u=${encodeURIComponent(consultant.email || consultant.name || consultant.id)}`;
+                    }}
+                  />
 
                   <div className="ranking-content">
                     <strong>{consultant.name}</strong>

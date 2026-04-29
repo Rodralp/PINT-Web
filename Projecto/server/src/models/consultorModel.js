@@ -241,6 +241,70 @@ const rankingConsultores = [
   { id: 12, name: 'Raquel Ribeiro', email: 'raquel.ribeiro@softinsa.pt', points: 1200, badges: 5, serviceLine: 'LowCode', avatar: 'https://i.pravatar.cc/120?u=raquel.ribeiro' },
 ];
 
+const buildRankingConsultores = async () => {
+  const rows = await sequelize.query(
+    `
+      WITH badge_scores AS (
+        SELECT
+          cb.nutilizador,
+          SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) AS points,
+          COUNT(DISTINCT cb.nbadge) AS badges
+        FROM c_obtem_b AS cb
+        INNER JOIN badge AS b
+          ON b.nbadge = cb.nbadge
+        GROUP BY cb.nutilizador
+      ),
+      service_line_scores AS (
+        SELECT
+          cb.nutilizador,
+          sl.sline,
+          SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) AS points
+        FROM c_obtem_b AS cb
+        INNER JOIN badge AS b
+          ON b.nbadge = cb.nbadge
+        LEFT JOIN b_pertence_sl AS bps
+          ON bps.nbadge = b.nbadge
+        LEFT JOIN service_line AS sl
+          ON sl.nsline = bps.nsline
+        GROUP BY cb.nutilizador, sl.sline
+      ),
+      dominant_service_line AS (
+        SELECT DISTINCT ON (nutilizador)
+          nutilizador,
+          sline
+        FROM service_line_scores
+        ORDER BY nutilizador, points DESC, sline ASC
+      )
+      SELECT
+        u.nutilizador AS id,
+        u.nome AS name,
+        u.email,
+        COALESCE(bs.points, 0) AS points,
+        COALESCE(bs.badges, 0) AS badges,
+        COALESCE(dsl.sline, 'Application Operations') AS "serviceLine",
+        'https://i.pravatar.cc/120?u=' || COALESCE(NULLIF(REPLACE(LOWER(u.email), '@', '.'), ''), LOWER(REPLACE(u.nome, ' ', '.'))) AS avatar
+      FROM utilizador AS u
+      LEFT JOIN badge_scores AS bs
+        ON bs.nutilizador = u.nutilizador
+      LEFT JOIN dominant_service_line AS dsl
+        ON dsl.nutilizador = u.nutilizador
+      WHERE LOWER(u.role) = 'consultor'
+      ORDER BY points DESC, badges DESC, u.nome ASC
+    `,
+    { type: QueryTypes.SELECT },
+  );
+
+  return rows.map((row) => ({
+    id: Number(row.id),
+    name: row.name,
+    email: row.email,
+    points: Number(row.points) || 0,
+    badges: Number(row.badges) || 0,
+    serviceLine: row.serviceLine || 'Application Operations',
+    avatar: row.avatar || `https://i.pravatar.cc/120?u=${encodeURIComponent(row.email || row.name || row.id)}`,
+  }));
+};
+
 const profileData = {
   location: 'Portugal',
   joined: '2023',
@@ -285,6 +349,101 @@ const profileData = {
     { title: 'Cloud Architecture', subtitleKey: 'badge_level_specialist', accent: 'violet' },
     { title: 'C++ Mastery', subtitleKey: 'badge_level_senior', accent: 'amber' },
   ],
+};
+
+const buildProfileData = async (accountId) => {
+  const parsedAccountId = Number(accountId);
+
+  if (!Number.isInteger(parsedAccountId) || parsedAccountId <= 0) {
+    return clone(profileData);
+  }
+
+  const [row] = await sequelize.query(
+    `
+      WITH badge_scores AS (
+        SELECT
+          cb.nutilizador,
+          SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) AS points,
+          COUNT(DISTINCT cb.nbadge) AS badges
+        FROM c_obtem_b AS cb
+        INNER JOIN badge AS b
+          ON b.nbadge = cb.nbadge
+        GROUP BY cb.nutilizador
+      ),
+      service_line_scores AS (
+        SELECT
+          cb.nutilizador,
+          sl.sline,
+          SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) AS points
+        FROM c_obtem_b AS cb
+        INNER JOIN badge AS b
+          ON b.nbadge = cb.nbadge
+        LEFT JOIN b_pertence_sl AS bps
+          ON bps.nbadge = b.nbadge
+        LEFT JOIN service_line AS sl
+          ON sl.nsline = bps.nsline
+        GROUP BY cb.nutilizador, sl.sline
+      ),
+      dominant_service_line AS (
+        SELECT DISTINCT ON (nutilizador)
+          nutilizador,
+          sline
+        FROM service_line_scores
+        ORDER BY nutilizador, points DESC, sline ASC
+      ),
+      consultor_ranking AS (
+        SELECT
+          u.nutilizador,
+          ROW_NUMBER() OVER (
+            ORDER BY COALESCE(bs.points, 0) DESC, COALESCE(bs.badges, 0) DESC, u.nome ASC
+          ) AS ranking_position
+        FROM utilizador AS u
+        LEFT JOIN badge_scores AS bs
+          ON bs.nutilizador = u.nutilizador
+        WHERE LOWER(u.role) = 'consultor'
+      )
+      SELECT
+        u.nutilizador AS id,
+        u.nome,
+        u.email,
+        COALESCE(bs.points, 0) AS points,
+        COALESCE(bs.badges, 0) AS badges,
+        COALESCE(dsl.sline, 'Application Operations') AS "serviceLine",
+        'https://i.pravatar.cc/120?u=' || COALESCE(NULLIF(REPLACE(LOWER(u.email), '@', '.'), ''), LOWER(REPLACE(u.nome, ' ', '.'))) AS avatar,
+        COALESCE(cr.ranking_position, 0) AS ranking
+      FROM utilizador AS u
+      LEFT JOIN badge_scores AS bs
+        ON bs.nutilizador = u.nutilizador
+      LEFT JOIN dominant_service_line AS dsl
+        ON dsl.nutilizador = u.nutilizador
+      LEFT JOIN consultor_ranking AS cr
+        ON cr.nutilizador = u.nutilizador
+      WHERE u.nutilizador = :accountId
+      LIMIT 1
+    `,
+    {
+      replacements: { accountId: parsedAccountId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  if (!row) {
+    return clone(profileData);
+  }
+
+  return {
+    ...clone(profileData),
+    points: Number(row.points) || 0,
+    badges: Number(row.badges) || 0,
+    ranking: Number(row.ranking) || 0,
+    serviceLine: row.serviceLine || 'Application Operations',
+    avatar: row.avatar || `https://i.pravatar.cc/120?u=${encodeURIComponent(row.email || row.nome || row.id)}`,
+    user: {
+      id: Number(row.id),
+      name: row.nome,
+      email: row.email,
+    },
+  };
 };
 
 const buildLearningPaths = async (accountId) => {
@@ -1157,8 +1316,9 @@ export const consultorModel = {
     return clone(data);
   },
 
-  getRankingConsultores() {
-    return clone(rankingConsultores);
+  async getRankingConsultores() {
+    const data = await buildRankingConsultores();
+    return clone(data);
   },
 
   async getReminders(accountId) {
@@ -1208,7 +1368,8 @@ export const consultorModel = {
     return deletedRows > 0;
   },
 
-  getProfileData() {
-    return clone(profileData);
+  async getProfileData(accountId) {
+    const data = await buildProfileData(accountId);
+    return clone(data);
   },
 };

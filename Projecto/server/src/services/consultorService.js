@@ -37,7 +37,7 @@ export const consultorService = {
     return consultorModel.getMyRequests(accountId);
   },
 
-  getRankingConsultores() {
+  async getRankingConsultores() {
     return consultorModel.getRankingConsultores();
   },
 
@@ -57,7 +57,7 @@ export const consultorService = {
     return consultorModel.deleteReminder(id, accountId);
   },
 
-  getProfileData() {
-    return consultorModel.getProfileData();
+  async getProfileData(accountId) {
+    return consultorModel.getProfileData(accountId);
   },
 };

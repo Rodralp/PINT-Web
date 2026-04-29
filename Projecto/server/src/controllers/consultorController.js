@@ -144,9 +144,13 @@ export const getMyRequests = async (req, res) => {
   }
 };
 
-export const getRankingConsultores = (_req, res) => {
-  const data = consultorService.getRankingConsultores();
-  res.status(200).json(data);
+export const getRankingConsultores = async (_req, res) => {
+  try {
+    const data = await consultorService.getRankingConsultores();
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch ranking.', error: error.message });
+  }
 };
 
 export const getReminders = async (req, res) => {
@@ -223,7 +227,13 @@ export const deleteReminder = async (req, res) => {
   }
 };
 
-export const getProfileData = (_req, res) => {
-  const data = consultorService.getProfileData();
-  res.status(200).json(data);
+export const getProfileData = async (req, res) => {
+  const accountId = parseAccountId(req.query?.accountId);
+
+  try {
+    const data = await consultorService.getProfileData(accountId);
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch profile data.', error: error.message });
+  }
 };

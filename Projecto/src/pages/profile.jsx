@@ -80,6 +80,9 @@ function Profile() {
   const [profileLocation, setProfileLocation] = useState('Portugal');
   const [profileJoined, setProfileJoined] = useState('2023');
   const [statusMessage, setStatusMessage] = useState('');
+  const [profileAvatar, setProfileAvatar] = useState(
+    loginData?.avatar || `https://i.pravatar.cc/150?u=${loginData?.email || userName}`,
+  );
 
   const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
   const loginData = storedLoginData ? JSON.parse(storedLoginData) : null;
@@ -124,6 +127,10 @@ function Profile() {
           setProfileJoined(data.joined);
         }
 
+        if (typeof data.avatar === 'string' && data.avatar) {
+          setProfileAvatar(data.avatar);
+        }
+
         setStatusMessage('');
       } catch {
         if (isMounted) {
@@ -155,7 +162,7 @@ function Profile() {
         <section className="dashboard-card dashboard-profile-header">
           <div className="profile-header-content">
             <div className="profile-avatar">
-              <img src={`https://i.pravatar.cc/150?u=${userName}`} alt="Profile Avatar" />
+              <img src={profileAvatar} alt="Profile Avatar" />
             </div>
             <div className="profile-info">
               <h2>{userName}</h2>

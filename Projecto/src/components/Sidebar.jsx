@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { fetchProfileData } from '../services/consultorService';
 import { 
   ChevronDown,
   ChevronUp,
@@ -168,6 +169,7 @@ function Sidebar() {
   };
 
   const userName = loginData?.nome || t('app_user_default');
+  const [userPoints, setUserPoints] = useState(Number(loginData?.points) || 0);
   const matchedSectionTitle =
     visibleSidebarSections.find((section) =>
       section.items.some((item) => isRouteMatch(item.route))
@@ -239,6 +241,34 @@ function Sidebar() {
     });
   }, [matchedSectionTitle, visibleSectionTitlesKey]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadUserPoints = async () => {
+      try {
+        const data = await fetchProfileData();
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (Number.isFinite(Number(data?.points))) {
+          setUserPoints(Number(data.points));
+        }
+      } catch {
+        if (isMounted) {
+          setUserPoints(Number(loginData?.points) || 0);
+        }
+      }
+    };
+
+    loadUserPoints();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [loginData?.points]);
+
   const toggleSection = (sectionTitle) => {
     setExpandedSections(prev => ({
       ...prev,
@@ -256,7 +286,7 @@ function Sidebar() {
         />
         <div className="sidebar-profile-info">
           <span className="sidebar-name">{userName}</span>
-          <span className="sidebar-points">2450 {t('app_points_suffix')}</span>
+          <span className="sidebar-points">{userPoints} {t('app_points_suffix')}</span>
         </div>
       </div>
 

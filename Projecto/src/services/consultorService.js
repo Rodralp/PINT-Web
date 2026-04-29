@@ -240,6 +240,45 @@ export async function deleteReminder(id) {
 }
 
 export async function fetchProfileData() {
-  const response = await apiClient.get('/consultor/profile');
-  return response.data;
+  const accountId = await ensureLoggedAccountId();
+  const path = accountId
+    ? `/consultor/profile?accountId=${accountId}`
+    : '/consultor/profile';
+
+  const response = await apiClient.get(path);
+  const data = response.data;
+
+  if (data && typeof data === 'object') {
+    const points = Number(data.points);
+    const badges = Number(data.badges);
+    const ranking = Number(data.ranking);
+
+    const patch = {};
+
+    if (Number.isFinite(points)) {
+      patch.points = points;
+    }
+
+    if (Number.isFinite(badges)) {
+      patch.badges = badges;
+    }
+
+    if (Number.isFinite(ranking) && ranking > 0) {
+      patch.ranking = ranking;
+    }
+
+    if (data.serviceLine) {
+      patch.serviceLine = data.serviceLine;
+    }
+
+    if (data.avatar) {
+      patch.avatar = data.avatar;
+    }
+
+    if (Object.keys(patch).length > 0) {
+      updateStoredLoginData(patch);
+    }
+  }
+
+  return data;
 }
