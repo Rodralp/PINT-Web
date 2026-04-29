@@ -186,7 +186,12 @@ export async function fetchBadgeSuggestions(limit = 3) {
 }
 
 export async function fetchMyRequests() {
-  const response = await apiClient.get('/consultor/meus-pedidos');
+  const accountId = await ensureLoggedAccountId();
+  if (!accountId) {
+    throw new Error('Missing logged account id.');
+  }
+
+  const response = await apiClient.get(`/consultor/meus-pedidos?accountId=${accountId}`);
   return response.data;
 }
 

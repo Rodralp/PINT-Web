@@ -129,9 +129,19 @@ export const getBadgeSuggestions = async (req, res) => {
   }
 };
 
-export const getMyRequests = (_req, res) => {
-  const data = consultorService.getMyRequests();
-  res.status(200).json(data);
+export const getMyRequests = async (req, res) => {
+  const accountId = parseAccountId(req.query?.accountId);
+  if (!accountId) {
+    res.status(400).json({ message: 'Account id is required.' });
+    return;
+  }
+
+  try {
+    const data = await consultorService.getMyRequests(accountId);
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch requests.', error: error.message });
+  }
 };
 
 export const getRankingConsultores = (_req, res) => {

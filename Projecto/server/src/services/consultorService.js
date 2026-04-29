@@ -33,8 +33,8 @@ export const consultorService = {
     return consultorModel.getBadgeSuggestions(accountId, limit);
   },
 
-  getMyRequests() {
-    return consultorModel.getMyRequests();
+  getMyRequests(accountId) {
+    return consultorModel.getMyRequests(accountId);
   },
 
   getRankingConsultores() {

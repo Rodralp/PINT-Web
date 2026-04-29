@@ -96,6 +96,20 @@ const mapPedidoEstadoToMyBadgeState = (estado) => {
   return 'em_validacao';
 };
 
+const mapPedidoEstadoToMyRequestStatus = (estado) => {
+  const normalized = normalizePedidoEstado(estado);
+
+  if (normalized === pedidoEstados.aprovado) {
+    return 'aprovado';
+  }
+
+  if (normalized === pedidoEstados.evidenciasInsuficientes) {
+    return 'rejeitado';
+  }
+
+  return 'pendente';
+};
+
 const resolveBadgeTemplate = (levelName, fallbackIndex = 0) => {
   const normalizedLevelName = String(levelName || '').trim().toLowerCase();
 
@@ -137,6 +151,29 @@ const formatDate = (value) => {
   const month = date.toLocaleString('en-US', { month: 'short' });
   const year = date.getFullYear();
   return `${day} ${month} ${year}`;
+};
+
+const formatShortDate = (value) => {
+  if (!value) {
+    return '--/--/----';
+  }
+
+  if (typeof value === 'string') {
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${match[3]}/${match[2]}/${match[1]}`;
+    }
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '--/--/----';
+  }
+
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
 };
 
 const getUtilizadorIdByAccountId = async (accountId) => {
@@ -188,19 +225,6 @@ const ensureEstadoId = async (estadoNome) => {
 
   return Number(inserted.nestado);
 };
-
-const myRequests = [
-  { id: 1, badge: 'UX/UI Design', level: 'Especialista', date: '05/12/2025', status: 'pendente' },
-  { id: 2, badge: 'Data Analytics', level: 'Intermedio', date: '04/12/2025', status: 'rejeitado' },
-  { id: 3, badge: 'Cloud Architecture', level: 'Senior', date: '03/12/2025', status: 'aprovado' },
-  { id: 4, badge: 'LowCode (Outsystems)', level: 'Junior', date: '01/12/2025', status: 'pendente' },
-  { id: 5, badge: 'DevOps', level: 'Intermedio', date: '30/11/2025', status: 'pendente' },
-  { id: 6, badge: 'Cybersecurity', level: 'Lider de Conhecimento', date: '28/11/2025', status: 'aprovado' },
-  { id: 7, badge: 'Machine Learning', level: 'Senior', date: '25/11/2025', status: 'aprovado' },
-  { id: 8, badge: 'Mobile Development', level: 'Junior', date: '22/11/2025', status: 'rejeitado' },
-  { id: 9, badge: 'Blockchain', level: 'Especialista', date: '20/11/2025', status: 'aprovado' },
-  { id: 10, badge: 'IoT Solutions', level: 'Intermedio', date: '18/11/2025', status: 'pendente' },
-];
 
 const rankingConsultores = [
   { id: 1, name: 'Joao Gomes', email: 'joaogomes1234@softinsa.pt', points: 2450, badges: 12, serviceLine: 'Cloud', avatar: 'https://i.pravatar.cc/120?u=joao.gomes' },
@@ -520,6 +544,61 @@ const buildMyBadges = async (accountId) => {
   }
 
   return items.sort((left, right) => right.points - left.points);
+};
+
+const buildMyRequests = async (accountId) => {
+  const utilizadorId = await getUtilizadorIdByAccountId(accountId);
+  if (!utilizadorId) {
+    return [];
+  }
+
+  const rows = await sequelize.query(
+    `
+      SELECT
+        p.npedido,
+        p.data_submissao,
+        e.estado,
+        b.b_nome,
+        meta.area,
+        meta.nivel
+      FROM pedidos AS p
+      INNER JOIN estado AS e
+        ON e.nestado = p.estado
+      LEFT JOIN badge AS b
+        ON b.nbadge = p.nbadge
+      LEFT JOIN (
+        SELECT DISTINCT ON (ncb.nbadge)
+          ncb.nbadge,
+          a.area,
+          n.nivel
+        FROM nivel_contem_b AS ncb
+        LEFT JOIN nivel AS n
+          ON n.nnivel = ncb.nnivel
+        LEFT JOIN area AS a
+          ON a.narea = n.narea
+        ORDER BY ncb.nbadge, n.nnivel ASC
+      ) AS meta
+        ON meta.nbadge = p.nbadge
+      WHERE p.nutilizador = :utilizadorId
+      ORDER BY p.data_submissao DESC, p.npedido DESC
+    `,
+    {
+      replacements: { utilizadorId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return rows.map((row) => {
+    const level = normalizeLevelTitle(row.nivel) || 'Intermedio';
+
+    return {
+      id: Number(row.npedido),
+      badge: row.area || row.b_nome || 'Badge',
+      level,
+      date: formatShortDate(row.data_submissao),
+      status: mapPedidoEstadoToMyRequestStatus(row.estado),
+    };
+  });
 };
 
 const getSelectedAreaRowsByUtilizadorId = async (utilizadorId) => {
@@ -1073,8 +1152,9 @@ export const consultorModel = {
     return clone(data);
   },
 
-  getMyRequests() {
-    return clone(myRequests);
+  async getMyRequests(accountId) {
+    const data = await buildMyRequests(accountId);
+    return clone(data);
   },
 
   getRankingConsultores() {
