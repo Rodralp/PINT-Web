@@ -236,6 +236,85 @@
   gap: 14px;
 }
 
+.badge-requirement-files {
+  border: 1px solid #e6ebf2;
+  border-radius: 12px;
+  background: #f8fbff;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.badge-file-input-label {
+  display: block;
+  margin: 0;
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.badge-file-input {
+  width: 100%;
+  max-width: 420px;
+  border: 1px solid #d3dbe7;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: #ffffff;
+  color: #1f2937;
+  font-size: 13px;
+}
+
+.badge-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.badge-file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid #e5ebf4;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 8px 10px;
+}
+
+.badge-file-name {
+  color: #334155;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge-file-remove-btn {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2937;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  flex: 0 0 auto;
+}
+
+.badge-file-remove-btn:hover {
+  background: #f8fafc;
+}
+
+.badge-file-none {
+  border: 1px dashed #d8e2ee;
+  border-radius: 10px;
+  color: #64748b;
+  font-size: 13px;
+  padding: 9px 10px;
+  text-align: center;
+  background: #ffffff;
+}
+
 .badge-evidence-block {
   border: 1px solid #e6eef7;
   background: linear-gradient(180deg, #fbfdff 0%, #f8fbff 100%);

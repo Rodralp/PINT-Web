@@ -8,11 +8,12 @@ export const Reminder = sequelize.define(
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
+      field: 'nlembrete',
     },
     accountId: {
       type: DataTypes.INTEGER,
-      allowNull: true,
-      field: 'account_id',
+      allowNull: false,
+      field: 'nutilizador',
       references: {
         model: 'utilizador',
         key: 'nutilizador',
@@ -23,22 +24,27 @@ export const Reminder = sequelize.define(
     title: {
       type: DataTypes.STRING,
       allowNull: false,
+      field: 'titulo',
     },
     description: {
       type: DataTypes.TEXT,
       allowNull: false,
+      field: 'descricao',
     },
     date: {
       type: DataTypes.DATEONLY,
       allowNull: false,
+      field: 'data_lembrete',
     },
     color: {
       type: DataTypes.STRING,
       allowNull: false,
+      field: 'cor',
     },
   },
   {
-    tableName: 'reminders',
+    tableName: 'lembrete',
+    timestamps: false,
     underscored: true,
     hooks: {
       beforeCreate(reminder) {

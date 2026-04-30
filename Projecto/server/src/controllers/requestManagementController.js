@@ -1,4 +1,6 @@
 import { requestManagementService } from '../services/requestManagementService.js';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const parsePositiveId = (value) => {
   const parsed = Number(value);
@@ -70,5 +72,39 @@ export const submitManagedRequestDecision = async (req, res) => {
   } catch (error) {
     const statusCode = Number(error?.statusCode) || 500;
     res.status(statusCode).json({ message: error?.message || 'Failed to submit decision.' });
+  }
+};
+
+export const downloadManagedEvidence = async (req, res) => {
+  const role = String(req.params?.role || '').trim();
+  const accountId = parsePositiveId(req.query?.accountId);
+  const requestId = parsePositiveId(req.params?.requestId);
+  const evidenceId = parsePositiveId(req.params?.evidenceId);
+
+  if (!accountId || !requestId || !evidenceId) {
+    res.status(400).json({ message: 'Account id, request id and evidence id are required.' });
+    return;
+  }
+
+  try {
+    const evidence = await requestManagementService.getManagedEvidenceFile(role, accountId, requestId, evidenceId);
+    if (!evidence) {
+      res.status(404).json({ message: 'Evidence not found.' });
+      return;
+    }
+
+    const uploadsDir = path.resolve(globalThis.process?.cwd?.() || '.', 'server', 'uploads');
+    const resolvedFilePath = path.resolve(uploadsDir, evidence.storedName);
+    const isInsideUploadsDir = resolvedFilePath === uploadsDir || resolvedFilePath.startsWith(`${uploadsDir}${path.sep}`);
+
+    if (!isInsideUploadsDir || !fs.existsSync(resolvedFilePath)) {
+      res.status(404).json({ message: 'Evidence file not found on server.' });
+      return;
+    }
+
+    res.download(resolvedFilePath, evidence.downloadName);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode) || 500;
+    res.status(statusCode).json({ message: error?.message || 'Failed to download evidence.' });
   }
 };

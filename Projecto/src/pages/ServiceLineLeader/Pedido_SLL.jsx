@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
+  Download,
   Eye,
   EyeOff,
   File,
@@ -20,6 +21,7 @@ import Layout from '../../components/Layout';
 import '../../css/ServiceLineLeader/GestaoPedidos_SLL.css';
 import {
   fetchManagedRequestById,
+  getManagedEvidenceDownloadUrl,
   submitManagedRequestDecision,
 } from '../../services/requestManagementService';
 
@@ -176,6 +178,20 @@ function PedidoSLL() {
     }
   };
 
+  const handleDownloadAttachment = async (attachment) => {
+    if (!attachment?.evidenceId) {
+      setStatusMessage('Nao foi possivel identificar o ficheiro para download.');
+      return;
+    }
+
+    try {
+      const url = await getManagedEvidenceDownloadUrl('service-line-leader', pedidoId, attachment.evidenceId);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      setStatusMessage(error?.message || 'Nao foi possivel descarregar o ficheiro.');
+    }
+  };
+
   return (
     <Layout>
       <div className="sll-order-detail-page">
@@ -267,10 +283,20 @@ function PedidoSLL() {
                             <ul className="sll-order-requirement-files-list">
                               {(item.attachments || []).map((attachment) => (
                                 <li key={attachment.id}>
-                                  <span className="sll-order-file-icon" aria-hidden="true">
-                                    {attachment.type === 'pdf' ? <FileText size={18} /> : <File size={18} />}
-                                  </span>
-                                  <span>{attachment.label}</span>
+                                  <div className="sll-order-file-main">
+                                    <span className="sll-order-file-icon" aria-hidden="true">
+                                      {attachment.type === 'pdf' ? <FileText size={18} /> : <File size={18} />}
+                                    </span>
+                                    <span>{attachment.label}</span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="sll-order-file-download-btn"
+                                    onClick={() => handleDownloadAttachment(attachment)}
+                                  >
+                                    <Download size={16} />
+                                    Download
+                                  </button>
                                 </li>
                               ))}
                             </ul>

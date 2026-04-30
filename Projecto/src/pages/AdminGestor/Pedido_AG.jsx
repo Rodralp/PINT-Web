@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
+  Download,
   Eye,
   EyeOff,
   FileText,
@@ -20,6 +21,7 @@ import Layout from '../../components/Layout';
 import '../../css/AdminGestor/GestaoPedidos_AG.css';
 import {
   fetchManagedRequestById,
+  getManagedEvidenceDownloadUrl,
   submitManagedRequestDecision,
 } from '../../services/requestManagementService';
 
@@ -178,6 +180,20 @@ function PedidoAG() {
     }
   };
 
+  const handleDownloadAttachment = async (attachment) => {
+    if (!attachment?.evidenceId) {
+      setStatusMessage('Nao foi possivel identificar o ficheiro para download.');
+      return;
+    }
+
+    try {
+      const url = await getManagedEvidenceDownloadUrl('admin-gestor', pedidoId, attachment.evidenceId);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      setStatusMessage(error?.message || 'Nao foi possivel descarregar o ficheiro.');
+    }
+  };
+
   return (
     <Layout>
       <div className="ag-order-detail-page">
@@ -268,10 +284,20 @@ function PedidoAG() {
                           <ul className="ag-order-requirement-files-list">
                             {(item.attachments || []).map((attachment) => (
                               <li key={attachment.id}>
-                                <span className="ag-order-file-icon" aria-hidden="true">
-                                  {attachment.type === 'pdf' ? <FileText size={18} /> : <File size={18} />}
-                                </span>
-                                <span>{attachment.label}</span>
+                                <div className="ag-order-file-main">
+                                  <span className="ag-order-file-icon" aria-hidden="true">
+                                    {attachment.type === 'pdf' ? <FileText size={18} /> : <File size={18} />}
+                                  </span>
+                                  <span>{attachment.label}</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="ag-order-file-download-btn"
+                                  onClick={() => handleDownloadAttachment(attachment)}
+                                >
+                                  <Download size={16} />
+                                  Download
+                                </button>
                               </li>
                             ))}
                           </ul>

@@ -301,9 +301,7 @@ export async function uploadEvidence(pedidoId, nreq, files) {
     arr.forEach((f) => form.append('files', f));
   }
 
-  const response = await apiClient.post(`/consultor/pedidos/${encodeURIComponent(pedidoId)}/evidencias`, form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const response = await apiClient.post(`/consultor/pedidos/${encodeURIComponent(pedidoId)}/evidencias`, form);
 
   return response.data;
 }

@@ -49,27 +49,50 @@ const request = async (path, options = {}) => {
   }
 };
 
-const withJsonHeaders = {
-  headers: {
-    'Content-Type': 'application/json',
-  },
-};
+const isFormDataPayload = (payload) => (
+  typeof FormData !== 'undefined' && payload instanceof FormData
+);
+
+const buildJsonHeaders = (customHeaders = {}) => ({
+  'Content-Type': 'application/json',
+  ...customHeaders,
+});
 
 const apiClient = {
-  get(path) {
-    return request(path, { method: 'GET' });
+  get(path, options = {}) {
+    return request(path, { method: 'GET', ...options });
   },
 
-  post(path, body) {
-    return request(path, { method: 'POST', data: body ?? {}, ...withJsonHeaders });
+  post(path, body, options = {}) {
+    const payload = body ?? {};
+    const headers = isFormDataPayload(payload)
+      ? (options.headers || {})
+      : buildJsonHeaders(options.headers);
+
+    return request(path, {
+      method: 'POST',
+      data: payload,
+      ...options,
+      headers,
+    });
   },
 
-  put(path, body) {
-    return request(path, { method: 'PUT', data: body ?? {}, ...withJsonHeaders });
+  put(path, body, options = {}) {
+    const payload = body ?? {};
+    const headers = isFormDataPayload(payload)
+      ? (options.headers || {})
+      : buildJsonHeaders(options.headers);
+
+    return request(path, {
+      method: 'PUT',
+      data: payload,
+      ...options,
+      headers,
+    });
   },
 
-  delete(path) {
-    return request(path, { method: 'DELETE' });
+  delete(path, options = {}) {
+    return request(path, { method: 'DELETE', ...options });
   },
 };
 

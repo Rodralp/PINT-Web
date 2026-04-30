@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
+  Download,
   Eye,
   EyeOff,
   File,
@@ -19,6 +20,7 @@ import Layout from '../../components/Layout';
 import '../../css/TalentManager/GestaoPedidos_TM.css';
 import {
   fetchManagedRequestById,
+  getManagedEvidenceDownloadUrl,
   submitManagedRequestDecision,
 } from '../../services/requestManagementService';
 
@@ -175,6 +177,20 @@ function PedidoTM() {
     }
   };
 
+  const handleDownloadAttachment = async (attachment) => {
+    if (!attachment?.evidenceId) {
+      setStatusMessage('Nao foi possivel identificar o ficheiro para download.');
+      return;
+    }
+
+    try {
+      const url = await getManagedEvidenceDownloadUrl('talent-manager', pedidoId, attachment.evidenceId);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      setStatusMessage(error?.message || 'Nao foi possivel descarregar o ficheiro.');
+    }
+  };
+
   return (
     <Layout>
       <div className="tm-order-detail-page">
@@ -261,10 +277,20 @@ function PedidoTM() {
                           <ul className="tm-order-requirement-files-list">
                             {(item.attachments || []).map((attachment) => (
                               <li key={attachment.id}>
-                                <span className="tm-order-file-icon" aria-hidden="true">
-                                  {attachment.type === 'pdf' ? <FileText size={18} /> : <File size={18} />}
-                                </span>
-                                <span>{attachment.label}</span>
+                                <div className="tm-order-file-main">
+                                  <span className="tm-order-file-icon" aria-hidden="true">
+                                    {attachment.type === 'pdf' ? <FileText size={18} /> : <File size={18} />}
+                                  </span>
+                                  <span>{attachment.label}</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="tm-order-file-download-btn"
+                                  onClick={() => handleDownloadAttachment(attachment)}
+                                >
+                                  <Download size={16} />
+                                  Download
+                                </button>
                               </li>
                             ))}
                           </ul>

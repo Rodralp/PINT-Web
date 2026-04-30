@@ -9,6 +9,10 @@ export const requestManagementService = {
     return requestManagementModel.getManagedRequestById(role, accountId, requestId);
   },
 
+  getManagedEvidenceFile(role, accountId, requestId, evidenceId) {
+    return requestManagementModel.getManagedEvidenceFile(role, accountId, requestId, evidenceId);
+  },
+
   submitDecision(role, accountId, requestId, payload) {
     return requestManagementModel.submitDecision(role, accountId, requestId, payload);
   },

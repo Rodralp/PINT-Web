@@ -257,7 +257,7 @@ export const uploadEvidence = async (req, res) => {
       return;
     }
 
-    const uploadsDir = path.resolve(process.cwd(), 'server', 'uploads');
+    const uploadsDir = path.resolve(globalThis.process?.cwd?.() || '.', 'server', 'uploads');
     if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
     const saved = [];

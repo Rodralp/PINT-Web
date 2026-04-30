@@ -1,4 +1,5 @@
 import { QueryTypes } from 'sequelize';
+import path from 'node:path';
 import { sequelize } from '../config/database.js';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -257,10 +258,10 @@ const buildRequirements = async (pedidoId, badgeId, levelName) => {
     ),
     sequelize.query(
       `
-        SELECT nreq, COUNT(*)::int AS total
+        SELECT nevidencias, nreq, nevidencia, formato
         FROM evidencias
         WHERE npedido = :pedidoId
-        GROUP BY nreq
+        ORDER BY nreq ASC, nevidencias ASC
       `,
       {
         replacements: { pedidoId: Number(pedidoId) },
@@ -269,23 +270,55 @@ const buildRequirements = async (pedidoId, badgeId, levelName) => {
     ),
   ]);
 
-  const evidenceCountByReq = new Map(
-    evidenceRows.map((row) => [Number(row.nreq), Number(row.total)]),
-  );
+  const evidenceByReq = new Map();
+  const unscopedAttachments = [];
+
+  for (const row of evidenceRows) {
+    const requirementId = Number(row.nreq);
+    const extension = String(row.formato || '').trim().toLowerCase();
+    const labelBase = String(row.nevidencia || 'evidencia').trim();
+    const label = extension && !labelBase.toLowerCase().endsWith(`.${extension}`)
+      ? `${labelBase}.${extension}`
+      : labelBase;
+    const attachment = {
+      id: `evidence-${Number(row.nevidencias) || label}`,
+      evidenceId: Number(row.nevidencias) || null,
+      type: extension === 'pdf' ? 'pdf' : 'file',
+      label,
+    };
+
+    if (!Number.isInteger(requirementId) || requirementId <= 0) {
+      unscopedAttachments.push(attachment);
+      continue;
+    }
+
+    if (!evidenceByReq.has(requirementId)) {
+      evidenceByReq.set(requirementId, []);
+    }
+
+    evidenceByReq.get(requirementId).push(attachment);
+  }
 
   const requirements = [];
   if (requirementsRows.length > 0) {
     for (let index = 0; index < requirementsRows.length; index += 1) {
       const row = requirementsRows[index];
       const requirementId = Number(row.nreq);
-      const files = evidenceCountByReq.has(requirementId) ? evidenceCountByReq.get(requirementId) : null;
+      const attachments = evidenceByReq.get(requirementId) || [];
+      const files = attachments.length;
 
       requirements.push({
         id: `req-${requirementId}`,
         title: row.requisito,
         description: row.r_descricao,
         files,
+        attachments,
       });
+    }
+
+    if (requirements.length > 0 && unscopedAttachments.length > 0) {
+      requirements[0].files += unscopedAttachments.length;
+      requirements[0].attachments = [...requirements[0].attachments, ...unscopedAttachments];
     }
 
     return requirements;
@@ -303,8 +336,14 @@ const buildRequirements = async (pedidoId, badgeId, levelName) => {
       id: `fallback-${index + 1}`,
       title: `${prefix}${index + 1} - ${fallbackTitles[index]}`,
       description: 'Texto de suporte do requisito associado à candidatura.',
-      files: index === 0 ? 2 : null,
+      files: 0,
+      attachments: [],
     });
+  }
+
+  if (requirements.length > 0 && unscopedAttachments.length > 0) {
+    requirements[0].files = unscopedAttachments.length;
+    requirements[0].attachments = unscopedAttachments;
   }
 
   return requirements;
@@ -750,6 +789,71 @@ export const requestManagementModel = {
 
     const item = await mapRequestDetails(row, parsedRole);
     return clone(item);
+  },
+
+  async getManagedEvidenceFile(role, accountId, requestId, evidenceId) {
+    const parsedRole = parseRole(role);
+    if (!parsedRole) {
+      const error = new Error('Invalid role.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const actorUtilizadorId = await getUtilizadorIdByAccountId(accountId);
+    if (!actorUtilizadorId) {
+      const error = new Error('User not found for account.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const row = await getRequestByIdForRole(parsedRole, actorUtilizadorId, requestId);
+    if (!row) {
+      return null;
+    }
+
+    const hasAccess = await ensureRoleAccessToRequest(parsedRole, actorUtilizadorId, row);
+    if (!hasAccess) {
+      const error = new Error('You are not allowed to download evidences from this request.');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const [evidence] = await sequelize.query(
+      `
+        SELECT nevidencias, nevidencia, formato
+        FROM evidencias
+        WHERE nevidencias = :evidenceId
+          AND npedido = :requestId
+        LIMIT 1
+      `,
+      {
+        replacements: {
+          evidenceId: Number(evidenceId),
+          requestId: Number(requestId),
+        },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    if (!evidence) {
+      return null;
+    }
+
+    const storedName = path.basename(String(evidence.nevidencia || '').trim());
+    if (!storedName) {
+      return null;
+    }
+
+    const extension = String(evidence.formato || '').trim().toLowerCase();
+    const downloadName = extension && !storedName.toLowerCase().endsWith(`.${extension}`)
+      ? `${storedName}.${extension}`
+      : storedName;
+
+    return clone({
+      evidenceId: Number(evidence.nevidencias),
+      storedName,
+      downloadName,
+    });
   },
 
   async submitDecision(role, accountId, requestId, payload) {

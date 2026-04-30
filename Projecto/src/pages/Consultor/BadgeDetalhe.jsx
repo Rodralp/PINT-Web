@@ -212,15 +212,29 @@ function BadgeDetalhe() {
 
   const requirements = useMemo(() => {
     const prefix = getRequirementPrefixByLevel(badge.levelKey);
-    const showFiles = badgeStatus !== 'visualizar';
+    const showFileCounters = badgeStatus !== 'visualizar';
+    const sourceRequirements = Array.isArray(badge.requirements) && badge.requirements.length > 0
+      ? badge.requirements
+      : requirementTemplate;
 
-    return requirementTemplate.map((item, index) => ({
-      ...item,
-      title: `${prefix}${index + 1} - ${item.title}`,
-      files: showFiles ? 0 : null,
-      image: badge.badgeImage,
-    }));
-  }, [badge.levelKey, badgeStatus, badge.badgeImage]);
+    return sourceRequirements.map((item, index) => {
+      const fallback = requirementTemplate[index % requirementTemplate.length];
+      const rawTitle = String(item?.title || fallback.title || `Requisito ${index + 1}`).trim();
+      const hasPrefixedTitle = /^[A-E]\d+\s*-\s*/i.test(rawTitle);
+      const filesCount = Number(item?.files);
+
+      return {
+        ...item,
+        id: String(item?.id || `req-${index + 1}`),
+        title: hasPrefixedTitle ? rawTitle : `${prefix}${index + 1} - ${rawTitle}`,
+        description: item?.description || fallback.description,
+        files: Number.isInteger(filesCount) && filesCount >= 0
+          ? filesCount
+          : showFileCounters ? 0 : null,
+        image: badge.badgeImage,
+      };
+    });
+  }, [badge.requirements, badge.levelKey, badgeStatus, badge.badgeImage]);
 
   const fallbackBackRoute =
     typeof location.state?.backTo === 'string' && location.state.backTo.trim().length > 0
@@ -362,8 +376,6 @@ function BadgeDetalhe() {
     });
   };
 
-  const breadcrumbPath = `${badge.learningPathName || 'Jornada Técnica'} -> ${badge.serviceLineName || 'Application Operations'} -> ${badge.area} -> ${t(badge.levelKey)}`;
-
   const filesStorageKey = useMemo(() => `consultor-badge-files:${decodeURIComponent(badgeId || 'default')}`, [badgeId]);
 
   useEffect(() => {
@@ -454,7 +466,7 @@ function BadgeDetalhe() {
 
                     <button
                       type="button"
-                      className="badge-requirement-toggle-btn"
+                      className="badge-requirement-view-btn"
                       aria-label={isOpen ? `Ocultar requisito ${index + 1}` : `Ver requisito ${index + 1}`}
                       title={isOpen ? 'Ocultar requisito' : 'Ver requisito'}
                       aria-expanded={isOpen}
@@ -471,38 +483,41 @@ function BadgeDetalhe() {
                         alt={`Ilustracao do requisito ${index + 1}`}
                         className="badge-requirement-detail-image"
                       />
-                      <p>{requirement.description}</p>
-                      {(badgeStatus === 'candidatura_em_progresso' || badgeStatus === 'evidencias_insuficientes') && (
-                        <div className="badge-requirement-files">
-                          <label className="badge-file-input-label">Anexar arquivos</label>
-                          <input
-                            type="file"
-                            multiple
-                            onChange={(e) => handleFilesSelected(requirement.id, e.target.files)}
-                            aria-label={`Anexar arquivos ao requisito ${index + 1}`}
-                          />
+                      <div className="badge-requirement-detail-content">
+                        <p>{requirement.description}</p>
+                        {(badgeStatus === 'candidatura_em_progresso' || badgeStatus === 'evidencias_insuficientes') && (
+                          <div className="badge-requirement-files">
+                            <label className="badge-file-input-label">Anexar arquivos</label>
+                            <input
+                              className="badge-file-input"
+                              type="file"
+                              multiple
+                              onChange={(e) => handleFilesSelected(requirement.id, e.target.files)}
+                              aria-label={`Anexar arquivos ao requisito ${index + 1}`}
+                            />
 
-                          <div className="badge-file-list">
-                            {Array.isArray(filesByRequirement[requirement.id]) && filesByRequirement[requirement.id].length > 0 ? (
-                              filesByRequirement[requirement.id].map((f, fi) => (
-                                <div key={`${requirement.id}-file-${fi}`} className="badge-file-item">
-                                  <span className="badge-file-name">{f.name}</span>
-                                  <button
-                                    type="button"
-                                    className="badge-file-remove-btn"
-                                    onClick={() => handleRemoveFile(requirement.id, fi)}
-                                    aria-label={`Remover arquivo ${f.name}`}
-                                  >
-                                    Remover
-                                  </button>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="badge-file-none">Nenhum ficheiro anexado.</div>
-                            )}
+                            <div className="badge-file-list">
+                              {Array.isArray(filesByRequirement[requirement.id]) && filesByRequirement[requirement.id].length > 0 ? (
+                                filesByRequirement[requirement.id].map((f, fi) => (
+                                  <div key={`${requirement.id}-file-${fi}`} className="badge-file-item">
+                                    <span className="badge-file-name">{f.name}</span>
+                                    <button
+                                      type="button"
+                                      className="badge-file-remove-btn"
+                                      onClick={() => handleRemoveFile(requirement.id, fi)}
+                                      aria-label={`Remover arquivo ${f.name}`}
+                                    >
+                                      Remover
+                                    </button>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="badge-file-none">Nenhum ficheiro anexado.</div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   )}
                 </article>

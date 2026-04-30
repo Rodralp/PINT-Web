@@ -175,6 +175,8 @@ function LearningPaths() {
           points: level.points,
           badgeImage: level.badgeImage,
           badgeDbId: level.badgeDbId || null,
+          requestId: Number(level.requestId) || null,
+          requirements: Array.isArray(level.requirements) ? level.requirements : [],
           status: level.status || 'visualizar',
           date: '12 Jan 2026',
         },

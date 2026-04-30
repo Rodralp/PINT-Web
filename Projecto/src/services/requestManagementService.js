@@ -1,5 +1,7 @@
 import apiClient from './apiClient';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
+
 const getStoredLoginData = () => {
   const sessionLoginData = sessionStorage.getItem('loginData');
 
@@ -126,4 +128,17 @@ export async function submitManagedRequestDecision(role, requestId, payload) {
     },
   );
   return response.data;
+}
+
+export async function getManagedEvidenceDownloadUrl(role, requestId, evidenceId) {
+  const accountId = await ensureLoggedAccountId();
+  if (!accountId) {
+    throw new Error('Missing logged account id.');
+  }
+
+  const normalizedRole = normalizeRole(role);
+  const safeRequestId = encodeURIComponent(requestId);
+  const safeEvidenceId = encodeURIComponent(evidenceId);
+
+  return `${API_BASE_URL}/request-management/${encodeURIComponent(normalizedRole)}/requests/${safeRequestId}/evidences/${safeEvidenceId}/download?accountId=${accountId}`;
 }

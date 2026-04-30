@@ -40,6 +40,20 @@ const badgeLevelTemplates = [
 ];
 
 const suggestionAccentPalette = ['success', 'violet', 'amber', 'warning', 'info', 'yellow'];
+const defaultRequirementTemplates = [
+  {
+    title: 'Implementar conectividade hibrida',
+    description: 'Texto de suporte do requisito associado a conectividade e integracao do servico.',
+  },
+  {
+    title: 'Monitorizar infraestrutura hibrida',
+    description: 'Texto de suporte do requisito associado a observabilidade, alertas e estabilidade operacional.',
+  },
+  {
+    title: 'Implementar disaster recovery',
+    description: 'Texto de suporte do requisito associado a resiliencia e continuidade de negocio.',
+  },
+];
 
 const normalizeLevelTitle = (value) => {
   const rawTitle = String(value || '').trim();
@@ -224,6 +238,92 @@ const ensureEstadoId = async (estadoNome) => {
   );
 
   return Number(inserted.nestado);
+};
+
+const normalizeBadgeIds = (badgeIds) => [...new Set(
+  (Array.isArray(badgeIds) ? badgeIds : [])
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value) && value > 0),
+)];
+
+const ensureRequirementsForBadges = async (badgeIds) => {
+  const normalizedBadgeIds = normalizeBadgeIds(badgeIds);
+  if (normalizedBadgeIds.length === 0) {
+    return;
+  }
+
+  const existingRows = await sequelize.query(
+    `
+      SELECT DISTINCT nbadge
+      FROM requisitos
+      WHERE nbadge IN (:badgeIds)
+    `,
+    {
+      replacements: { badgeIds: normalizedBadgeIds },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  const existingBadgeIds = new Set(existingRows.map((row) => Number(row.nbadge)));
+  const missingBadgeIds = normalizedBadgeIds.filter((badgeId) => !existingBadgeIds.has(badgeId));
+
+  for (const badgeId of missingBadgeIds) {
+    for (const template of defaultRequirementTemplates) {
+      await sequelize.query(
+        `
+          INSERT INTO requisitos (requisito, r_descricao, nbadge)
+          VALUES (:title, :description, :badgeId)
+        `,
+        {
+          replacements: {
+            title: template.title,
+            description: template.description,
+            badgeId,
+          },
+          type: QueryTypes.INSERT,
+        },
+      );
+    }
+  }
+};
+
+const loadRequirementsByBadgeIds = async (badgeIds) => {
+  const normalizedBadgeIds = normalizeBadgeIds(badgeIds);
+  const requirementsByBadge = new Map();
+
+  if (normalizedBadgeIds.length === 0) {
+    return requirementsByBadge;
+  }
+
+  const rows = await sequelize.query(
+    `
+      SELECT nbadge, nreq, requisito, r_descricao
+      FROM requisitos
+      WHERE nbadge IN (:badgeIds)
+      ORDER BY nbadge ASC, nreq ASC
+    `,
+    {
+      replacements: { badgeIds: normalizedBadgeIds },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  for (const row of rows) {
+    const badgeId = Number(row.nbadge);
+    if (!requirementsByBadge.has(badgeId)) {
+      requirementsByBadge.set(badgeId, []);
+    }
+
+    requirementsByBadge.get(badgeId).push({
+      id: `req-${Number(row.nreq)}`,
+      title: row.requisito || 'Requisito',
+      description: row.r_descricao || 'Texto de suporte do requisito associado a candidatura.',
+      files: 0,
+      attachments: [],
+    });
+  }
+
+  return requirementsByBadge;
 };
 
 const rankingConsultores = [
@@ -475,6 +575,9 @@ const buildLearningPaths = async (accountId) => {
     `,
     { type: QueryTypes.SELECT },
   );
+  const badgeIds = normalizeBadgeIds(rows.map((row) => row.nbadge));
+  await ensureRequirementsForBadges(badgeIds);
+  const requirementsByBadge = await loadRequirementsByBadgeIds(badgeIds);
 
   let userBadges = [];
   let userRequests = [];
@@ -495,7 +598,7 @@ const buildLearningPaths = async (accountId) => {
       ),
       sequelize.query(
         `
-          SELECT p.nbadge, e.estado
+          SELECT p.npedido, p.nbadge, e.estado
           FROM pedidos AS p
           INNER JOIN estado AS e
             ON e.nestado = p.estado
@@ -514,19 +617,31 @@ const buildLearningPaths = async (accountId) => {
   }
 
   const obtainedBadgeIds = new Set(userBadges.map((b) => Number(b.nbadge)));
-  const requestStatusMap = new Map();
+  const requestMetadataByBadge = new Map();
   for (const r of userRequests) {
     const badgeId = Number(r.nbadge);
-    if (!requestStatusMap.has(badgeId)) {
-      requestStatusMap.set(badgeId, mapPedidoEstadoToLearningPathStatus(r.estado));
+    if (!requestMetadataByBadge.has(badgeId)) {
+      requestMetadataByBadge.set(badgeId, {
+        status: mapPedidoEstadoToLearningPathStatus(r.estado),
+        requestId: Number(r.npedido) || null,
+      });
     }
   }
 
-  const getStatusForBadge = (nbadge) => {
-    if (!nbadge) return 'visualizar';
-    if (obtainedBadgeIds.has(nbadge)) return 'obtido';
-    if (requestStatusMap.has(Number(nbadge))) return requestStatusMap.get(Number(nbadge));
-    return 'visualizar';
+  const getRequestMetaForBadge = (nbadge) => {
+    if (!nbadge) {
+      return { status: 'visualizar', requestId: null };
+    }
+
+    if (obtainedBadgeIds.has(nbadge)) {
+      return { status: 'obtido', requestId: null };
+    }
+
+    if (requestMetadataByBadge.has(Number(nbadge))) {
+      return requestMetadataByBadge.get(Number(nbadge));
+    }
+
+    return { status: 'visualizar', requestId: null };
   };
 
   const learningPathMap = new Map();
@@ -585,13 +700,21 @@ const buildLearningPaths = async (accountId) => {
 
     if (row.nnivel) {
       const template = badgeLevelTemplates[area.levels.length % badgeLevelTemplates.length];
+      const badgeDbId = row.nbadge ? Number(row.nbadge) : null;
+      const requestMeta = getRequestMetaForBadge(badgeDbId);
+      const requirements = badgeDbId
+        ? clone(requirementsByBadge.get(badgeDbId) || [])
+        : [];
+
       area.levels.push({
         id: `nivel-${Number(row.nnivel)}`,
         title: normalizeLevelTitle(row.nivel),
         subtitle: `Nivel ${area.levels.length + 1}`,
         ...template,
-        badgeDbId: row.nbadge ? Number(row.nbadge) : null,
-        status: getStatusForBadge(row.nbadge),
+        badgeDbId,
+        requestId: requestMeta.requestId,
+        requirements,
+        status: requestMeta.status,
       });
     }
   }
@@ -660,20 +783,26 @@ const buildMyBadges = async (accountId) => {
     ),
   ]);
 
-  const requestIds = requestRows.map((row) => Number(row.npedido)).filter((requestId) => Number.isInteger(requestId) && requestId > 0);
+  const requestIds = requestRows
+    .map((row) => Number(row.npedido))
+    .filter((requestId) => Number.isInteger(requestId) && requestId > 0);
+  const requestBadgeIds = requestRows
+    .map((row) => Number(row.nbadge))
+    .filter((badgeId) => Number.isInteger(badgeId) && badgeId > 0);
+
+  await ensureRequirementsForBadges(requestBadgeIds);
+  const requirementsByBadge = await loadRequirementsByBadgeIds(requestBadgeIds);
+
   const evidenceRows = requestIds.length > 0
     ? await sequelize.query(
       `
         SELECT
           e.npedido,
           e.nreq,
+          e.nevidencias,
           e.nevidencia,
-          e.formato,
-          r.requisito,
-          r.r_descricao
+          e.formato
         FROM evidencias AS e
-        LEFT JOIN requisitos AS r
-          ON r.nreq = e.nreq
         WHERE e.npedido IN (:requestIds)
         ORDER BY e.npedido ASC, e.nreq ASC, e.nevidencias ASC
       `,
@@ -689,36 +818,44 @@ const buildMyBadges = async (accountId) => {
   for (const row of evidenceRows) {
     const requestId = Number(row.npedido);
     const requirementId = Number(row.nreq);
-    const requirementKey = Number.isInteger(requirementId) && requirementId > 0 ? requirementId : null;
+    const requirementKey = Number.isInteger(requirementId) && requirementId > 0 ? `req-${requirementId}` : null;
 
     if (!evidenceByRequest.has(requestId)) {
-      evidenceByRequest.set(requestId, new Map());
+      evidenceByRequest.set(requestId, {
+        byRequirement: new Map(),
+        unscoped: [],
+      });
     }
 
-    const requirementMap = evidenceByRequest.get(requestId);
-    const labelBase = String(row.nevidencia || row.requisito || 'Evidência').trim();
+    const requirementState = evidenceByRequest.get(requestId);
+    const labelBase = String(row.nevidencia || 'evidencia').trim();
     const extension = String(row.formato || '').trim();
     const attachmentLabel = extension && !labelBase.toLowerCase().endsWith(`.${extension.toLowerCase()}`)
       ? `${labelBase}.${extension}`
       : labelBase;
 
-    if (!requirementMap.has(requirementKey)) {
-      requirementMap.set(requirementKey, {
-        id: `req-${requirementKey || requestId}`,
-        title: row.requisito || 'Requisito',
-        description: row.r_descricao || 'Evidências submetidas para este requisito.',
+    const attachment = {
+      id: `evidence-${Number(row.nevidencias) || `${requestId}-${labelBase}`}`,
+      evidenceId: Number(row.nevidencias) || null,
+      type: extension === 'pdf' ? 'pdf' : 'file',
+      label: attachmentLabel,
+    };
+
+    if (!requirementKey) {
+      requirementState.unscoped.push(attachment);
+      continue;
+    }
+
+    if (!requirementState.byRequirement.has(requirementKey)) {
+      requirementState.byRequirement.set(requirementKey, {
         files: 0,
         attachments: [],
       });
     }
 
-    const requirementItem = requirementMap.get(requirementKey);
+    const requirementItem = requirementState.byRequirement.get(requirementKey);
     requirementItem.files += 1;
-    requirementItem.attachments.push({
-      id: `${requestId}-${requirementKey || 'req'}-${requirementItem.files}`,
-      type: extension === 'pdf' ? 'pdf' : 'file',
-      label: attachmentLabel,
-    });
+    requirementItem.attachments.push(attachment);
   }
 
   const items = [];
@@ -750,11 +887,32 @@ const buildMyBadges = async (accountId) => {
 
     const template = resolveBadgeTemplate(row.nivel);
     const mappedStatus = mapPedidoEstadoToLearningPathStatus(row.estado);
+    const requestId = Number(row.npedido);
+    const requestEvidence = evidenceByRequest.get(requestId);
+    const badgeRequirements = clone(requirementsByBadge.get(badgeId) || []);
+
+    for (const requirement of badgeRequirements) {
+      const requirementEvidence = requestEvidence?.byRequirement?.get(String(requirement.id));
+      if (!requirementEvidence) {
+        requirement.files = Number(requirement.files) || 0;
+        requirement.attachments = Array.isArray(requirement.attachments) ? requirement.attachments : [];
+        continue;
+      }
+
+      requirement.files = requirementEvidence.files;
+      requirement.attachments = requirementEvidence.attachments;
+    }
+
+    if (badgeRequirements.length > 0 && requestEvidence?.unscoped?.length) {
+      const firstRequirement = badgeRequirements[0];
+      firstRequirement.files = Number(firstRequirement.files || 0) + requestEvidence.unscoped.length;
+      firstRequirement.attachments = [...(firstRequirement.attachments || []), ...requestEvidence.unscoped];
+    }
 
     items.push({
       id: `badge-${badgeId}`,
       badgeDbId: badgeId,
-      requestId: Number(row.npedido),
+      requestId,
       area: row.area || 'Badge',
       stateId: mapPedidoEstadoToMyBadgeState(row.estado),
       status: mappedStatus,
@@ -762,7 +920,8 @@ const buildMyBadges = async (accountId) => {
       points: template.points,
       badgeImage: template.badgeImage,
       date: formatDate(row.data_submissao),
-      evidence: Array.from(evidenceByRequest.get(Number(row.npedido))?.values() || []),
+      requirements: badgeRequirements,
+      evidence: badgeRequirements,
     });
   }
 
@@ -1178,6 +1337,8 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
     throw error;
   }
 
+  await ensureRequirementsForBadges([parsedBadgeId]);
+
   const [alreadyObtained] = await sequelize.query(
     `
       SELECT 1
@@ -1296,7 +1457,7 @@ const syncReminderIdSequence = async (lastId) => {
   const isCalled = Number(lastId) > 0;
 
   await sequelize.query(
-    "SELECT setval(pg_get_serial_sequence('reminders', 'id'), :safeLastId, :isCalled)",
+    "SELECT setval(pg_get_serial_sequence('lembrete', 'nlembrete'), :safeLastId, :isCalled)",
     {
       replacements: { safeLastId, isCalled },
     },
@@ -1304,8 +1465,15 @@ const syncReminderIdSequence = async (lastId) => {
 };
 
 const saveEvidences = async (accountId, pedidoId, nreq, fileMeta) => {
+  const parsedAccountId = Number(accountId);
   const parsedPedido = Number(pedidoId);
-  const parsedNreq = Number(nreq) || null;
+  let parsedNreq = Number(nreq) || null;
+
+  if (!Number.isInteger(parsedAccountId) || parsedAccountId <= 0) {
+    const error = new Error('Invalid account id.');
+    error.statusCode = 400;
+    throw error;
+  }
 
   if (!Number.isInteger(parsedPedido) || parsedPedido <= 0) {
     const error = new Error('Invalid pedido id.');
@@ -1313,7 +1481,57 @@ const saveEvidences = async (accountId, pedidoId, nreq, fileMeta) => {
     throw error;
   }
 
-  const nevidencia = String(fileMeta.originalName || fileMeta.filename || '').slice(0, 250);
+  const utilizadorId = await getUtilizadorIdByAccountId(parsedAccountId);
+  if (!utilizadorId) {
+    const error = new Error('User not found for account.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const [requestRow] = await sequelize.query(
+    `
+      SELECT npedido, nbadge
+      FROM pedidos
+      WHERE npedido = :pedidoId
+        AND nutilizador = :utilizadorId
+      LIMIT 1
+    `,
+    {
+      replacements: { pedidoId: parsedPedido, utilizadorId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  if (!requestRow) {
+    const error = new Error('Request not found for account.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (Number.isInteger(parsedNreq) && parsedNreq > 0) {
+    const [requirementRow] = await sequelize.query(
+      `
+        SELECT 1
+        FROM requisitos
+        WHERE nreq = :nreq
+          AND nbadge = :badgeId
+        LIMIT 1
+      `,
+      {
+        replacements: {
+          nreq: parsedNreq,
+          badgeId: Number(requestRow.nbadge),
+        },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    if (!requirementRow) {
+      parsedNreq = null;
+    }
+  }
+
+  const nevidencia = String(fileMeta.filename || fileMeta.originalName || 'evidence').slice(0, 50);
   const formato = String(fileMeta.formato || '').slice(0, 50);
 
   const [inserted] = await sequelize.query(
@@ -1431,7 +1649,7 @@ export const consultorModel = {
   async getReminders(accountId) {
     const reminders = await Reminder.findAll({
       where: { accountId: Number(accountId) },
-      order: [['createdAt', 'DESC']],
+      order: [['date', 'ASC']],
     });
 
     return reminders.map(mapReminder);
