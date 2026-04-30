@@ -18,7 +18,7 @@ import {
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
-import { requestBadgeAcquisition } from '../../services/consultorService';
+import { requestBadgeAcquisition, uploadEvidence } from '../../services/consultorService';
 import '../../css/Consultor/BadgeDetalhe.css';
 
 const defaultBadgeDetails = {
@@ -179,6 +179,8 @@ function BadgeDetalhe() {
   const [openRequirementId, setOpenRequirementId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [filesByRequirement, setFilesByRequirement] = useState({});
+  const [currentRequestId, setCurrentRequestId] = useState(() => Number(location.state?.badge?.requestId) || null);
 
   const badge = useMemo(() => {
     if (location.state?.badge) {
@@ -192,7 +194,20 @@ function BadgeDetalhe() {
   const [badgeStatus, setBadgeStatus] = useState(() => normalizeBadgeStatus(badge));
 
   useEffect(() => {
+    // Initialize files state from badge payload when available (server may provide per-requirement files)
+    const possible = badge?.requirementFiles || badge?.filesByRequirement || badge?.requirementSubmissions || badge?.submittedFiles;
+    if (possible && typeof possible === 'object') {
+      setFilesByRequirement(possible);
+    }
+  }, [badge]);
+
+  useEffect(() => {
     setBadgeStatus(normalizeBadgeStatus(badge));
+  }, [badge]);
+
+  useEffect(() => {
+    const nextRequestId = Number(badge?.requestId);
+    setCurrentRequestId(Number.isInteger(nextRequestId) && nextRequestId > 0 ? nextRequestId : null);
   }, [badge]);
 
   const requirements = useMemo(() => {
@@ -202,7 +217,7 @@ function BadgeDetalhe() {
     return requirementTemplate.map((item, index) => ({
       ...item,
       title: `${prefix}${index + 1} - ${item.title}`,
-      files: showFiles ? (index === 0 ? 2 : null) : null,
+      files: showFiles ? 0 : null,
       image: badge.badgeImage,
     }));
   }, [badge.levelKey, badgeStatus, badge.badgeImage]);
@@ -235,7 +250,13 @@ function BadgeDetalhe() {
     setOpenRequirementId((current) => (current === requirementId ? null : requirementId));
   };
 
-  const canRequestBadge = badgeStatus === 'visualizar' || badgeStatus === 'evidencias_insuficientes';
+  const openedFromCatalog =
+    (typeof location.state?.backTo === 'string' && location.state.backTo === '/consultor/catalogo-badges') ||
+    location.state?.activeSidebarRoute === '/consultor/catalogo-badges';
+
+  const canRequestBadge =
+    (badgeStatus === 'visualizar' || badgeStatus === 'evidencias_insuficientes') &&
+    !(openedFromCatalog && badgeStatus === 'visualizar');
   const isProgressStatus = badgeStatus === 'candidatura_em_progresso';
   const canSubmitProgress = canRequestBadge || isProgressStatus;
   const hasStatusBanner = badgeStatus !== 'visualizar';
@@ -244,15 +265,64 @@ function BadgeDetalhe() {
   const showShareActions = badgeStatus === 'obtido';
 
   const handleRequestBadge = async () => {
-    if (!badge?.badgeDbId || isSubmitting || !canSubmitProgress) {
+    setStatusMessage('A processar submissão...');
+
+    if (isSubmitting) {
+      return;
+    }
+
+    if (!canSubmitProgress) {
+      setStatusMessage('Este badge não pode ser submetido no estado atual.');
+      return;
+    }
+
+    if (!badge?.badgeDbId) {
+      setStatusMessage('Não foi possível identificar o badge para submissão. Volte a abrir a partir de "Meus Badges".');
       return;
     }
 
     try {
       setIsSubmitting(true);
       setStatusMessage('');
+
+      const shouldUploadEvidence = badgeStatus === 'candidatura_em_progresso' || badgeStatus === 'evidencias_insuficientes';
+      if (shouldUploadEvidence) {
+        const requestId = Number(currentRequestId);
+        if (!Number.isInteger(requestId) || requestId <= 0) {
+          throw new Error('Pedido inválido para submissão de evidências.');
+        }
+
+        const entries = Object.entries(filesByRequirement);
+        const uploads = [];
+
+        for (const [requirementId, files] of entries) {
+          const validFiles = Array.isArray(files) ? files.filter((f) => typeof File !== 'undefined' && f instanceof File) : [];
+          if (validFiles.length === 0) {
+            continue;
+          }
+
+          const nreqMatch = String(requirementId).match(/(\d+)/);
+          const nreq = nreqMatch ? Number(nreqMatch[1]) : Number.NaN;
+          if (!Number.isInteger(nreq) || nreq <= 0) {
+            continue;
+          }
+
+          uploads.push(uploadEvidence(requestId, nreq, validFiles));
+        }
+
+        if (uploads.length === 0) {
+          throw new Error('Adicione pelo menos um ficheiro antes de submeter.');
+        }
+
+        await Promise.all(uploads);
+      }
+
       const response = await requestBadgeAcquisition(badge.badgeDbId);
       const nextStatus = String(response?.status || 'candidatura_em_progresso').toLowerCase();
+      const returnedRequestId = Number(response?.requestId);
+      if (Number.isInteger(returnedRequestId) && returnedRequestId > 0) {
+        setCurrentRequestId(returnedRequestId);
+      }
 
       setBadgeStatus(nextStatus);
       if (nextStatus === 'obtido') {
@@ -269,16 +339,54 @@ function BadgeDetalhe() {
     }
   };
 
-  const getFilesLabel = (files) => {
-    const filesCount = Number(files);
-    if (Number.isInteger(filesCount) && filesCount > 0) {
-      return `${String(filesCount).padStart(2, '0')} Arquivos Submetidos`;
-    }
+  const getFilesLabel = (requirementId, filesProp) => {
+    const arr = Array.isArray(filesByRequirement[requirementId]) ? filesByRequirement[requirementId] : null;
+    const countFromState = arr ? arr.length : 0;
+    const countFromProp = Number.isInteger(Number(filesProp)) && Number(filesProp) > 0 ? Number(filesProp) : 0;
+    const total = countFromState > 0 ? countFromState : countFromProp;
 
-    return 'XX Arquivos Submetidos';
+    if (total > 0) return `${String(total).padStart(2, '0')} Arquivos Submetidos`;
+    return 'Nenhum Arquivo Submetido';
+  };
+
+  const handleFilesSelected = (requirementId, fileList) => {
+    const files = Array.from(fileList || []);
+    setFilesByRequirement((current) => ({ ...current, [requirementId]: [...(current[requirementId] || []), ...files] }));
+  };
+
+  const handleRemoveFile = (requirementId, index) => {
+    setFilesByRequirement((current) => {
+      const arr = Array.isArray(current[requirementId]) ? [...current[requirementId]] : [];
+      if (index >= 0 && index < arr.length) arr.splice(index, 1);
+      return { ...current, [requirementId]: arr };
+    });
   };
 
   const breadcrumbPath = `${badge.learningPathName || 'Jornada Técnica'} -> ${badge.serviceLineName || 'Application Operations'} -> ${badge.area} -> ${t(badge.levelKey)}`;
+
+  const filesStorageKey = useMemo(() => `consultor-badge-files:${decodeURIComponent(badgeId || 'default')}`, [badgeId]);
+
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(filesStorageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          setFilesByRequirement(parsed);
+        }
+      }
+    } catch {
+      // Ignore malformed storage and continue with empty state.
+    }
+  }, [badge, filesStorageKey]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(filesStorageKey, JSON.stringify(filesByRequirement));
+    } catch {
+      // Ignore storage failures.
+    }
+  }, [filesByRequirement, filesStorageKey]);
 
   return (
     <Layout>
@@ -305,10 +413,12 @@ function BadgeDetalhe() {
                 <strong>Expira</strong>
                 {badge.date}
               </span>
+
               <span>
                 <Trophy size={16} />
                 {badge.points} pontos
               </span>
+
               <span>
                 <FileText size={16} />
                 {requirements.length} requisitos
@@ -321,15 +431,13 @@ function BadgeDetalhe() {
                 <span>{statusMeta.label}</span>
               </div>
             )}
+
           </div>
         </section>
-
-        <p className="badge-breadcrumb">{breadcrumbPath}</p>
 
         <section className="badge-requirements-card">
           <h3>Requisitos</h3>
 
-          <div className="badge-requirements-list">
             {requirements.map((requirement, index) => {
               const isOpen = openRequirementId === requirement.id;
               const ToggleIcon = isOpen ? EyeOff : Eye;
@@ -340,12 +448,13 @@ function BadgeDetalhe() {
                     <div>
                       <p>{requirement.title}</p>
                       {badgeStatus !== 'visualizar' && (
-                        <span>{getFilesLabel(requirement.files)}</span>
+                        <span>{getFilesLabel(requirement.id, requirement.files)}</span>
                       )}
                     </div>
+
                     <button
                       type="button"
-                      className="badge-requirement-view-btn"
+                      className="badge-requirement-toggle-btn"
                       aria-label={isOpen ? `Ocultar requisito ${index + 1}` : `Ver requisito ${index + 1}`}
                       title={isOpen ? 'Ocultar requisito' : 'Ver requisito'}
                       aria-expanded={isOpen}
@@ -363,12 +472,42 @@ function BadgeDetalhe() {
                         className="badge-requirement-detail-image"
                       />
                       <p>{requirement.description}</p>
+                      {(badgeStatus === 'candidatura_em_progresso' || badgeStatus === 'evidencias_insuficientes') && (
+                        <div className="badge-requirement-files">
+                          <label className="badge-file-input-label">Anexar arquivos</label>
+                          <input
+                            type="file"
+                            multiple
+                            onChange={(e) => handleFilesSelected(requirement.id, e.target.files)}
+                            aria-label={`Anexar arquivos ao requisito ${index + 1}`}
+                          />
+
+                          <div className="badge-file-list">
+                            {Array.isArray(filesByRequirement[requirement.id]) && filesByRequirement[requirement.id].length > 0 ? (
+                              filesByRequirement[requirement.id].map((f, fi) => (
+                                <div key={`${requirement.id}-file-${fi}`} className="badge-file-item">
+                                  <span className="badge-file-name">{f.name}</span>
+                                  <button
+                                    type="button"
+                                    className="badge-file-remove-btn"
+                                    onClick={() => handleRemoveFile(requirement.id, fi)}
+                                    aria-label={`Remover arquivo ${f.name}`}
+                                  >
+                                    Remover
+                                  </button>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="badge-file-none">Nenhum ficheiro anexado.</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </article>
               );
             })}
-          </div>
         </section>
 
         {showReviewMessage && (
@@ -401,7 +540,7 @@ function BadgeDetalhe() {
             <button
               type="button"
               className="badge-submit-btn"
-              disabled={!badge.badgeDbId || isSubmitting}
+              disabled={isSubmitting}
               onClick={handleRequestBadge}
             >
               {badgeStatus === 'visualizar' ? null : <SendHorizontal size={20} />}

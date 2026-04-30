@@ -6,16 +6,6 @@ import Layout from '../../components/Layout';
 import { fetchMyBadges } from '../../services/consultorService';
 import '../../css/Consultor/CatalogoBadges_C.css';
 
-const badgeLevels = [
-  { levelKey: 'badge_level_junior', points: 100, badgeImage: '/badges/J%C3%BAnior.png' },
-  { levelKey: 'badge_level_intermediate', points: 150, badgeImage: '/badges/Interm%C3%A9dio.png' },
-  { levelKey: 'badge_level_senior', points: 200, badgeImage: '/badges/S%C3%A9nior.png' },
-  { levelKey: 'badge_level_specialist', points: 250, badgeImage: '/badges/Especialista.png' },
-  { levelKey: 'badge_level_knowledge_lead', points: 300, badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png' },
-];
-
-const badgeAreas = ['LowCode (Outsystems)', 'Cloud Architecture'];
-
 const badgeStates = [
   {
     id: 'aprovado',
@@ -61,23 +51,6 @@ const badgeStates = [
 
 const ITEMS_PER_PAGE = 10;
 
-const buildDefaultBadgeItems = () =>
-  badgeAreas.flatMap((area, areaIndex) =>
-    badgeLevels.map((level, levelIndex) => {
-      const state = badgeStates[(areaIndex + levelIndex) % badgeStates.length];
-
-      return {
-        id: `${area}-${level.levelKey}`,
-        area,
-        stateId: state.id,
-        levelKey: level.levelKey,
-        points: level.points,
-        badgeImage: level.badgeImage,
-        date: '12 Jan 2026',
-      };
-    }),
-  );
-
 function MeusBadges() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -88,8 +61,9 @@ function MeusBadges() {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [sortBy, setSortBy] = useState(defaultSort);
-  const [badgeItems, setBadgeItems] = useState(buildDefaultBadgeItems);
+  const [badgeItems, setBadgeItems] = useState([]);
   const [statusMessage, setStatusMessage] = useState('');
+  
   const filterDropdownRef = useRef(null);
   const sortDropdownRef = useRef(null);
 
@@ -104,13 +78,14 @@ function MeusBadges() {
     const loadMyBadges = async () => {
       try {
         const data = await fetchMyBadges();
-        if (isMounted && Array.isArray(data) && data.length > 0) {
-          setBadgeItems(data);
+        if (isMounted) {
+          setBadgeItems(Array.isArray(data) ? data : []);
           setStatusMessage('');
         }
       } catch {
         if (isMounted) {
-          setStatusMessage('');
+          setBadgeItems([]);
+          setStatusMessage('Não foi possível carregar os badges. Tente novamente em alguns segundos.');
         }
       }
     };
@@ -407,6 +382,7 @@ function MeusBadges() {
                   >
                     <Icon size={18} strokeWidth={2} />
                   </button>
+                  
                 </article>
               );
             })}

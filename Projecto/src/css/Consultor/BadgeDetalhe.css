@@ -221,11 +221,85 @@
 
 .badge-requirement-detail {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 18px;
   border-top: 1px solid #eef2f7;
   margin-top: 12px;
   padding: 12px 6px 0;
+}
+
+.badge-requirement-detail-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.badge-evidence-block {
+  border: 1px solid #e6eef7;
+  background: linear-gradient(180deg, #fbfdff 0%, #f8fbff 100%);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.badge-evidence-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.badge-evidence-block-head strong {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.badge-evidence-files-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.badge-evidence-file-item,
+.badge-evidence-empty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid #e5ebf4;
+  color: #334155;
+  font-size: 13px;
+}
+
+.badge-evidence-file-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%);
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.badge-evidence-file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge-evidence-empty {
+  justify-content: center;
+  color: #64748b;
+  background: #f8fafc;
 }
 
 .badge-requirement-detail-image {

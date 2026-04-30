@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import {
   acquireBadge,
   getBadgeSuggestions,
@@ -15,6 +16,7 @@ import {
   getReminders,
   savePreferences,
   updateReminder,
+  uploadEvidence,
 } from '../controllers/consultorController.js';
 
 const router = Router();
@@ -33,6 +35,8 @@ router.get('/lembretes', getReminders);
 router.post('/lembretes', createReminder);
 router.put('/lembretes/:id', updateReminder);
 router.delete('/lembretes/:id', deleteReminder);
+const upload = multer({ dest: 'server/uploads/' });
+router.post('/pedidos/:pedidoId/evidencias', upload.array('files'), uploadEvidence);
 router.get('/profile', getProfileData);
 
 export default router;

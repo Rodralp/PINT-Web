@@ -282,3 +282,28 @@ export async function fetchProfileData() {
 
   return data;
 }
+
+export async function uploadEvidence(pedidoId, nreq, files) {
+  const accountId = await ensureLoggedAccountId();
+  if (!accountId) {
+    throw new Error('Missing logged account id.');
+  }
+
+  if (!pedidoId) throw new Error('Missing pedido id.');
+
+  const form = new FormData();
+  form.append('accountId', String(accountId));
+  form.append('nreq', String(nreq || ''));
+
+  if (files && files.length) {
+    // files can be FileList or array
+    const arr = Array.from(files);
+    arr.forEach((f) => form.append('files', f));
+  }
+
+  const response = await apiClient.post(`/consultor/pedidos/${encodeURIComponent(pedidoId)}/evidencias`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+  return response.data;
+}

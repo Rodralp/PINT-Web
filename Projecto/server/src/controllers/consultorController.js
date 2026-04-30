@@ -1,4 +1,6 @@
 import { consultorService } from '../services/consultorService.js';
+import fs from 'fs';
+import path from 'path';
 
 const parseAccountId = (value) => {
   const parsed = Number(value);
@@ -235,5 +237,46 @@ export const getProfileData = async (req, res) => {
     res.status(200).json(data);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch profile data.', error: error.message });
+  }
+};
+
+export const uploadEvidence = async (req, res) => {
+  const pedidoId = Number(req.params?.pedidoId);
+  const nreq = Number(req.body?.nreq);
+  const accountId = Number(req.body?.accountId);
+
+  if (!pedidoId || Number.isNaN(nreq) || !accountId) {
+    res.status(400).json({ message: 'pedidoId, nreq and accountId are required.' });
+    return;
+  }
+
+  try {
+    const files = Array.isArray(req.files) ? req.files : [];
+    if (files.length === 0) {
+      res.status(400).json({ message: 'No files provided.' });
+      return;
+    }
+
+    const uploadsDir = path.resolve(process.cwd(), 'server', 'uploads');
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+    const saved = [];
+    for (const f of files) {
+      const originalName = f.originalname || f.filename;
+      const ext = path.extname(originalName).replace(/\./g, '') || '';
+      const storedName = path.basename(f.path);
+
+      const result = await consultorService.saveEvidences(accountId, pedidoId, nreq, {
+        filename: storedName,
+        originalName,
+        formato: ext,
+      });
+
+      saved.push(result);
+    }
+
+    res.status(201).json({ uploaded: saved });
+  } catch (error) {
+    res.status(500).json({ message: error?.message || 'Failed to upload evidences.' });
   }
 };

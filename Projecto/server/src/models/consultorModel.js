@@ -635,6 +635,7 @@ const buildMyBadges = async (accountId) => {
     sequelize.query(
       `
         SELECT DISTINCT ON (p.nbadge)
+          p.npedido,
           p.nbadge,
           p.data_submissao,
           e.estado,
@@ -658,6 +659,67 @@ const buildMyBadges = async (accountId) => {
       },
     ),
   ]);
+
+  const requestIds = requestRows.map((row) => Number(row.npedido)).filter((requestId) => Number.isInteger(requestId) && requestId > 0);
+  const evidenceRows = requestIds.length > 0
+    ? await sequelize.query(
+      `
+        SELECT
+          e.npedido,
+          e.nreq,
+          e.nevidencia,
+          e.formato,
+          r.requisito,
+          r.r_descricao
+        FROM evidencias AS e
+        LEFT JOIN requisitos AS r
+          ON r.nreq = e.nreq
+        WHERE e.npedido IN (:requestIds)
+        ORDER BY e.npedido ASC, e.nreq ASC, e.nevidencias ASC
+      `,
+      {
+        replacements: { requestIds },
+        type: QueryTypes.SELECT,
+      },
+    )
+    : [];
+
+  const evidenceByRequest = new Map();
+
+  for (const row of evidenceRows) {
+    const requestId = Number(row.npedido);
+    const requirementId = Number(row.nreq);
+    const requirementKey = Number.isInteger(requirementId) && requirementId > 0 ? requirementId : null;
+
+    if (!evidenceByRequest.has(requestId)) {
+      evidenceByRequest.set(requestId, new Map());
+    }
+
+    const requirementMap = evidenceByRequest.get(requestId);
+    const labelBase = String(row.nevidencia || row.requisito || 'Evidência').trim();
+    const extension = String(row.formato || '').trim();
+    const attachmentLabel = extension && !labelBase.toLowerCase().endsWith(`.${extension.toLowerCase()}`)
+      ? `${labelBase}.${extension}`
+      : labelBase;
+
+    if (!requirementMap.has(requirementKey)) {
+      requirementMap.set(requirementKey, {
+        id: `req-${requirementKey || requestId}`,
+        title: row.requisito || 'Requisito',
+        description: row.r_descricao || 'Evidências submetidas para este requisito.',
+        files: 0,
+        attachments: [],
+      });
+    }
+
+    const requirementItem = requirementMap.get(requirementKey);
+    requirementItem.files += 1;
+    requirementItem.attachments.push({
+      id: `${requestId}-${requirementKey || 'req'}-${requirementItem.files}`,
+      type: extension === 'pdf' ? 'pdf' : 'file',
+      label: attachmentLabel,
+    });
+  }
 
   const items = [];
   const existingBadgeIds = new Set();
@@ -692,6 +754,7 @@ const buildMyBadges = async (accountId) => {
     items.push({
       id: `badge-${badgeId}`,
       badgeDbId: badgeId,
+      requestId: Number(row.npedido),
       area: row.area || 'Badge',
       stateId: mapPedidoEstadoToMyBadgeState(row.estado),
       status: mappedStatus,
@@ -699,6 +762,7 @@ const buildMyBadges = async (accountId) => {
       points: template.points,
       badgeImage: template.badgeImage,
       date: formatDate(row.data_submissao),
+      evidence: Array.from(evidenceByRequest.get(Number(row.npedido))?.values() || []),
     });
   }
 
@@ -1129,7 +1193,7 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
   );
 
   if (alreadyObtained) {
-    return { status: 'obtido' };
+    return { status: 'obtido', requestId: null };
   }
 
   const candidaturaEstadoId = await ensureEstadoId('candidatura_em_progresso');
@@ -1151,13 +1215,14 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
   );
 
   if (existingRequest) {
+    const existingRequestId = Number(existingRequest.npedido);
     const existingEstado = normalizePedidoEstado(existingRequest.estado);
     if (existingEstado === pedidoEstados.aprovado) {
-      return { status: 'obtido' };
+      return { status: 'obtido', requestId: existingRequestId };
     }
 
     if (existingEstado === pedidoEstados.emValidacaoTm || existingEstado === pedidoEstados.emValidacaoSll) {
-      return { status: 'em_validacao' };
+      return { status: 'em_validacao', requestId: existingRequestId };
     }
 
     if (
@@ -1165,7 +1230,10 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
       && existingEstado !== pedidoEstados.evidenciasInsuficientes
     ) {
       const currentStatus = mapPedidoEstadoToLearningPathStatus(existingEstado);
-      return { status: currentStatus === 'visualizar' ? 'candidatura_em_progresso' : currentStatus };
+      return {
+        status: currentStatus === 'visualizar' ? 'candidatura_em_progresso' : currentStatus,
+        requestId: existingRequestId,
+      };
     }
 
     const nextStatus = pedidoEstados.emValidacaoTm;
@@ -1187,13 +1255,14 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
       },
     );
 
-    return { status: 'em_validacao' };
+    return { status: 'em_validacao', requestId: existingRequestId };
   }
 
-  await sequelize.query(
+  const [createdRequest] = await sequelize.query(
     `
       INSERT INTO pedidos (nbadge, nutilizador, estado, data_submissao)
       VALUES (:badgeId, :utilizadorId, :estadoId, CURRENT_DATE)
+      RETURNING npedido
     `,
     {
       replacements: {
@@ -1201,11 +1270,11 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
         utilizadorId,
         estadoId: candidaturaEstadoId,
       },
-      type: QueryTypes.INSERT,
+      type: QueryTypes.SELECT,
     },
   );
 
-  return { status: 'candidatura_em_progresso' };
+  return { status: 'candidatura_em_progresso', requestId: Number(createdRequest?.npedido) || null };
 };
 
 const mapReminder = (reminder) => ({
@@ -1232,6 +1301,44 @@ const syncReminderIdSequence = async (lastId) => {
       replacements: { safeLastId, isCalled },
     },
   );
+};
+
+const saveEvidences = async (accountId, pedidoId, nreq, fileMeta) => {
+  const parsedPedido = Number(pedidoId);
+  const parsedNreq = Number(nreq) || null;
+
+  if (!Number.isInteger(parsedPedido) || parsedPedido <= 0) {
+    const error = new Error('Invalid pedido id.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const nevidencia = String(fileMeta.originalName || fileMeta.filename || '').slice(0, 250);
+  const formato = String(fileMeta.formato || '').slice(0, 50);
+
+  const [inserted] = await sequelize.query(
+    `
+      INSERT INTO evidencias (nevidencia, e_data_submissao, formato, nreq, npedido)
+      VALUES (:nevidencia, CURRENT_DATE, :formato, :nreq, :npedido)
+      RETURNING nevidencias, nevidencia, formato, nreq, npedido
+    `,
+    {
+      replacements: {
+        nevidencia,
+        formato,
+        nreq: parsedNreq,
+        npedido: parsedPedido,
+      },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return inserted || {
+    nevidencia,
+    formato,
+    nreq: parsedNreq,
+    npedido: parsedPedido,
+  };
 };
 
 export const consultorModel = {
@@ -1370,6 +1477,10 @@ export const consultorModel = {
 
   async getProfileData(accountId) {
     const data = await buildProfileData(accountId);
+    return clone(data);
+  },
+  async saveEvidences(accountId, pedidoId, nreq, fileMeta) {
+    const data = await saveEvidences(accountId, pedidoId, nreq, fileMeta);
     return clone(data);
   },
 };
