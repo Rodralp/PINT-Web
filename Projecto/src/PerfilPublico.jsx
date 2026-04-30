@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
 	ArrowLeft,
 	Award,
@@ -15,6 +15,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from './components/Navbar';
 import './css/PerfilPublico.css';
+import { fetchPublicProfile } from './services/consultorService';
 
 const defaultConsultor = {
 	id: '1',
@@ -42,15 +43,58 @@ function PerfilPublico() {
 	const location = useLocation();
 	const { t } = useTranslation();
 
-	const consultor = useMemo(() => {
-		if (location.state?.consultor) {
-			return location.state.consultor;
-		}
+		const [remoteConsultor, setRemoteConsultor] = useState(null);
 
-		const decodedId = decodeURIComponent(consultorId || '');
-		const matchedConsultor = fallbackConsultores.find((item) => String(item.id) === decodedId);
-		return matchedConsultor || defaultConsultor;
-	}, [consultorId, location.state]);
+		const consultor = useMemo(() => {
+			if (location.state?.consultor) {
+				return location.state.consultor;
+			}
+
+			if (remoteConsultor) {
+				return remoteConsultor;
+			}
+
+			const decodedId = decodeURIComponent(consultorId || '');
+			const matchedConsultor = fallbackConsultores.find((item) => String(item.id) === decodedId);
+			return matchedConsultor || defaultConsultor;
+		}, [consultorId, location.state, remoteConsultor]);
+
+		useEffect(() => {
+			let isMounted = true;
+			const loadPublicProfile = async () => {
+				try {
+					const decodedId = decodeURIComponent(consultorId || '');
+					if (!decodedId) return;
+					const data = await fetchPublicProfile(decodedId);
+					if (!isMounted || !data) return;
+
+					// Map server profile structure to expected consultor shape used in this page
+					const mapped = {
+						id: data.user?.id || data.id || decodedId,
+						name: data.user?.name || data.nome || data.user?.nome || 'Consultor',
+						email: data.user?.email || data.email || '',
+						serviceLine: data.serviceLine || (data.user?.serviceLine) || 'Service Line',
+						points: data.points || 0,
+						badges: data.badges || 0,
+						serviceLineStats: Array.isArray(data.serviceLineStats) ? data.serviceLineStats.map((s) => ({
+							serviceLine: s.serviceLine || s.name || s.serviceline,
+							badges: Number(s.badges) || 0,
+							points: Number(s.points) || 0,
+						})) : [],
+						location: data.location || 'Portugal',
+						joined: data.joined || data.user?.joined || '',
+					};
+
+					setRemoteConsultor(mapped);
+				} catch (e) {
+					// ignore and keep fallback
+				}
+			};
+
+			loadPublicProfile();
+
+			return () => { isMounted = false; };
+		}, [consultorId]);
 
 	const profileStats = useMemo(() => {
 		const rankingPosition = fallbackConsultores
@@ -66,11 +110,21 @@ function PerfilPublico() {
 		];
 	}, [consultor, t]);
 
-	const skillsItems = useMemo(() => ([
-		{ title: consultor.serviceLine, levelKey: 'badge_level_specialist' },
-		{ title: 'JavaScript', levelKey: 'badge_level_senior' },
-		{ title: 'React', levelKey: 'badge_level_intermediate' },
-	]), [consultor.serviceLine]);
+		const skillsItems = useMemo(() => {
+			if (Array.isArray(consultor.serviceLineStats) && consultor.serviceLineStats.length > 0) {
+				return consultor.serviceLineStats.slice(0, 3).map((s) => ({
+					title: s.serviceLine || s.name,
+					levelKey: 'badge_level_specialist',
+					meta: `${s.badges} badges`,
+				}));
+			}
+
+			return [
+				{ title: consultor.serviceLine, levelKey: 'badge_level_specialist', meta: `${consultor.points} pts` },
+				{ title: 'JavaScript', levelKey: 'badge_level_senior' },
+				{ title: 'React', levelKey: 'badge_level_intermediate' },
+			];
+		}, [consultor.serviceLineStats, consultor.serviceLine, consultor.points]);
 
 	const certificationsItems = useMemo(() => ([
 		{ title: consultor.serviceLine, levelKey: 'badge_level_knowledge_lead' },
@@ -148,19 +202,47 @@ function PerfilPublico() {
 									<h3>{t('profile_skills')}</h3>
 								</div>
 
-								<div className="pp-list">
-									{skillsItems.map(({ title, levelKey }) => (
-										<article key={`${title}-${levelKey}`} className="pp-list-item">
-											<div className="pp-list-badge">
-												<Award size={18} strokeWidth={2} />
-											</div>
-											<div className="pp-list-content">
-												<strong>{title}</strong>
-												<span>{t(levelKey)}</span>
-											</div>
-										</article>
-									))}
-								</div>
+								{Array.isArray(consultor.serviceLineStats) && consultor.serviceLineStats.length > 0 ? (
+									<div className="pp-service-line-stats">
+										{(() => {
+											const maxBadges = Math.max(...consultor.serviceLineStats.map((s) => s.badges || 0), 1);
+											return consultor.serviceLineStats.map((stat) => {
+												const percentage = ((stat.badges || 0) / maxBadges) * 100;
+												return (
+													<article key={`sl-${stat.serviceLine}`} className="pp-service-line-item">
+														<div className="pp-service-line-header">
+															<strong>{stat.serviceLine || 'Service Line'}</strong>
+															<span className="pp-service-line-meta">
+																{stat.badges || 0} badge{stat.badges !== 1 ? 's' : ''} · {stat.points || 0} pts
+															</span>
+														</div>
+														<div className="pp-progress-bar-bg">
+															<div
+																style={{ width: `${percentage}%` }}
+																className="pp-progress-bar-fill"
+															/>
+														</div>
+													</article>
+												);
+											})()}
+										</div>
+									) : (
+										<div className="pp-list">
+											{skillsItems.map(({ title, levelKey, meta }) => (
+												<article key={`${title}-${levelKey}`} className="pp-list-item">
+													<div className="pp-list-badge">
+														<Award size={18} strokeWidth={2} />
+													</div>
+													<div className="pp-list-content">
+														<strong>{title}</strong>
+														<span>
+														  {t(levelKey)}{meta ? ` · ${meta}` : ''}
+														</span>
+													</div>
+												</article>
+											))}
+										</div>
+									)}
 							</section>
 
 							<section className="pp-panel-card">

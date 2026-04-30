@@ -449,6 +449,11 @@ const profileData = {
     { title: 'Cloud Architecture', subtitleKey: 'badge_level_specialist', accent: 'violet' },
     { title: 'C++ Mastery', subtitleKey: 'badge_level_senior', accent: 'amber' },
   ],
+  serviceLineStats: [
+    { serviceLine: 'Cloud', badges: 12, points: 2450 },
+    { serviceLine: 'Data & AI', badges: 10, points: 2200 },
+    { serviceLine: 'LowCode', badges: 8, points: 1700 },
+  ],
 };
 
 const buildProfileData = async (accountId) => {
@@ -530,6 +535,35 @@ const buildProfileData = async (accountId) => {
   if (!row) {
     return clone(profileData);
   }
+  // compute per-service-line aggregates for this user (badges and points)
+  const serviceLineRows = await sequelize.query(
+    `
+      SELECT
+        COALESCE(sl.sline, 'Application Operations') AS serviceLine,
+        COUNT(DISTINCT b.nbadge) AS badges,
+        SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) AS points
+      FROM c_obtem_b AS cb
+      INNER JOIN badge AS b
+        ON b.nbadge = cb.nbadge
+      LEFT JOIN b_pertence_sl AS bps
+        ON bps.nbadge = b.nbadge
+      LEFT JOIN service_line AS sl
+        ON sl.nsline = bps.nsline
+      WHERE cb.nutilizador = :accountId
+      GROUP BY sl.sline
+      ORDER BY COUNT(DISTINCT b.nbadge) DESC, SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) DESC
+    `,
+    {
+      replacements: { accountId: parsedAccountId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  const serviceLineStats = (serviceLineRows || []).map((r) => ({
+    serviceLine: r.serviceline || r.serviceLine || 'Application Operations',
+    badges: Number(r.badges) || 0,
+    points: Number(r.points) || 0,
+  }));
 
   return {
     ...clone(profileData),
@@ -538,6 +572,12 @@ const buildProfileData = async (accountId) => {
     ranking: Number(row.ranking) || 0,
     serviceLine: row.serviceLine || 'Application Operations',
     avatar: row.avatar || `https://i.pravatar.cc/120?u=${encodeURIComponent(row.email || row.nome || row.id)}`,
+    serviceLineStats,
+    skillsItems: (serviceLineStats || []).slice(0, 3).map((s) => ({
+      title: s.serviceLine || s.name,
+      subtitleKey: 'badge_level_specialist',
+      accent: 'yellow',
+    })),
     user: {
       id: Number(row.id),
       name: row.nome,
@@ -1700,5 +1740,33 @@ export const consultorModel = {
   async saveEvidences(accountId, pedidoId, nreq, fileMeta) {
     const data = await saveEvidences(accountId, pedidoId, nreq, fileMeta);
     return clone(data);
+  },
+
+  async getBadgeRequirements(badgeId) {
+    const parsedBadgeId = Number(badgeId);
+    if (!Number.isInteger(parsedBadgeId) || parsedBadgeId <= 0) {
+      return [];
+    }
+
+    const rows = await sequelize.query(
+      `
+        SELECT nreq, requisito, r_descricao
+        FROM requisitos
+        WHERE nbadge = :badgeId
+        ORDER BY nreq ASC
+      `,
+      {
+        replacements: { badgeId: parsedBadgeId },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    return rows.map((row) => ({
+      id: `req-${Number(row.nreq)}`,
+      title: row.requisito || 'Requisito',
+      description: row.r_descricao || 'Texto de suporte do requisito associado a candidatura.',
+      files: 0,
+      attachments: [],
+    }));
   },
 };

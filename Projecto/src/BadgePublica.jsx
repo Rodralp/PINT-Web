@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Clock3, Eye, EyeOff, FileText, Trophy } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from './components/Navbar';
+import { fetchCatalogBadges, fetchBadgeRequirements } from './services/consultorService';
 import './css/BadgePublica.css';
 
 const defaultBadgeDetails = {
@@ -106,6 +107,7 @@ function BadgePublica() {
   const location = useLocation();
   const { t } = useTranslation();
   const [openRequirementId, setOpenRequirementId] = useState(null);
+  const [dynamicRequirements, setDynamicRequirements] = useState(null);
 
   const badge = useMemo(() => {
     if (location.state?.badge) {
@@ -117,10 +119,69 @@ function BadgePublica() {
     return matchedBadge || defaultBadgeDetails;
   }, [location.state, badgeId]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadBadgeFromApi = async () => {
+      if (location.state?.badge) return;
+
+      try {
+        const items = await fetchCatalogBadges();
+        if (!isMounted || !Array.isArray(items)) return;
+
+        const decodedId = decodeURIComponent(badgeId || '');
+        const matched = items.find((it) => String(it.id) === String(decodedId) || String(it.badgeDbId) === decodedId || String(it.id) === `badge-${decodedId}`);
+        if (matched && isMounted) {
+          const template = matched;
+          try {
+            navigate(location.pathname, { replace: true, state: { badge: template } });
+          } catch {
+            // ignore navigation errors
+          }
+        }
+      } catch (e) {
+        // ignore and keep fallback
+      }
+    };
+
+    loadBadgeFromApi();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [badgeId, location.state, navigate, location.pathname]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRequirements = async () => {
+      try {
+        const badgeDbId = badge.badgeDbId;
+        if (!badgeDbId) return;
+
+        const reqs = await fetchBadgeRequirements(badgeDbId);
+        if (isMounted && Array.isArray(reqs)) {
+          setDynamicRequirements(reqs);
+        }
+      } catch (e) {
+        // ignore and keep static requirements
+      }
+    };
+
+    loadRequirements();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [badge.badgeDbId]);
+
   const requirements = useMemo(() => {
+    if (dynamicRequirements && Array.isArray(dynamicRequirements) && dynamicRequirements.length > 0) {
+      return dynamicRequirements;
+    }
     const areaKey = (badge.area || '').trim().toLowerCase();
     return requirementsByArea[areaKey] || requirementsByArea['lowcode (outsystems)'];
-  }, [badge.area]);
+  }, [dynamicRequirements, badge.area]);
 
   const handleGoBack = () => {
     if (window.history.length > 1) {

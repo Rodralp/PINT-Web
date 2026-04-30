@@ -77,6 +77,7 @@ function Profile() {
   const [skillsItems, setSkillsItems] = useState(defaultSkillsItems);
   const [certificationsItems, setCertificationsItems] = useState(defaultCertificationsItems);
   const [activityItems, setActivityItems] = useState(defaultActivityItems);
+  const [serviceLineStats, setServiceLineStats] = useState([]);
   const [profileLocation, setProfileLocation] = useState('Portugal');
   const [profileJoined, setProfileJoined] = useState('2023');
   const [statusMessage, setStatusMessage] = useState('');
@@ -110,6 +111,10 @@ function Profile() {
 
         if (Array.isArray(data.skillsItems) && data.skillsItems.length > 0) {
           setSkillsItems(data.skillsItems);
+        }
+
+        if (Array.isArray(data.serviceLineStats) && data.serviceLineStats.length > 0) {
+          setServiceLineStats(data.serviceLineStats);
         }
 
         if (Array.isArray(data.certificationsItems) && data.certificationsItems.length > 0) {
@@ -240,18 +245,40 @@ function Profile() {
             </div>
 
             <div className="dashboard-list">
-              {skillsItems.map(({ title, subtitleKey, accent }) => (
-                <article key={`${title}-${subtitleKey}`} className="dashboard-list-item">
-                  <div className={`dashboard-list-badge accent-${accent}`}>
-                    <Award size={18} strokeWidth={2} />
-                  </div>
-                  <div className="dashboard-list-content">
-                    <strong>{title}</strong>
-                    <span>{t(subtitleKey)}</span>
-                  </div>
-                  <ChevronsRight className="dashboard-item-chevron" size={18} />
-                </article>
-              ))}
+              {Array.isArray(serviceLineStats) && serviceLineStats.length > 0 ? (
+                (() => {
+                  const maxBadges = Math.max(...serviceLineStats.map((s) => s.badges || 0), 1);
+                  return serviceLineStats.map((stat) => {
+                    const percentage = ((stat.badges || 0) / maxBadges) * 100;
+                    return (
+                      <article key={`sl-${stat.serviceLine}`} className="pp-service-line-item">
+                        <div className="pp-service-line-header">
+                          <strong>{stat.serviceLine}</strong>
+                          <span className="pp-service-line-meta">
+                            {stat.badges} {t('badges')} · {stat.points} {t('points')}
+                          </span>
+                        </div>
+                        <div className="pp-progress-bar-bg">
+                          <div style={{ width: `${percentage}%` }} className="pp-progress-bar-fill" />
+                        </div>
+                      </article>
+                    );
+                  });
+                })()
+              ) : (
+                skillsItems.map(({ title, subtitleKey, accent }) => (
+                  <article key={`${title}-${subtitleKey}`} className="dashboard-list-item">
+                    <div className={`dashboard-list-badge accent-${accent}`}>
+                      <Award size={18} strokeWidth={2} />
+                    </div>
+                    <div className="dashboard-list-content">
+                      <strong>{title}</strong>
+                      <span>{t(subtitleKey)}</span>
+                    </div>
+                    <ChevronsRight className="dashboard-item-chevron" size={18} />
+                  </article>
+                ))
+              )}
             </div>
           </section>
 

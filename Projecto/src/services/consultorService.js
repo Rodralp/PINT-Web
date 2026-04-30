@@ -283,6 +283,28 @@ export async function fetchProfileData() {
   return data;
 }
 
+// Public profile fetch by consultor id (does not require logged user)
+export async function fetchPublicProfile(consultorId) {
+  const parsed = String(consultorId || '').trim();
+  if (!parsed) {
+    throw new Error('Missing consultor id.');
+  }
+
+  const response = await apiClient.get(`/consultor/profile?accountId=${encodeURIComponent(parsed)}`);
+  return response.data;
+}
+
+// Fetch badge requirements by badge ID
+export async function fetchBadgeRequirements(badgeId) {
+  const parsed = String(badgeId || '').trim();
+  if (!parsed) {
+    throw new Error('Missing badge id.');
+  }
+
+  const response = await apiClient.get(`/consultor/badge/${encodeURIComponent(parsed)}/requirements`);
+  return response.data;
+}
+
 export async function uploadEvidence(pedidoId, nreq, files) {
   const accountId = await ensureLoggedAccountId();
   if (!accountId) {

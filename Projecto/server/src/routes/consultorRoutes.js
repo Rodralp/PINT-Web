@@ -19,6 +19,7 @@ import {
   savePreferences,
   updateReminder,
   uploadEvidence,
+  getBadgeRequirements,
 } from '../controllers/consultorController.js';
 
 const router = Router();
@@ -64,5 +65,6 @@ router.put('/lembretes/:id', updateReminder);
 router.delete('/lembretes/:id', deleteReminder);
 router.post('/pedidos/:pedidoId/evidencias', upload.array('files'), uploadEvidence);
 router.get('/profile', getProfileData);
+router.get('/badge/:badgeId/requirements', getBadgeRequirements);
 
 export default router;

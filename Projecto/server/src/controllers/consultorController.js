@@ -280,3 +280,19 @@ export const uploadEvidence = async (req, res) => {
     res.status(500).json({ message: error?.message || 'Failed to upload evidences.' });
   }
 };
+
+export const getBadgeRequirements = async (req, res) => {
+  const badgeId = req.params?.badgeId;
+
+  if (!badgeId) {
+    res.status(400).json({ message: 'Badge id is required.' });
+    return;
+  }
+
+  try {
+    const data = await consultorService.getBadgeRequirements(badgeId);
+    res.status(200).json(data || []);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch badge requirements.', error: error.message });
+  }
+};

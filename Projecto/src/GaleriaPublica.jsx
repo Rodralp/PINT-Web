@@ -81,7 +81,10 @@ const normalizeConsultores = (items) => {
 function GaleriaPublica() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('badges');
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = sessionStorage.getItem('gp_activeTab');
+    return saved || 'badges';
+  });
   const [badges, setBadges] = useState(fallbackBadges);
   const [consultores, setConsultores] = useState(fallbackConsultores);
   const [searchTerm, setSearchTerm] = useState('');
@@ -201,7 +204,10 @@ function GaleriaPublica() {
                   role="tab"
                   aria-selected={activeTab === 'badges'}
                   className={`gp-tab-btn ${activeTab === 'badges' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('badges')}
+                  onClick={() => {
+                    setActiveTab('badges');
+                    sessionStorage.setItem('gp_activeTab', 'badges');
+                  }}
                 >
                   {t('public_gallery_badges')}
                 </button>
@@ -210,7 +216,10 @@ function GaleriaPublica() {
                   role="tab"
                   aria-selected={activeTab === 'consultores'}
                   className={`gp-tab-btn ${activeTab === 'consultores' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('consultores')}
+                  onClick={() => {
+                    setActiveTab('consultores');
+                    sessionStorage.setItem('gp_activeTab', 'consultores');
+                  }}
                 >
                   {t('public_gallery_consultores')}
                 </button>

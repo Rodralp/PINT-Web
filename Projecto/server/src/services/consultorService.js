@@ -63,4 +63,8 @@ export const consultorService = {
   async saveEvidences(accountId, pedidoId, nreq, fileMeta) {
     return consultorModel.saveEvidences(accountId, pedidoId, nreq, fileMeta);
   },
+
+  async getBadgeRequirements(badgeId) {
+    return consultorModel.getBadgeRequirements(badgeId);
+  },
 };
