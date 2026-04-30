@@ -22,6 +22,7 @@
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: var(--black);
   background: linear-gradient(to bottom, #0088FF, #002F59);
+  background-attachment: fixed;
   min-height: 100vh;
   display: flex;
   flex-direction: column;

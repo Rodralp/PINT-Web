@@ -10,6 +10,7 @@
 .gp-root {
   min-height: 100vh;
   background: linear-gradient(to bottom, #0088ff, #002f59);
+  background-attachment: fixed;
   color: var(--gp-text);
 }
 
