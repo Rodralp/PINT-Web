@@ -436,7 +436,7 @@ const ensureDefaultBadgeType = async (transaction) => {
 };
 
 const ensureEstadosAndMockData = async (accounts, transaction) => {
-  const estados = ['candidatura_em_progresso', 'em_validacao', 'evidencias_insuficientes'];
+  const estados = ['aprovado', 'candidatura_em_progresso', 'em_validacao', 'evidencias_insuficientes'];
   const estadoIds = {};
   const defaultBadgeTypeId = await ensureDefaultBadgeType(transaction);
   
@@ -572,7 +572,9 @@ const ensureEstadosAndMockData = async (accounts, transaction) => {
         ? estadoIds.em_validacao
         : seed === 3
           ? estadoIds.evidencias_insuficientes
-          : estadoIds.candidatura_em_progresso;
+          : seed === 6
+            ? estadoIds.aprovado
+            : estadoIds.candidatura_em_progresso;
 
       await sequelize.query(
         `

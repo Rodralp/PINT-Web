@@ -183,6 +183,29 @@
   font-size: 0.85rem;
 }
 
+.gp-service-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gp-service-line-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.88rem;
+}
+
+.gp-sl-name {
+  color: var(--gp-text);
+  font-weight: 600;
+}
+
+.gp-sl-meta {
+  color: var(--gp-muted);
+  font-size: 0.8rem;
+}
+
 @media (max-width: 768px) {
   .gp-main {
     padding-top: 84px;

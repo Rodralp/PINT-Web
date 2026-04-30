@@ -69,7 +69,7 @@ const defaultSuggestionItems = [
 
 const defaultDashboardStats = [
   { titleKey: 'dashboard_stat_badges_title', value: '12', noteKey: 'dashboard_stat_badges_note', icon: Award, tone: 'gold' },
-  { titleKey: 'dashboard_stat_streak_title', value: '4', noteKey: 'dashboard_stat_streak_note', icon: Flame, tone: 'fire' },
+  { titleKey: 'dashboard_stat_streak_title', value: '0', noteKey: 'dashboard_stat_streak_note', icon: Flame, tone: 'fire' },
   { titleKey: 'dashboard_stat_requests_title', value: '5', noteKey: 'dashboard_stat_requests_note', icon: Clock3, tone: 'blue' },
   { titleKey: 'dashboard_stat_ranking_title', value: '#15', noteKey: 'dashboard_stat_ranking_note', icon: Crown, tone: 'rank' },
 ];
@@ -270,7 +270,7 @@ function DashboardC() {
                   </div>
                   <div className="dashboard-list-content">
                       <strong>{item.title}</strong>
-                      <span>{t(item.subtitleKey)}</span>
+                    <span>{item.subtitle || t(item.subtitleKey)}</span>
                   </div>
                     <div className={`dashboard-list-action accent-${item.accent}`}>
                       <ProgressIcon size={18} strokeWidth={2} />

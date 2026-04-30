@@ -13,7 +13,7 @@ export const dashboardService = {
     return dashboardModel.getAdminGestorDashboardData();
   },
 
-  getConsultorDashboard() {
-    return dashboardModel.getConsultorDashboardData();
+  async getConsultorDashboard(accountId) {
+    return await dashboardModel.getConsultorDashboardData(accountId);
   },
 };

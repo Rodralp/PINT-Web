@@ -190,6 +190,44 @@ const formatShortDate = (value) => {
   return `${day}/${month}/${year}`;
 };
 
+const toUtcDayKey = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+};
+
+const calculateConsecutiveDayStreak = (values) => {
+  const uniqueDayKeys = [...new Set(
+    (Array.isArray(values) ? values : [])
+      .map(toUtcDayKey)
+      .filter((value) => Number.isFinite(value)),
+  )].sort((a, b) => b - a);
+
+  if (uniqueDayKeys.length === 0) {
+    return 0;
+  }
+
+  let streak = 1;
+  let previousDayKey = uniqueDayKeys[0];
+
+  for (let index = 1; index < uniqueDayKeys.length; index += 1) {
+    const currentDayKey = uniqueDayKeys[index];
+    const expectedPreviousDayKey = previousDayKey - (24 * 60 * 60 * 1000);
+
+    if (currentDayKey !== expectedPreviousDayKey) {
+      break;
+    }
+
+    streak += 1;
+    previousDayKey = currentDayKey;
+  }
+
+  return streak;
+};
+
 const getUtilizadorIdByAccountId = async (accountId) => {
   const [utilizador] = await sequelize.query(
     `
@@ -394,15 +432,52 @@ const buildRankingConsultores = async () => {
     { type: QueryTypes.SELECT },
   );
 
-  return rows.map((row) => ({
-    id: Number(row.id),
-    name: row.name,
-    email: row.email,
-    points: Number(row.points) || 0,
-    badges: Number(row.badges) || 0,
-    serviceLine: row.serviceLine || 'Application Operations',
-    avatar: row.avatar || `https://i.pravatar.cc/120?u=${encodeURIComponent(row.email || row.name || row.id)}`,
-  }));
+  // For each consultor, fetch their service line stats
+  const consultoresWithStats = await Promise.all(
+    rows.map(async (row) => {
+      const serviceLineRows = await sequelize.query(
+        `
+          SELECT
+            COALESCE(sl.sline, 'Application Operations') AS serviceLine,
+            COUNT(DISTINCT b.nbadge) AS badges,
+            SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) AS points
+          FROM c_obtem_b AS cb
+          INNER JOIN badge AS b
+            ON b.nbadge = cb.nbadge
+          LEFT JOIN b_pertence_sl AS bps
+            ON bps.nbadge = b.nbadge
+          LEFT JOIN service_line AS sl
+            ON sl.nsline = bps.nsline
+          WHERE cb.nutilizador = :accountId
+          GROUP BY sl.sline
+          ORDER BY COUNT(DISTINCT b.nbadge) DESC, SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) DESC
+        `,
+        {
+          replacements: { accountId: Number(row.id) },
+          type: QueryTypes.SELECT,
+        },
+      );
+
+      const serviceLineStats = (serviceLineRows || []).map((r) => ({
+        serviceLine: r.serviceline || r.serviceLine || 'Application Operations',
+        badges: Number(r.badges) || 0,
+        points: Number(r.points) || 0,
+      }));
+
+      return {
+        id: Number(row.id),
+        name: row.name,
+        email: row.email,
+        points: Number(row.points) || 0,
+        badges: Number(row.badges) || 0,
+        serviceLine: row.serviceLine || 'Application Operations',
+        avatar: row.avatar || `https://i.pravatar.cc/120?u=${encodeURIComponent(row.email || row.name || row.id)}`,
+        serviceLineStats,
+      };
+    }),
+  );
+
+  return consultoresWithStats;
 };
 
 const profileData = {
@@ -419,7 +494,7 @@ const profileData = {
     },
     {
       titleKey: 'dashboard_stat_streak_title',
-      value: '4',
+      value: '0',
       noteKey: 'dashboard_stat_streak_note',
       iconKey: 'flame',
       tone: 'fire',
@@ -565,19 +640,125 @@ const buildProfileData = async (accountId) => {
     points: Number(r.points) || 0,
   }));
 
+  // Fetch request count for this user
+  const requestCountRows = await sequelize.query(
+    `
+      SELECT COUNT(DISTINCT p.npedido) AS request_count
+      FROM pedidos AS p
+      WHERE p.nutilizador = :accountId
+    `,
+    {
+      replacements: { accountId: parsedAccountId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  const requestCount = Number(requestCountRows[0]?.request_count) || 0;
+
+  // Fetch recent activity from pedidos and logs
+  const activityRows = await sequelize.query(
+    `
+      SELECT
+        p.npedido AS id,
+        CASE 
+          WHEN e.estado = 'candidatura_em_progresso' THEN 'Candidatura submetida para ' || b.b_nome
+          WHEN e.estado = 'em_validacao' THEN 'Candidatura em validação: ' || b.b_nome
+          WHEN e.estado = 'aprovado' THEN 'Badge conquistada: ' || b.b_nome
+          WHEN e.estado = 'rejeitado' THEN 'Candidatura rejeitada: ' || b.b_nome
+          WHEN e.estado = 'evidencias_insuficientes' THEN 'Evidências insuficientes: ' || b.b_nome
+          ELSE 'Atividade em badge'
+        END AS description,
+        p.data_submissao AS activity_date,
+        'badge' AS activity_type
+      FROM pedidos AS p
+      INNER JOIN badge AS b ON p.nbadge = b.nbadge
+      LEFT JOIN estado AS e ON p.estado = e.nestado
+      WHERE p.nutilizador = :accountId
+      ORDER BY p.data_submissao DESC
+      LIMIT 5
+    `,
+    {
+      replacements: { accountId: parsedAccountId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  const activityItems = (activityRows || []).map((row) => ({
+    type: row.activity_type || 'badge',
+    description: row.description || 'Nova atividade',
+    date: formatDate(row.activity_date),
+    icon: 'award',
+    color: 'gold',
+  }));
+
+  const streakRows = await sequelize.query(
+    `
+      SELECT DISTINCT activity_date
+      FROM (
+        SELECT DATE(p.data_submissao) AS activity_date
+        FROM pedidos AS p
+        WHERE p.nutilizador = :accountId
+        UNION
+        SELECT DATE(l.data_log) AS activity_date
+        FROM logs AS l
+        WHERE l.nutilizador = :accountId
+      ) AS activity_days
+      WHERE activity_date IS NOT NULL
+      ORDER BY activity_date DESC
+    `,
+    {
+      replacements: { accountId: parsedAccountId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  const streakDays = calculateConsecutiveDayStreak((streakRows || []).map((row) => row.activity_date));
+
   return {
     ...clone(profileData),
     points: Number(row.points) || 0,
     badges: Number(row.badges) || 0,
     ranking: Number(row.ranking) || 0,
+    streakDays,
     serviceLine: row.serviceLine || 'Application Operations',
     avatar: row.avatar || `https://i.pravatar.cc/120?u=${encodeURIComponent(row.email || row.nome || row.id)}`,
     serviceLineStats,
+    stats: [
+      {
+        titleKey: 'dashboard_stat_badges_title',
+        value: String(Number(row.badges) || 0),
+        noteKey: 'dashboard_stat_badges_note',
+        iconKey: 'award',
+        tone: 'gold',
+      },
+      {
+        titleKey: 'dashboard_stat_streak_title',
+        value: String(streakDays),
+        noteKey: 'dashboard_stat_streak_note',
+        iconKey: 'flame',
+        tone: 'fire',
+      },
+      {
+        titleKey: 'dashboard_stat_requests_title',
+        value: String(requestCount),
+        noteKey: 'dashboard_stat_requests_note',
+        iconKey: 'clock',
+        tone: 'blue',
+      },
+      {
+        titleKey: 'dashboard_stat_ranking_title',
+        value: `#${Number(row.ranking) || 0}`,
+        noteKey: 'dashboard_stat_ranking_note',
+        iconKey: 'crown',
+        tone: 'rank',
+      },
+    ],
     skillsItems: (serviceLineStats || []).slice(0, 3).map((s) => ({
       title: s.serviceLine || s.name,
       subtitleKey: 'badge_level_specialist',
       accent: 'yellow',
     })),
+    activityItems: activityItems.length > 0 ? activityItems : clone(profileData.activityItems),
     user: {
       id: Number(row.id),
       name: row.nome,

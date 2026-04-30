@@ -27,9 +27,9 @@ export const getAdminGestorDashboard = (_req, res) => {
   }
 };
 
-export const getConsultorDashboard = (_req, res) => {
+export const getConsultorDashboard = async (req, res) => {
   try {
-    const dashboardData = dashboardService.getConsultorDashboard();
+    const dashboardData = await dashboardService.getConsultorDashboard(req.query.accountId);
     res.status(200).json(dashboardData);
   } catch {
     res.status(500).json({ message: 'Failed to fetch dashboard data.' });

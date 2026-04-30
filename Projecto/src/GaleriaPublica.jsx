@@ -75,6 +75,8 @@ const normalizeConsultores = (items) => {
     serviceLine: item.serviceLine || 'Service Line',
     points: Number(item.points) || 0,
     badges: Number(item.badges) || 0,
+    avatar: item.avatar || `https://i.pravatar.cc/120?u=${item.email || item.name}`,
+    serviceLineStats: Array.isArray(item.serviceLineStats) ? item.serviceLineStats : [],
   }));
 };
 
@@ -295,7 +297,20 @@ function GaleriaPublica() {
                   <strong className="gp-rank">#{index + 1}</strong>
                   <h2>{consultor.name}</h2>
                   <p>{consultor.email}</p>
-                  <p>{consultor.serviceLine}</p>
+                  
+                  {Array.isArray(consultor.serviceLineStats) && consultor.serviceLineStats.length > 0 ? (
+                    <div className="gp-service-lines">
+                      {consultor.serviceLineStats.slice(0, 2).map((stat) => (
+                        <div key={`sl-${stat.serviceLine}`} className="gp-service-line-item">
+                          <span className="gp-sl-name">{stat.serviceLine}</span>
+                          <span className="gp-sl-meta">{stat.badges} badges</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>{consultor.serviceLine}</p>
+                  )}
+                  
                   <div className="gp-consultor-stats">
                     <span>{`${consultor.points} pts`}</span>
                     <span>{`${consultor.badges} badges`}</span>

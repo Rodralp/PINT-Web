@@ -24,6 +24,7 @@ const defaultConsultor = {
 	serviceLine: 'Cloud',
 	points: 2450,
 	badges: 12,
+	streakDays: 0,
 	location: 'Portugal',
 	joined: '2023',
 };
@@ -46,12 +47,15 @@ function PerfilPublico() {
 		const [remoteConsultor, setRemoteConsultor] = useState(null);
 
 		const consultor = useMemo(() => {
-			if (location.state?.consultor) {
-				return location.state.consultor;
+			if (remoteConsultor) {
+				return {
+					...(location.state?.consultor || {}),
+					...remoteConsultor,
+				};
 			}
 
-			if (remoteConsultor) {
-				return remoteConsultor;
+			if (location.state?.consultor) {
+				return location.state.consultor;
 			}
 
 			const decodedId = decodeURIComponent(consultorId || '');
@@ -76,10 +80,19 @@ function PerfilPublico() {
 						serviceLine: data.serviceLine || (data.user?.serviceLine) || 'Service Line',
 						points: data.points || 0,
 						badges: data.badges || 0,
-						serviceLineStats: Array.isArray(data.serviceLineStats) ? data.serviceLineStats.map((s) => ({
-							serviceLine: s.serviceLine || s.name || s.serviceline,
-							badges: Number(s.badges) || 0,
-							points: Number(s.points) || 0,
+						avatar: data.avatar || data.user?.avatar || '',
+					streakDays: data.streakDays || 0,
+						ranking: data.ranking || 0,
+					serviceLineStats: Array.isArray(data.serviceLineStats) ? data.serviceLineStats.map((s) => ({
+						serviceLine: s.serviceLine || s.name || s.serviceline,
+						badges: Number(s.badges) || 0,
+						points: Number(s.points) || 0,
+					})) : [],
+					activityItems: Array.isArray(data.activityItems) ? data.activityItems.map((item) => ({
+						id: item.id || `activity-${Math.random()}`,
+						description: item.description || 'Nova atividade',
+						date: item.date || 'Recentemente',
+						icon: Award,
 						})) : [],
 						location: data.location || 'Portugal',
 						joined: data.joined || data.user?.joined || '',
@@ -97,16 +110,16 @@ function PerfilPublico() {
 		}, [consultorId]);
 
 	const profileStats = useMemo(() => {
-		const rankingPosition = fallbackConsultores
+		const rankingPosition = consultor.ranking || (fallbackConsultores
 			.slice()
 			.sort((a, b) => b.points - a.points)
-			.findIndex((item) => String(item.id) === String(consultor.id));
+			.findIndex((item) => String(item.id) === String(consultor.id)));
 
 		return [
 			{ id: 'badges', title: t('dashboard_stat_badges_title'), value: consultor.badges, icon: Award, tone: 'gold' },
 			{ id: 'points', title: t('points'), value: consultor.points, icon: Trophy, tone: 'blue' },
-			{ id: 'streak', title: t('dashboard_stat_streak_title'), value: 4, icon: Flame, tone: 'fire' },
-			{ id: 'ranking', title: t('dashboard_stat_ranking_title'), value: `#${rankingPosition >= 0 ? rankingPosition + 1 : '-'}`, icon: Crown, tone: 'rank' },
+			{ id: 'streak', title: t('dashboard_stat_streak_title'), value: consultor.streakDays || 0, icon: Flame, tone: 'fire' },
+			{ id: 'ranking', title: t('dashboard_stat_ranking_title'), value: `#${rankingPosition > 0 ? rankingPosition : '-'}`, icon: Crown, tone: 'rank' },
 		];
 	}, [consultor, t]);
 
@@ -132,11 +145,17 @@ function PerfilPublico() {
 		{ title: 'LowCode (Outsystems)', levelKey: 'badge_level_senior' },
 	]), [consultor.serviceLine]);
 
-	const activityItems = useMemo(() => ([
-		{ id: 'a1', description: `Subiu para ${consultor.badges} badges concluidas`, date: '5 dias atras', icon: Award },
-		{ id: 'a2', description: `Alcancou ${consultor.points} pontos`, date: '1 semana atras', icon: Zap },
-		{ id: 'a3', description: `Nova skill em ${consultor.serviceLine}`, date: '2 semanas atras', icon: Star },
-	]), [consultor.badges, consultor.points, consultor.serviceLine]);
+	const activityItems = useMemo(() => {
+		if (Array.isArray(consultor.activityItems) && consultor.activityItems.length > 0) {
+			return consultor.activityItems;
+		}
+
+		return [
+			{ id: 'a1', description: `Subiu para ${consultor.badges} badges concluidas`, date: '5 dias atras', icon: Award },
+			{ id: 'a2', description: `Alcancou ${consultor.points} pontos`, date: '1 semana atras', icon: Zap },
+			{ id: 'a3', description: `Nova skill em ${consultor.serviceLine}`, date: '2 semanas atras', icon: Star },
+		];
+	}, [consultor.activityItems, consultor.badges, consultor.points, consultor.serviceLine]);
 
 	const handleGoBack = () => {
 		if (window.history.length > 1) {
@@ -163,7 +182,11 @@ function PerfilPublico() {
 
 						<section className="pp-profile-hero">
 							<div className="pp-avatar-wrap">
-								<img src={`https://i.pravatar.cc/160?u=${consultor.email || consultor.name}`} alt={consultor.name} className="pp-avatar" />
+								<img
+									src={consultor.avatar || `https://i.pravatar.cc/160?u=${consultor.email || consultor.name}`}
+									alt={consultor.name}
+									className="pp-avatar"
+								/>
 							</div>
 
 							<div className="pp-profile-info">
@@ -224,8 +247,9 @@ function PerfilPublico() {
 														</div>
 													</article>
 												);
-											})()}
-										</div>
+										});
+									})()}
+									</div>
 									) : (
 										<div className="pp-list">
 											{skillsItems.map(({ title, levelKey, meta }) => (
