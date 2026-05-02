@@ -91,6 +91,20 @@ const apiClient = {
     });
   },
 
+  patch(path, body, options = {}) {
+    const payload = body ?? {};
+    const headers = isFormDataPayload(payload)
+      ? (options.headers || {})
+      : buildJsonHeaders(options.headers);
+
+    return request(path, {
+      method: 'PATCH',
+      data: payload,
+      ...options,
+      headers,
+    });
+  },
+
   delete(path, options = {}) {
     return request(path, { method: 'DELETE', ...options });
   },

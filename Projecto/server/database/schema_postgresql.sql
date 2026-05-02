@@ -81,10 +81,9 @@ CREATE TABLE IF NOT EXISTS utilizador (
     nome VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
     senha VARCHAR(255) NOT NULL DEFAULT '',
-    role VARCHAR(50) NOT NULL DEFAULT 'consultor',
     status VARCHAR(50) NOT NULL DEFAULT 'pendente',
     data_registo DATE NOT NULL DEFAULT CURRENT_DATE,
-    permissoes VARCHAR(60)
+    permissoes VARCHAR(100) NOT NULL DEFAULT 'consultor'
 );
 
 CREATE TABLE IF NOT EXISTS sll_leader_sl (

@@ -43,6 +43,10 @@ export const Account = sequelize.define(
       allowNull: false,
       defaultValue: 'pendente',
     },
+    permissoes: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     tableName: 'utilizador',

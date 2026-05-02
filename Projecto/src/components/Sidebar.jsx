@@ -72,7 +72,7 @@ const sidebarConfig = [
     allowedRoles: ['admin-gestor'],
     items: [
       { id: 'dashboard_AG', labelKey: 'sidebar_dashboard', icon: Home, route: '/admin-gestor/dashboard' },
-      { id: 'utilizadores_AG', labelKey: 'sidebar_users', icon: CircleUserRound },
+      { id: 'utilizadores_AG', labelKey: 'sidebar_users', icon: CircleUserRound, route: '/admin-gestor/utilizadores' },
       { id: 'catalogo_AG', labelKey: 'sidebar_catalog_badges', icon: Medal, route: '/admin-gestor/catalogo-badges' },
       { id: 'equipas_AG', labelKey: 'sidebar_teams_sla', icon: UsersRound, route: '/admin-gestor/equipas-sla' },
       { id: 'comunicados_AG', labelKey: 'sidebar_announcements', icon: Megaphone, route: '/admin-gestor/comunicados-avisos' },

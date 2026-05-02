@@ -145,7 +145,7 @@ const normalizeRoles = (rolesValue) => {
     .filter(Boolean);
 };
 
-const isServiceLineLeader = (account) => normalizeRoles(account.role).includes('service-line-leader');
+const isServiceLineLeader = (account) => normalizeRoles(account.permissoes).includes('service-line-leader');
 
 const getOrCreateLearningPathId = async (transaction) => {
   const [existing] = await sequelize.query(
@@ -327,7 +327,7 @@ const ensureUtilizadorForAccounts = async (accounts, transaction) => {
         replacements: {
           nome: account.nome,
           email: account.email,
-          permissoes: account.role,
+          permissoes: normalizeRoles(account.permissoes || 'consultor').join(',')
         },
         type: QueryTypes.SELECT,
         transaction,
@@ -494,7 +494,7 @@ const ensureEstadosAndMockData = async (accounts, transaction) => {
   }
 
   const consultorAccounts = accounts.filter((account) =>
-    normalizeRoles(account.role).includes('consultor'),
+    normalizeRoles(account.permissoes).includes('consultor'),
   );
 
   const untouchedServiceLine = 'Testing';
@@ -629,7 +629,7 @@ export const seedDatabase = async () => {
 
   const orderedAccounts = await Account.findAll({ order: [['id', 'ASC']] });
   const defaultConsultorAccount = orderedAccounts.find((account) =>
-    String(account.role || '')
+    String(account.permissoes || 'consultor')
       .split(';')
       .map((role) => role.trim().toLowerCase())
       .includes('consultor')

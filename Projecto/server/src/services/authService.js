@@ -16,4 +16,28 @@ export const authService = {
   async changePassword(payload) {
     return authModel.changePassword(payload);
   },
+
+  async listServiceLines() {
+    return authModel.listServiceLines();
+  },
+
+  async listAdminUsers(filters) {
+    return authModel.listAdminUsers(filters);
+  },
+
+  async createAdminUser(payload) {
+    return authModel.createAdminUser(payload);
+  },
+
+  async updateAdminUserPermissions(accountId, payload) {
+    return authModel.updateAdminUserPermissions(accountId, payload);
+  },
+
+  async updateAdminUserStatus(accountId, payload) {
+    return authModel.updateAdminUserStatus(accountId, payload);
+  },
+
+  async decidePendingUser(accountId, payload) {
+    return authModel.decidePendingUser(accountId, payload);
+  },
 };

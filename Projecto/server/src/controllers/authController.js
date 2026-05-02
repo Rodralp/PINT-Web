@@ -59,6 +59,14 @@ export const login = async (req, res) => {
       return;
     }
 
+    if (loginResult.status === 'inactive_account') {
+      res.status(403).json({
+        message: 'A conta encontra-se desativada.',
+        code: 'ACCOUNT_INACTIVE',
+      });
+      return;
+    }
+
     res.status(200).json(loginResult.account);
   } catch {
     res.status(500).json({ message: 'Failed to login.' });
@@ -100,5 +108,104 @@ export const changePassword = async (req, res) => {
   } catch (error) {
     const statusCode = Number(error?.statusCode) || 500;
     res.status(statusCode).json({ message: error?.message || 'Failed to update password.' });
+  }
+};
+
+export const listServiceLines = async (_req, res) => {
+  try {
+    const data = await authService.listServiceLines();
+    res.status(200).json(data);
+  } catch {
+    res.status(500).json({ message: 'Failed to load service lines.' });
+  }
+};
+
+export const listAdminUsers = async (req, res) => {
+  const tab = String(req.query?.tab || 'users');
+  const search = String(req.query?.search || '');
+  const accountType = String(req.query?.accountType || 'all');
+
+  try {
+    const data = await authService.listAdminUsers({ tab, search, accountType });
+    res.status(200).json(data);
+  } catch {
+    res.status(500).json({ message: 'Failed to load users.' });
+  }
+};
+
+export const createAdminUser = async (req, res) => {
+  const { nome, email, senha, roles, serviceLineIds } = req.body ?? {};
+
+  if (!nome || !email || !senha) {
+    res.status(400).json({ message: 'Missing required fields.' });
+    return;
+  }
+
+  try {
+    const created = await authService.createAdminUser({
+      nome,
+      email,
+      senha,
+      roles,
+      serviceLineIds,
+    });
+    res.status(201).json(created);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode) || 500;
+    res.status(statusCode).json({ message: error?.message || 'Failed to create user.' });
+  }
+};
+
+export const updateAdminUserPermissions = async (req, res) => {
+  const accountId = Number(req.params?.accountId);
+  const { roles, serviceLineIds } = req.body ?? {};
+
+  if (!accountId || !Array.isArray(roles) || roles.length === 0) {
+    res.status(400).json({ message: 'Missing required fields.' });
+    return;
+  }
+
+  try {
+    const updated = await authService.updateAdminUserPermissions(accountId, { roles, serviceLineIds });
+    res.status(200).json(updated);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode) || 500;
+    res.status(statusCode).json({ message: error?.message || 'Failed to update permissions.' });
+  }
+};
+
+export const updateAdminUserStatus = async (req, res) => {
+  const accountId = Number(req.params?.accountId);
+  const status = String(req.body?.status || '').trim().toLowerCase();
+
+  if (!accountId || !status) {
+    res.status(400).json({ message: 'Missing required fields.' });
+    return;
+  }
+
+  try {
+    const updated = await authService.updateAdminUserStatus(accountId, { status });
+    res.status(200).json(updated);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode) || 500;
+    res.status(statusCode).json({ message: error?.message || 'Failed to update status.' });
+  }
+};
+
+export const decidePendingUser = async (req, res) => {
+  const accountId = Number(req.params?.accountId);
+  const decision = String(req.body?.decision || '').trim().toLowerCase();
+
+  if (!accountId || !decision) {
+    res.status(400).json({ message: 'Missing required fields.' });
+    return;
+  }
+
+  try {
+    const updated = await authService.decidePendingUser(accountId, { decision });
+    res.status(200).json(updated);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode) || 500;
+    res.status(statusCode).json({ message: error?.message || 'Failed to process decision.' });
   }
 };

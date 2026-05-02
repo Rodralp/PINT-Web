@@ -426,7 +426,7 @@ const buildRankingConsultores = async () => {
         ON bs.nutilizador = u.nutilizador
       LEFT JOIN dominant_service_line AS dsl
         ON dsl.nutilizador = u.nutilizador
-      WHERE LOWER(u.role) = 'consultor'
+      WHERE LOWER(u.permissoes) LIKE '%consultor%'
       ORDER BY points DESC, badges DESC, u.nome ASC
     `,
     { type: QueryTypes.SELECT },
@@ -580,7 +580,7 @@ const buildProfileData = async (accountId) => {
         FROM utilizador AS u
         LEFT JOIN badge_scores AS bs
           ON bs.nutilizador = u.nutilizador
-        WHERE LOWER(u.role) = 'consultor'
+        WHERE LOWER(u.permissoes) LIKE '%consultor%'
       )
       SELECT
         u.nutilizador AS id,

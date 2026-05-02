@@ -3,6 +3,8 @@ import { sequelize } from '../config/database.js';
 import { Account } from './sql/Account.js';
 
 const DEFAULT_ROLE = 'consultor';
+const ALLOWED_ROLES = new Set(['consultor', 'talent-manager', 'service-line-leader', 'admin-gestor']);
+const ALLOWED_STATUS = new Set(['ativo', 'inativo', 'pendente']);
 
 const normalizeEmail = (value) => value.trim().toLowerCase();
 
@@ -22,7 +24,7 @@ const normalizeRoles = (rolesValue) => {
 };
 
 const sanitizeAccount = (account, hasPreferences = false) => {
-  const roles = normalizeRoles(account.role);
+  const roles = normalizeRoles(account.permissoes ?? account.role);
 
   return {
     id: account.id,
@@ -34,6 +36,90 @@ const sanitizeAccount = (account, hasPreferences = false) => {
     hasPreferences: Boolean(hasPreferences),
   };
 };
+
+const normalizeStatus = (statusValue, fallback = 'ativo') => {
+  const normalized = String(statusValue || '').trim().toLowerCase();
+  return ALLOWED_STATUS.has(normalized) ? normalized : fallback;
+};
+
+const normalizeRoleList = (rolesValue) => {
+  const parsed = normalizeRoles(rolesValue).filter((role) => ALLOWED_ROLES.has(role));
+  return parsed.length > 0 ? parsed : [DEFAULT_ROLE];
+};
+
+const mapUserRow = (row) => {
+  const roles = normalizeRoleList(row.permissoes);
+  const serviceLines = String(row.service_lines || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return {
+    id: Number(row.id),
+    nome: row.nome,
+    email: row.email,
+    role: roles[0],
+    roles,
+    status: normalizeStatus(row.status, 'ativo'),
+    joinedAt: row.joined_at,
+    points: Number(row.points || 0),
+    badges: Number(row.badges || 0),
+    serviceLines,
+  };
+};
+
+const syncServiceLineAssignments = async (transaction, accountId, roles, serviceLineIdsValue) => {
+  const normalizedServiceLineIds = [...new Set(
+    (Array.isArray(serviceLineIdsValue) ? serviceLineIdsValue : [])
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0),
+  )];
+
+  await sequelize.query(
+    `
+      DELETE FROM sll_leader_sl
+      WHERE nutilizador = :accountId
+    `,
+    {
+      replacements: { accountId: Number(accountId) },
+      transaction,
+    },
+  );
+
+  if (!roles.includes('service-line-leader') || normalizedServiceLineIds.length === 0) {
+    return;
+  }
+
+  for (const serviceLineId of normalizedServiceLineIds) {
+    await sequelize.query(
+      `
+        INSERT INTO sll_leader_sl (nutilizador, nsline)
+        VALUES (:accountId, :serviceLineId)
+      `,
+      {
+        replacements: {
+          accountId: Number(accountId),
+          serviceLineId,
+        },
+        transaction,
+      },
+    );
+  }
+};
+
+const getAdminUsersBaseQuery = `
+  SELECT
+    u.nutilizador AS id,
+    u.nome,
+    u.email,
+    u.permissoes,
+    u.status,
+    CURRENT_TIMESTAMP AS joined_at,
+    0 AS points,
+    0 AS badges,
+    '' AS service_lines
+  FROM utilizador u
+`;
 
 const getHasPreferences = async (accountId) => {
   if (!Number.isInteger(Number(accountId)) || Number(accountId) <= 0) {
@@ -69,6 +155,7 @@ export const authModel = {
       email: normalizedEmail,
       senha,
       role: 'consultor',
+      permissoes: 'consultor',
       status: 'pendente',
     });
 
@@ -84,12 +171,18 @@ export const authModel = {
       return { status: 'invalid_credentials' };
     }
 
-    if (String(account.status).toLowerCase() === 'pendente') {
+    const normalizedStatus = normalizeStatus(account.status, 'pendente');
+
+    if (normalizedStatus === 'pendente') {
       const hasPreferences = await getHasPreferences(account.id);
       return {
         status: 'pending_approval',
         account: sanitizeAccount(account, hasPreferences),
       };
+    }
+
+    if (normalizedStatus === 'inativo') {
+      return { status: 'inactive_account' };
     }
 
     const hasPreferences = await getHasPreferences(account.id);
@@ -141,5 +234,204 @@ export const authModel = {
     await account.save();
 
     return { updated: true };
+  },
+
+  async listServiceLines() {
+    const rows = await sequelize.query(
+      `
+        SELECT nsline AS id, sline AS name
+        FROM service_line
+        ORDER BY sline ASC
+      `,
+      { type: QueryTypes.SELECT },
+    );
+
+    return rows.map((row) => ({
+      id: Number(row.id),
+      name: row.name,
+    }));
+  },
+
+  async listAdminUsers({ tab = 'users', search = '', accountType = 'all' }) {
+    const isTabPending = String(tab || '').trim().toLowerCase() === 'pending';
+    const normalizedSearch = String(search || '').trim().toLowerCase();
+    const normalizedAccountType = String(accountType || 'all').trim().toLowerCase();
+
+    const query = `
+      ${getAdminUsersBaseQuery}
+      ORDER BY u.nutilizador ASC
+    `;
+
+    const rows = await sequelize.query(query, {
+      type: QueryTypes.SELECT,
+    });
+
+    // Filter results in JavaScript to avoid complex SQL WHERE conditions
+    return rows.filter((row) => {
+      // Filter by tab (pending or active/inactive)
+      const status = row.status?.toLowerCase() || '';
+      if (isTabPending) {
+        if (status !== 'pendente') return false;
+      } else {
+        // Show both ativo and inativo users, but not pendente
+        if (status === 'pendente') return false;
+      }
+
+      // Filter by search term
+      if (normalizedSearch) {
+        const searchable = `${row.nome || ''} ${row.email || ''}`.toLowerCase();
+        if (!searchable.includes(normalizedSearch)) return false;
+      }
+
+      // Filter by account type
+      if (normalizedAccountType !== 'all') {
+        const userRoles = `${row.permissoes || ''}`.toLowerCase();
+        if (!userRoles.includes(normalizedAccountType)) return false;
+      }
+
+      return true;
+    }).map(mapUserRow);
+  },
+
+  async createAdminUser({ nome, email, senha, roles, serviceLineIds }) {
+    const trimmedName = String(nome || '').trim();
+    const normalizedEmail = normalizeEmail(String(email || ''));
+    const normalizedPassword = String(senha || '');
+    const normalizedRoles = normalizeRoleList(roles);
+
+    if (!trimmedName || !normalizedEmail || !normalizedPassword) {
+      const error = new Error('Missing required fields.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const transaction = await sequelize.transaction();
+
+    try {
+      const account = await Account.create(
+        {
+          nome: trimmedName,
+          email: normalizedEmail,
+          senha: normalizedPassword,
+          role: normalizedRoles[0],
+          permissoes: normalizedRoles.join(';'),
+          status: 'ativo',
+        },
+        { transaction },
+      );
+
+      await syncServiceLineAssignments(transaction, account.id, normalizedRoles, serviceLineIds);
+      await transaction.commit();
+
+      const [created] = await sequelize.query(
+        `
+          ${getAdminUsersBaseQuery}
+          WHERE u.nutilizador = :accountId
+          LIMIT 1
+        `,
+        {
+          replacements: { accountId: Number(account.id) },
+          type: QueryTypes.SELECT,
+        },
+      );
+
+      return mapUserRow(created);
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+
+  async updateAdminUserPermissions(accountId, { roles, serviceLineIds }) {
+    const parsedAccountId = Number(accountId);
+    const normalizedRoles = normalizeRoleList(roles);
+
+    if (!Number.isInteger(parsedAccountId) || parsedAccountId <= 0) {
+      const error = new Error('Invalid account id.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const account = await Account.findByPk(parsedAccountId);
+    if (!account) {
+      const error = new Error('Account not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const transaction = await sequelize.transaction();
+
+    try {
+      account.permissoes = normalizedRoles.join(',');
+      await account.save({ transaction });
+
+      await syncServiceLineAssignments(transaction, parsedAccountId, normalizedRoles, serviceLineIds);
+      await transaction.commit();
+
+      const [updated] = await sequelize.query(
+        `
+          ${getAdminUsersBaseQuery}
+          WHERE u.nutilizador = :accountId
+          LIMIT 1
+        `,
+        {
+          replacements: { accountId: parsedAccountId },
+          type: QueryTypes.SELECT,
+        },
+      );
+
+      return mapUserRow(updated);
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+
+  async updateAdminUserStatus(accountId, { status }) {
+    const parsedAccountId = Number(accountId);
+    const normalizedStatus = normalizeStatus(status, 'ativo');
+
+    if (!Number.isInteger(parsedAccountId) || parsedAccountId <= 0) {
+      const error = new Error('Invalid account id.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const account = await Account.findByPk(parsedAccountId);
+    if (!account) {
+      const error = new Error('Account not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    account.status = normalizedStatus;
+    await account.save();
+
+    const [updated] = await sequelize.query(
+      `
+        ${getAdminUsersBaseQuery}
+        WHERE u.nutilizador = :accountId
+        LIMIT 1
+      `,
+      {
+        replacements: { accountId: parsedAccountId },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    return mapUserRow(updated);
+  },
+
+  async decidePendingUser(accountId, { decision }) {
+    const normalizedDecision = String(decision || '').trim().toLowerCase();
+
+    if (!['approve', 'reject'].includes(normalizedDecision)) {
+      const error = new Error('Invalid decision.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const targetStatus = normalizedDecision === 'approve' ? 'ativo' : 'inativo';
+    return this.updateAdminUserStatus(accountId, { status: targetStatus });
   },
 };
