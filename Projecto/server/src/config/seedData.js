@@ -145,7 +145,7 @@ const normalizeRoles = (rolesValue) => {
     .filter(Boolean);
 };
 
-const isServiceLineLeader = (account) => normalizeRoles(account.permissoes).includes('service-line-leader');
+const isServiceLineLeader = (account) => normalizeRoles(account.role).includes('service-line-leader');
 
 const getOrCreateLearningPathId = async (transaction) => {
   const [existing] = await sequelize.query(
@@ -327,7 +327,7 @@ const ensureUtilizadorForAccounts = async (accounts, transaction) => {
         replacements: {
           nome: account.nome,
           email: account.email,
-          permissoes: normalizeRoles(account.permissoes || 'consultor').join(',')
+          permissoes: normalizeRoles(account.role || 'consultor').join(',')
         },
         type: QueryTypes.SELECT,
         transaction,
@@ -436,7 +436,9 @@ const ensureDefaultBadgeType = async (transaction) => {
 };
 
 const ensureEstadosAndMockData = async (accounts, transaction) => {
-  const estados = ['aprovado', 'candidatura_em_progresso', 'em_validacao', 'evidencias_insuficientes'];
+  // Estados conforme especificação:
+  // 1=rejeitado, 2=pendente-tm, 3=pendente-sll, 4=aprovado
+  const estados = ['rejeitado', 'pendente-tm', 'pendente-sll', 'aprovado'];
   const estadoIds = {};
   const defaultBadgeTypeId = await ensureDefaultBadgeType(transaction);
   
@@ -494,7 +496,7 @@ const ensureEstadosAndMockData = async (accounts, transaction) => {
   }
 
   const consultorAccounts = accounts.filter((account) =>
-    normalizeRoles(account.permissoes).includes('consultor'),
+    normalizeRoles(account.role).includes('consultor'),
   );
 
   const untouchedServiceLine = 'Testing';
@@ -553,14 +555,28 @@ const ensureEstadosAndMockData = async (accounts, transaction) => {
         continue;
       }
 
+      // seed 1 = criar pedido APROVADO (estado 4) com badge obtida
       if (seed === 1) {
-        await sequelize.query(
+        const [createdPedido] = await sequelize.query(
           `
-            INSERT INTO c_obtem_b (nutilizador, nbadge, pontos_obtidos)
-            VALUES (:utilizadorId, :nbadge, 100)
+            INSERT INTO pedidos (nutilizador, nbadge, estado, data_submissao)
+            VALUES (:utilizadorId, :nbadge, :estadoId, CURRENT_DATE)
+            RETURNING npedido
           `,
           {
-            replacements: { utilizadorId, nbadge },
+            replacements: { utilizadorId, nbadge, estadoId: estadoIds.aprovado },
+            type: QueryTypes.SELECT,
+            transaction,
+          },
+        );
+
+        await sequelize.query(
+          `
+            INSERT INTO c_obtem_b (nutilizador, nbadge, npedido, pontos_obtidos, data_obtencao)
+            VALUES (:utilizadorId, :nbadge, :npedido, 100, CURRENT_DATE)
+          `,
+          {
+            replacements: { utilizadorId, nbadge, npedido: createdPedido.npedido },
             type: QueryTypes.INSERT,
             transaction,
           },
@@ -568,13 +584,14 @@ const ensureEstadosAndMockData = async (accounts, transaction) => {
         continue;
       }
 
+      // seed 2 = pendente-tm (estado 2), seed 3 = rejeitado (estado 1), seed 6 = pendente-sll (estado 3)
       const estadoId = seed === 2
-        ? estadoIds.em_validacao
+        ? estadoIds['pendente-tm']
         : seed === 3
-          ? estadoIds.evidencias_insuficientes
+          ? estadoIds.rejeitado
           : seed === 6
-            ? estadoIds.aprovado
-            : estadoIds.candidatura_em_progresso;
+            ? estadoIds['pendente-sll']
+            : estadoIds['pendente-tm'];
 
       await sequelize.query(
         `
@@ -629,7 +646,7 @@ export const seedDatabase = async () => {
 
   const orderedAccounts = await Account.findAll({ order: [['id', 'ASC']] });
   const defaultConsultorAccount = orderedAccounts.find((account) =>
-    String(account.permissoes || 'consultor')
+    String(account.role || 'consultor')
       .split(';')
       .map((role) => role.trim().toLowerCase())
       .includes('consultor')

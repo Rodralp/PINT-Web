@@ -115,10 +115,27 @@ const getAdminUsersBaseQuery = `
     u.permissoes,
     u.status,
     CURRENT_TIMESTAMP AS joined_at,
-    0 AS points,
-    0 AS badges,
-    '' AS service_lines
+    COALESCE(bs.points, 0) AS points,
+    COALESCE(bs.badges, 0) AS badges,
+    COALESCE(sl.service_lines, '') AS service_lines
   FROM utilizador u
+  LEFT JOIN (
+    SELECT
+      cb.nutilizador,
+      SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) AS points,
+      COUNT(DISTINCT cb.nbadge) AS badges
+    FROM c_obtem_b cb
+    JOIN badge b ON b.nbadge = cb.nbadge
+    GROUP BY cb.nutilizador
+  ) bs ON bs.nutilizador = u.nutilizador
+  LEFT JOIN (
+    SELECT
+      s.nutilizador,
+      STRING_AGG(sl.sline, ', ' ORDER BY sl.sline) AS service_lines
+    FROM sll_leader_sl s
+    JOIN service_line sl ON sl.nsline = s.nsline
+    GROUP BY s.nutilizador
+  ) sl ON sl.nutilizador = u.nutilizador
 `;
 
 const getHasPreferences = async (accountId) => {
@@ -298,11 +315,46 @@ export const authModel = {
     const normalizedEmail = normalizeEmail(String(email || ''));
     const normalizedPassword = String(senha || '');
     const normalizedRoles = normalizeRoleList(roles);
+    const normalizedServiceLineIds = [...new Set(
+      (Array.isArray(serviceLineIds) ? serviceLineIds : [])
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0),
+    )];
 
     if (!trimmedName || !normalizedEmail || !normalizedPassword) {
       const error = new Error('Missing required fields.');
       error.statusCode = 400;
       throw error;
+    }
+
+    // Validação: SLL só pode ser de uma service line
+    if (normalizedRoles.includes('service-line-leader') && normalizedServiceLineIds.length > 1) {
+      const error = new Error('Service Line Leader só pode ser associado a uma Service Line.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Validação: uma service line só pode ter um SLL
+    if (normalizedRoles.includes('service-line-leader') && normalizedServiceLineIds.length === 1) {
+      const existingSll = await sequelize.query(
+        `
+          SELECT s.nutilizador, u.nome
+          FROM sll_leader_sl s
+          JOIN utilizador u ON u.nutilizador = s.nutilizador
+          WHERE s.nsline = :serviceLineId
+          LIMIT 1
+        `,
+        {
+          replacements: { serviceLineId: normalizedServiceLineIds[0] },
+          type: QueryTypes.SELECT,
+        },
+      );
+
+      if (existingSll && existingSll.length > 0) {
+        const error = new Error(`Esta Service Line já tem um Service Line Leader: ${existingSll[0].nome}`);
+        error.statusCode = 409;
+        throw error;
+      }
     }
 
     const transaction = await sequelize.transaction();
@@ -320,7 +372,7 @@ export const authModel = {
         { transaction },
       );
 
-      await syncServiceLineAssignments(transaction, account.id, normalizedRoles, serviceLineIds);
+      await syncServiceLineAssignments(transaction, account.id, normalizedRoles, normalizedServiceLineIds);
       await transaction.commit();
 
       const [created] = await sequelize.query(
@@ -345,6 +397,11 @@ export const authModel = {
   async updateAdminUserPermissions(accountId, { roles, serviceLineIds }) {
     const parsedAccountId = Number(accountId);
     const normalizedRoles = normalizeRoleList(roles);
+    const normalizedServiceLineIds = [...new Set(
+      (Array.isArray(serviceLineIds) ? serviceLineIds : [])
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0),
+    )];
 
     if (!Number.isInteger(parsedAccountId) || parsedAccountId <= 0) {
       const error = new Error('Invalid account id.');
@@ -359,13 +416,46 @@ export const authModel = {
       throw error;
     }
 
+    // Validação: SLL só pode ser de uma service line
+    if (normalizedRoles.includes('service-line-leader') && normalizedServiceLineIds.length > 1) {
+      const error = new Error('Service Line Leader só pode ser associado a uma Service Line.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Validação: uma service line só pode ter um SLL
+    if (normalizedRoles.includes('service-line-leader') && normalizedServiceLineIds.length === 1) {
+      const existingSll = await sequelize.query(
+        `
+          SELECT s.nutilizador, u.nome
+          FROM sll_leader_sl s
+          JOIN utilizador u ON u.nutilizador = s.nutilizador
+          WHERE s.nsline = :serviceLineId
+            AND s.nutilizador <> :accountId
+          LIMIT 1
+        `,
+        {
+          replacements: { serviceLineId: normalizedServiceLineIds[0], accountId: parsedAccountId },
+          type: QueryTypes.SELECT,
+        },
+      );
+
+      if (existingSll && existingSll.length > 0) {
+        const error = new Error(`Esta Service Line já tem um Service Line Leader: ${existingSll[0].nome}`);
+        error.statusCode = 409;
+        throw error;
+      }
+    }
+
     const transaction = await sequelize.transaction();
 
     try {
-      account.permissoes = normalizedRoles.join(',');
+      // Usar ponto e vírgula como separador (consistente com o resto da aplicação)
+      // O campo Sequelize 'role' é mapeado para a coluna 'permissoes' no banco
+      account.role = normalizedRoles.join(';');
       await account.save({ transaction });
 
-      await syncServiceLineAssignments(transaction, parsedAccountId, normalizedRoles, serviceLineIds);
+      await syncServiceLineAssignments(transaction, parsedAccountId, normalizedRoles, normalizedServiceLineIds);
       await transaction.commit();
 
       const [updated] = await sequelize.query(

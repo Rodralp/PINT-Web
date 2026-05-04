@@ -47,7 +47,7 @@ const sidebarConfig = [
     items: [
       { id: 'dashboard_TM', labelKey: 'sidebar_dashboard', icon: Home, route: '/talent-manager/dashboard' },
       { id: 'pedidos_TM', labelKey: 'sidebar_manage_requests', icon: FilePenLine, route: '/talent-manager/pedidos' },
-      { id: 'historico_TM', labelKey: 'sidebar_history', icon: History },
+      { id: 'historico_TM', labelKey: 'sidebar_history', icon: History, route: '/talent-manager/historico' },
       { id: 'exportacoes_TM', labelKey: 'sidebar_exports_tm', icon: ArrowDownToLine, route: '/talent-manager/exportacoes' },
       { id: 'definicoes_TM', labelKey: 'sidebar_settings', icon: Settings, route: '/talent-manager/definicoes' },
     ],
@@ -61,7 +61,7 @@ const sidebarConfig = [
       { id: 'learning_paths_SLL', labelKey: 'sidebar_my_learning_path', icon: BookOpen, route: '/service-line-leader/minha-service-line' },
       { id: 'ranking_SLL', labelKey: 'sidebar_service_line_ranking', icon: Crown, route: '/service-line-leader/ranking' },
       { id: 'pedidos_SLL', labelKey: 'sidebar_manage_requests', icon: FilePenLine, route: '/service-line-leader/pedidos' },
-      { id: 'historico_SLL', labelKey: 'sidebar_history', icon: History },
+      { id: 'historico_SLL', labelKey: 'sidebar_history', icon: History, route: '/service-line-leader/historico' },
       { id: 'exportacoes_SLL', labelKey: 'sidebar_exports_sll', icon: ArrowDownToLine, route: '/service-line-leader/exportacoes' },
       { id: 'definicoes_SLL', labelKey: 'sidebar_settings', icon: Settings, route: '/service-line-leader/definicoes' },
     ],

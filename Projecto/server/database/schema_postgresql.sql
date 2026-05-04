@@ -257,7 +257,9 @@ CREATE TABLE IF NOT EXISTS a_gere_u (
 CREATE TABLE IF NOT EXISTS c_obtem_b (
     nutilizador INTEGER NOT NULL REFERENCES utilizador(nutilizador),
     nbadge INTEGER NOT NULL REFERENCES badge(nbadge),
+    npedido INTEGER NOT NULL REFERENCES pedidos(npedido),
     pontos_obtidos INTEGER DEFAULT 0,
+    data_obtencao DATE NOT NULL DEFAULT CURRENT_DATE,
     PRIMARY KEY (nutilizador, nbadge)
 );
 

@@ -6,12 +6,13 @@ const clone = (value) => JSON.parse(JSON.stringify(value));
 const GLOBAL_SERVICE_LINE_ACCESS_USER_IDS = new Set([5]);
 
 const roleSet = new Set(['talent-manager', 'service-line-leader', 'admin-gestor']);
+// Estados conforme especificação:
+// 1=rejeitado, 2=pendente-tm, 3=pendente-sll, 4=aprovado
 const pedidoEstados = Object.freeze({
-  candidaturaEmProgresso: 'candidatura_em_progresso',
-  emValidacaoTm: 'em_validacao',
-  emValidacaoSll: 'em_validacao_sll',
-  evidenciasInsuficientes: 'evidencias_insuficientes',
-  aprovado: 'aprovado',
+  rejeitado: 1,
+  pendenteTm: 2,
+  pendenteSll: 3,
+  aprovado: 4,
 });
 
 const badgeLevelTemplates = [
@@ -111,52 +112,53 @@ const formatLongDate = (value) => {
 
 const buildAvatar = (seed) => `https://i.pravatar.cc/120?u=${encodeURIComponent(String(seed || 'user').toLowerCase())}`;
 
-const normalizePedidoEstado = (estadoNome) => String(estadoNome || '').trim().toLowerCase();
-
-const isApprovedRequest = (estadoNome, obtido) => (
-  Boolean(obtido) || normalizePedidoEstado(estadoNome) === pedidoEstados.aprovado
-);
-
-const buildRoleStatusClause = (role) => {
-  if (role === 'service-line-leader') {
-    return `
-      LOWER(e.estado) IN (
-        '${pedidoEstados.emValidacaoSll}',
-        '${pedidoEstados.evidenciasInsuficientes}',
-        '${pedidoEstados.aprovado}'
-      )
-    `;
-  }
-
-  return `LOWER(e.estado) <> '${pedidoEstados.candidaturaEmProgresso}'`;
+// Normaliza ID de estado (pode vir como string ou número)
+const normalizeEstadoId = (estado) => {
+  const num = Number(estado);
+  return Number.isNaN(num) ? null : num;
 };
 
-const mapRowStatus = (estadoNome, obtido, role) => {
-  const normalizedEstado = normalizePedidoEstado(estadoNome);
+// Verifica se pedido está aprovado (estado 4 ou tem flag obtido)
+const isApprovedRequest = (estadoId, obtido) => (
+  Boolean(obtido) || Number(estadoId) === pedidoEstados.aprovado
+);
 
-  if (isApprovedRequest(normalizedEstado, obtido)) {
+// Retorna clause SQL para filtrar pedidos visíveis por role
+const buildRoleStatusClause = (role) => {
+  if (role === 'service-line-leader') {
+    // SLL vê: pendente-sll (3), rejeitado (1), aprovado (4)
+    return `p.estado IN (3, 1, 4)`;
+  }
+  if (role === 'talent-manager') {
+    // TM vê: pendente-tm (2), pendente-sll (3), rejeitado (1), aprovado (4)
+    return `p.estado IN (2, 3, 1, 4)`;
+  }
+  // Admin/Gestor vê todos
+  return `p.estado IN (1, 2, 3, 4)`;
+};
+
+const mapRowStatus = (estadoId, obtido, role) => {
+  const estado = normalizeEstadoId(estadoId);
+
+  if (isApprovedRequest(estado, obtido)) {
     return 'aprovado';
   }
 
-  if (normalizedEstado === pedidoEstados.evidenciasInsuficientes) {
+  if (estado === pedidoEstados.rejeitado) {
     return 'rejeitado';
   }
 
-  if (role === 'talent-manager') {
-    return normalizedEstado === pedidoEstados.emValidacaoTm ? 'validacao' : 'aprovado';
+  // Estado 2 = pendente-tm (TM valida)
+  if (estado === pedidoEstados.pendenteTm) {
+    return role === 'talent-manager' ? 'validacao' : 'pendente';
   }
 
-  if (role === 'service-line-leader') {
-    return normalizedEstado === pedidoEstados.emValidacaoSll ? 'validacao' : 'aprovado';
+  // Estado 3 = pendente-sll (SLL valida)
+  if (estado === pedidoEstados.pendenteSll) {
+    return (role === 'service-line-leader' || role === 'admin-gestor') ? 'validacao' : 'pendente';
   }
 
-  if (role === 'admin-gestor') {
-    return normalizedEstado === pedidoEstados.emValidacaoTm || normalizedEstado === pedidoEstados.emValidacaoSll
-      ? 'validacao'
-      : 'aprovado';
-  }
-
-  return 'validacao';
+  return 'pendente';
 };
 
 const mapTableStatus = (status) => {
@@ -165,23 +167,23 @@ const mapTableStatus = (status) => {
   return 'pendente';
 };
 
-const buildStatusNote = (status, estadoNome, description) => {
+const buildStatusNote = (status, estadoId, description) => {
   const customDescription = String(description || '').trim();
   if (customDescription) {
     return customDescription;
   }
 
-  const normalizedEstado = normalizePedidoEstado(estadoNome);
+  const estado = normalizeEstadoId(estadoId);
 
-  if (normalizedEstado === pedidoEstados.emValidacaoSll) {
+  if (estado === pedidoEstados.pendenteSll) {
     return 'Candidatura validada pelo Talent Manager e enviada para SLL.';
   }
 
-  if (normalizedEstado === pedidoEstados.emValidacaoTm) {
-    return 'Candidatura submetida e em validação.';
+  if (estado === pedidoEstados.pendenteTm) {
+    return 'Candidatura submetida e em validação pelo Talent Manager.';
   }
 
-  if (status === 'rejeitado') {
+  if (estado === pedidoEstados.rejeitado) {
     return 'Evidências insuficientes para a conclusão da submissão.';
   }
 
@@ -189,7 +191,7 @@ const buildStatusNote = (status, estadoNome, description) => {
     return 'Candidatura aprovada com base nas evidências submetidas.';
   }
 
-  return 'Candidatura submetida e em validação.';
+  return 'Candidatura em progresso.';
 };
 
 const getUtilizadorIdByAccountId = async (accountId) => {
@@ -390,6 +392,7 @@ const fetchRequestRows = async ({ role, actorUtilizadorId, requestId = null }) =
         p.npedido,
         p.nutilizador AS consultor_id,
         p.nbadge,
+        p.estado AS estado_id,
         p.data_submissao,
         p.descricao,
         e.estado AS estado_nome,
@@ -437,6 +440,7 @@ const fetchRequestRows = async ({ role, actorUtilizadorId, requestId = null }) =
         p.npedido,
         p.nutilizador AS consultor_id,
         p.nbadge,
+        p.estado AS estado_id,
         p.data_submissao,
         p.descricao,
         e.estado AS estado_nome,
@@ -485,7 +489,7 @@ const fetchRequestRows = async ({ role, actorUtilizadorId, requestId = null }) =
 const mapRequestListItem = (row, role) => {
   const levelTitle = normalizeLevelTitle(row.nivel_nome) || 'Intermédio';
   const levelTemplate = resolveLevelTemplate(levelTitle);
-  const status = mapRowStatus(row.estado_nome, row.obtido, role);
+  const status = mapRowStatus(row.estado_id, row.obtido, role);
 
   return {
     id: Number(row.npedido),
@@ -524,7 +528,7 @@ const mapRequestDetails = async (row, role) => {
     reviewer: reviewerByRole,
     reviewerAvatar: buildAvatar(`reviewer-${role}`),
     reviewerDate: formatLongDate(row.data_submissao),
-    notes: buildStatusNote(status, row.estado_nome, row.descricao),
+    notes: buildStatusNote(status, row.estado_id, row.descricao),
     finalReviewer: status === 'aprovado' ? reviewerByRole : null,
     finalReviewerAvatar: status === 'aprovado' ? buildAvatar(`final-${role}`) : null,
     finalReviewerDate: status === 'aprovado' ? formatLongDate(row.data_submissao) : null,
@@ -624,23 +628,26 @@ const applyDecision = async ({ role, request, decision, comment }) => {
     throw error;
   }
 
-  const currentEstado = normalizePedidoEstado(request.estado_nome);
+  const currentEstado = normalizeEstadoId(request.estado_id);
 
-  if (role === 'talent-manager' && currentEstado !== pedidoEstados.emValidacaoTm) {
+  // TM só pode validar pedidos em estado 2 (pendente-tm)
+  if (role === 'talent-manager' && currentEstado !== pedidoEstados.pendenteTm) {
     const error = new Error('Request is not pending Talent Manager validation.');
     error.statusCode = 409;
     throw error;
   }
 
-  if (role === 'service-line-leader' && currentEstado !== pedidoEstados.emValidacaoSll) {
+  // SLL só pode validar pedidos em estado 3 (pendente-sll)
+  if (role === 'service-line-leader' && currentEstado !== pedidoEstados.pendenteSll) {
     const error = new Error('Request is not pending Service Line Leader validation.');
     error.statusCode = 409;
     throw error;
   }
 
+  // Admin/Gestor pode validar pedidos em estado 2 ou 3
   if (role === 'admin-gestor') {
-    const canAdminReview = currentEstado === pedidoEstados.emValidacaoTm
-      || currentEstado === pedidoEstados.emValidacaoSll;
+    const canAdminReview = currentEstado === pedidoEstados.pendenteTm
+      || currentEstado === pedidoEstados.pendenteSll;
 
     if (!canAdminReview) {
       const error = new Error('Request is not in a submitted state for admin review.');
@@ -657,19 +664,24 @@ const applyDecision = async ({ role, request, decision, comment }) => {
 
   let targetEstado = null;
   let shouldObtainBadge = false;
+  let shouldRemoveBadge = false;
   let defaultDescription = '';
 
   if (decisionKey === 'rejeitar') {
-    targetEstado = pedidoEstados.evidenciasInsuficientes;
+    // Rejeitar -> estado 1 (rejeitado)
+    targetEstado = pedidoEstados.rejeitado;
+    shouldRemoveBadge = isApprovedRequest(currentEstado, request.obtido);
     defaultDescription = role === 'talent-manager'
       ? 'Candidatura rejeitada pelo Talent Manager.'
       : role === 'service-line-leader'
         ? 'Candidatura rejeitada pelo Service Line Leader.'
         : 'Candidatura rejeitada pelo Administrador/Gestor.';
   } else if (decisionKey === 'aprovar' && role === 'talent-manager') {
-    targetEstado = pedidoEstados.emValidacaoSll;
+    // TM aprova -> vai para estado 3 (pendente-sll)
+    targetEstado = pedidoEstados.pendenteSll;
     defaultDescription = 'Candidatura validada pelo Talent Manager e enviada para SLL.';
   } else if (decisionKey === 'aprovar' && (role === 'service-line-leader' || role === 'admin-gestor')) {
+    // SLL ou Admin aprova -> vai para estado 4 (aprovado)
     targetEstado = pedidoEstados.aprovado;
     shouldObtainBadge = true;
     defaultDescription = role === 'service-line-leader'
@@ -683,7 +695,8 @@ const applyDecision = async ({ role, request, decision, comment }) => {
     throw error;
   }
 
-  const estadoId = await ensureEstadoId(targetEstado);
+  // Usar o ID do estado diretamente (já é um número)
+  const estadoId = targetEstado;
   const description = String(comment || '').trim();
 
   await sequelize.query(
@@ -702,6 +715,24 @@ const applyDecision = async ({ role, request, decision, comment }) => {
       type: QueryTypes.UPDATE,
     },
   );
+
+  if (shouldRemoveBadge) {
+    const consultorId = Number(request.consultor_id ?? request.nutilizador);
+    await sequelize.query(
+      `
+        DELETE FROM c_obtem_b
+        WHERE nutilizador = :consultorId AND nbadge = :badgeId
+      `,
+      {
+        replacements: {
+          consultorId,
+          badgeId: Number(request.nbadge),
+        },
+        type: QueryTypes.DELETE,
+      },
+    );
+    return;
+  }
 
   if (!shouldObtainBadge) {
     return;
@@ -731,14 +762,19 @@ const applyDecision = async ({ role, request, decision, comment }) => {
 
   await sequelize.query(
     `
-      INSERT INTO c_obtem_b (nutilizador, nbadge, pontos_obtidos)
-      VALUES (:consultorId, :badgeId, :points)
-      ON CONFLICT (nutilizador, nbadge) DO NOTHING
+      INSERT INTO c_obtem_b (nutilizador, nbadge, npedido, pontos_obtidos, data_obtencao)
+      VALUES (:consultorId, :badgeId, :requestId, :points, CURRENT_DATE)
+      ON CONFLICT (nutilizador, nbadge)
+      DO UPDATE SET
+        npedido = EXCLUDED.npedido,
+        pontos_obtidos = EXCLUDED.pontos_obtidos,
+        data_obtencao = EXCLUDED.data_obtencao
     `,
     {
       replacements: {
         consultorId,
         badgeId: Number(request.nbadge),
+        requestId: Number(request.npedido),
         points,
       },
       type: QueryTypes.INSERT,

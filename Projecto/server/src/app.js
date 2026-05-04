@@ -5,6 +5,7 @@ import consultorRoutes from './routes/consultorRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import requestManagementRoutes from './routes/requestManagementRoutes.js';
 import serviceLineLeaderRoutes from './routes/serviceLineLeaderRoutes.js';
+import talentManagerRoutes from './routes/talentManagerRoutes.js';
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/consultor', consultorRoutes);
 app.use('/api/service-line-leader', serviceLineLeaderRoutes);
+app.use('/api/talent-manager', talentManagerRoutes);
 app.use('/api/request-management', requestManagementRoutes);
 
 export default app;

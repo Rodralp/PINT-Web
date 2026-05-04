@@ -37,15 +37,12 @@ export const Account = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
       defaultValue: 'consultor',
+      field: 'permissoes',
     },
     status: {
       type: DataTypes.STRING,
       allowNull: false,
       defaultValue: 'pendente',
-    },
-    permissoes: {
-      type: DataTypes.STRING,
-      allowNull: true,
     },
   },
   {

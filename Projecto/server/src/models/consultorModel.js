@@ -8,6 +8,7 @@ const pedidoEstados = Object.freeze({
   emValidacaoTm: 'em_validacao',
   emValidacaoSll: 'em_validacao_sll',
   evidenciasInsuficientes: 'evidencias_insuficientes',
+  rejeitado: 'rejeitado',
   aprovado: 'aprovado',
 });
 
@@ -77,7 +78,7 @@ const mapPedidoEstadoToLearningPathStatus = (estado) => {
     return 'em_validacao';
   }
 
-  if (normalized === pedidoEstados.evidenciasInsuficientes) {
+  if (normalized === pedidoEstados.evidenciasInsuficientes || normalized === pedidoEstados.rejeitado) {
     return 'evidencias_insuficientes';
   }
 
@@ -99,7 +100,7 @@ const mapPedidoEstadoToMyBadgeState = (estado) => {
     return 'em_validacao';
   }
 
-  if (normalized === pedidoEstados.evidenciasInsuficientes) {
+  if (normalized === pedidoEstados.evidenciasInsuficientes || normalized === pedidoEstados.rejeitado) {
     return 'rejeitado';
   }
 
@@ -117,7 +118,7 @@ const mapPedidoEstadoToMyRequestStatus = (estado) => {
     return 'aprovado';
   }
 
-  if (normalized === pedidoEstados.evidenciasInsuficientes) {
+  if (normalized === pedidoEstados.evidenciasInsuficientes || normalized === pedidoEstados.rejeitado) {
     return 'rejeitado';
   }
 
@@ -957,7 +958,7 @@ const buildMyBadges = async (accountId) => {
           a.area,
           n.nivel,
           cb.pontos_obtidos,
-          b.validade,
+          cb.data_obtencao,
           cb.nutilizador
         FROM c_obtem_b AS cb
         INNER JOIN badge AS b
@@ -1096,7 +1097,7 @@ const buildMyBadges = async (accountId) => {
       levelKey: template.levelKey,
       points: Number(row.pontos_obtidos) || template.points,
       badgeImage: template.badgeImage,
-      date: formatDate(row.validade),
+      date: formatDate(row.data_obtencao),
     });
   }
 
@@ -1610,6 +1611,7 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
     if (
       existingEstado !== pedidoEstados.candidaturaEmProgresso
       && existingEstado !== pedidoEstados.evidenciasInsuficientes
+      && existingEstado !== pedidoEstados.rejeitado
     ) {
       const currentStatus = mapPedidoEstadoToLearningPathStatus(existingEstado);
       return {
