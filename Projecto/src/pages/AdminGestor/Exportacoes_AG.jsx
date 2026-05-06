@@ -20,7 +20,6 @@ import '../../css/TalentManager/Exportacoes_TM.css';
 const tabs = [
   { id: 'pedidos', label: 'Pedidos de Badges' },
   { id: 'badges', label: 'Badges' },
-  { id: 'certificado', label: 'Certificado' },
   { id: 'consultores', label: 'Consultores' },
 ];
 
@@ -68,7 +67,6 @@ const consultantSortOptions = [
 const tabDefaults = {
   pedidos: { filter: 'todos', sort: 'recentes' },
   badges: { filter: 'todos', sort: 'padrao' },
-  certificado: { filter: 'todos', sort: 'padrao' },
   consultores: { filter: 'todos', sort: 'points_desc' },
 };
 
@@ -232,7 +230,6 @@ function ExportacoesAG() {
   const [selectedRequestIds, setSelectedRequestIds] = useState(() => requestItems.slice(0, 7).map((item) => item.id));
   const [selectedBadgeIds, setSelectedBadgeIds] = useState(() => badgeItems.slice(0, 13).map((item) => item.id));
   const [selectedConsultantIds, setSelectedConsultantIds] = useState(() => consultantItems.slice(0, 4).map((item) => item.id));
-  const [selectedCertificateId, setSelectedCertificateId] = useState(() => badgeItems[0]?.id || null);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [page, setPage] = useState(1);
@@ -345,8 +342,6 @@ function ExportacoesAG() {
     return nextRows;
   }, [filteredBadges, sortBy]);
 
-  const certificateItems = useMemo(() => sortedBadges.slice(0, 15), [sortedBadges]);
-
   const filteredConsultants = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
@@ -383,16 +378,14 @@ function ExportacoesAG() {
     return nextRows;
   }, [filteredConsultants, sortBy]);
 
-  const pageSize = activeTab === 'certificado' ? 5 : 10;
+  const pageSize = 10;
 
   const totalItems =
     activeTab === 'pedidos'
       ? sortedRequests.length
       : activeTab === 'badges'
         ? sortedBadges.length
-        : activeTab === 'certificado'
-          ? certificateItems.length
-          : sortedConsultants.length;
+        : sortedConsultants.length;
 
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
@@ -407,7 +400,6 @@ function ExportacoesAG() {
 
   const pagedRequests = useMemo(() => sortedRequests.slice(start, end), [sortedRequests, start, end]);
   const pagedBadges = useMemo(() => sortedBadges.slice(start, end), [sortedBadges, start, end]);
-  const pagedCertificateItems = useMemo(() => certificateItems.slice(start, end), [certificateItems, start, end]);
 
   const pagedConsultants = useMemo(
     () =>
@@ -417,26 +409,6 @@ function ExportacoesAG() {
       })),
     [sortedConsultants, start, end],
   );
-
-  useEffect(() => {
-    if (activeTab !== 'certificado') {
-      return;
-    }
-
-    if (!pagedCertificateItems.length) {
-      setSelectedCertificateId(null);
-      return;
-    }
-
-    if (!pagedCertificateItems.some((item) => item.id === selectedCertificateId)) {
-      setSelectedCertificateId(pagedCertificateItems[0].id);
-    }
-  }, [activeTab, pagedCertificateItems, selectedCertificateId]);
-
-  const selectedCertificate =
-    certificateItems.find((item) => item.id === selectedCertificateId)
-    || pagedCertificateItems[0]
-    || null;
 
   const selectedRequestCount = filteredRequests.filter((item) => selectedRequestIds.includes(item.id)).length;
   const selectedBadgeCount = filteredBadges.filter((item) => selectedBadgeIds.includes(item.id)).length;
@@ -827,70 +799,6 @@ function ExportacoesAG() {
             </>
           )}
 
-          {activeTab === 'certificado' && (
-            <div className="tm-export-certificate-layout">
-              <aside className="tm-export-certificate-sidebar">
-                <div className="tm-export-certificate-head">
-                  <h2>Certificado</h2>
-                  <div className="tm-export-mini-pager">
-                    <button type="button" onClick={previousPage} disabled={page === 1} aria-label="Página anterior">
-                      <ChevronLeft size={14} />
-                    </button>
-                    <span>{page} / {totalPages}</span>
-                    <button type="button" onClick={nextPage} disabled={page === totalPages} aria-label="Página seguinte">
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                <p className="tm-export-certificate-subtitle">Selecionar Badge</p>
-
-                <div className="tm-export-certificate-list">
-                  {pagedCertificateItems.map((item) => {
-                    const isSelected = selectedCertificateId === item.id;
-
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className={`tm-export-certificate-item ${isSelected ? 'selected' : ''}`}
-                        onClick={() => setSelectedCertificateId(item.id)}
-                      >
-                        <img src={item.badgeImage} alt={item.level} />
-                        <div>
-                          <strong>{item.area}</strong>
-                          <span>{item.level}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <button type="button" className="tm-export-btn primary full" aria-label="Exportar certificado em PDF">
-                  <FileDown size={16} />
-                  <span>Exportar PDF</span>
-                </button>
-              </aside>
-
-              <div className="tm-export-certificate-preview-wrap">
-                <div className="tm-export-certificate-preview">
-                  <div className="tm-export-certificate-brand">SOFTINSA</div>
-                  <h3>Certificado de Badge</h3>
-                  <img
-                    src={selectedCertificate?.badgeImage || '/badges/Especialista.png'}
-                    alt={selectedCertificate?.level || 'Certificado'}
-                    className="tm-export-certificate-badge"
-                  />
-                  <p>Certificamos que</p>
-                  <strong>{userName}</strong>
-                  <p>conquistou a badge</p>
-                  <strong>{selectedCertificate?.area || 'LowCode (Outsystems)'}</strong>
-                  <span>{selectedCertificate?.level || 'Especialista'}</span>
-                  <span>6 de dezembro de 2025</span>
-                </div>
-              </div>
-            </div>
-          )}
 
           {activeTab === 'consultores' && (
             <>
