@@ -354,7 +354,10 @@
   font-weight: 600;
 }
 
-.ag-users-modal-card input {
+.ag-users-modal-card input:not([type]),
+.ag-users-modal-card input[type='text'],
+.ag-users-modal-card input[type='email'],
+.ag-users-modal-card input[type='password'] {
   height: 40px;
   border: 1px solid #d4dbe6;
   border-radius: 10px;
@@ -391,6 +394,18 @@
   gap: 8px;
   color: #4b5563;
   font-size: 14px;
+  cursor: pointer;
+}
+
+.ag-users-check-row input[type='checkbox'],
+.ag-users-check-row input[type='radio'] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  accent-color: #1d8cf8;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .ag-users-modal-actions {

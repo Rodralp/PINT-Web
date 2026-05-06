@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Filter, ChevronLeft, ChevronRight, Eye, X } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Eye, X } from 'lucide-react';
 import Layout from '../../components/Layout';
 import {
   fetchHistoricoServiceLines,
@@ -10,6 +10,7 @@ import {
   fetchDetalhesServiceLine,
 } from '../../services/talentManagerService';
 import '../../css/TalentManager/Exportacoes_TM.css';
+import '../../css/Shared/HistoricoPages.css';
 
 const tabs = [
   { id: 'service-lines', label: 'Service Lines' },
@@ -19,32 +20,35 @@ const tabs = [
 
 const ITEMS_PER_PAGE = 10;
 
-const getStoredLoginData = () => {
-  const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
-  if (!storedLoginData) return null;
-  try {
-    return JSON.parse(storedLoginData);
-  } catch {
-    return null;
+const normalizeLevelTitle = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '-';
   }
+
+  if (raw.includes(' - ')) {
+    const suffix = raw.split(' - ').slice(1).join(' - ').trim();
+    if (suffix) {
+      return suffix;
+    }
+  }
+
+  return raw.replace(/^nivel\s+/i, '').trim() || raw;
 };
 
 function HistoricoTM() {
-  const loginData = useMemo(() => getStoredLoginData(), []);
   const [activeTab, setActiveTab] = useState('service-lines');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Dados
   const [serviceLines, setServiceLines] = useState([]);
   const [badges, setBadges] = useState([]);
   const [consultores, setConsultores] = useState([]);
 
-  // Modal states
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState(null); // 'consultor', 'badge', 'serviceLine'
+  const [modalType, setModalType] = useState(null);
   const [modalData, setModalData] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
 
@@ -85,42 +89,37 @@ function HistoricoTM() {
     };
   }, []);
 
-  // Reset page quando muda tab ou search
   useEffect(() => {
     setPage(1);
   }, [activeTab, searchQuery]);
 
-  // Filtrar dados baseado na tab ativa e search
   const filteredData = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
 
     if (activeTab === 'service-lines') {
       return serviceLines.filter((item) =>
-        item.name?.toLowerCase().includes(query) ||
-        item.description?.toLowerCase().includes(query)
-      );
+        item.name?.toLowerCase().includes(query));
     }
 
     if (activeTab === 'badges') {
       return badges.filter((item) =>
-        item.name?.toLowerCase().includes(query) ||
-        item.area?.toLowerCase().includes(query) ||
-        item.serviceLine?.toLowerCase().includes(query)
+        item.name?.toLowerCase().includes(query)
+        || item.area?.toLowerCase().includes(query)
+        || item.serviceLine?.toLowerCase().includes(query),
       );
     }
 
     if (activeTab === 'consultores') {
       return consultores.filter((item) =>
-        item.name?.toLowerCase().includes(query) ||
-        item.email?.toLowerCase().includes(query) ||
-        item.serviceLine?.toLowerCase().includes(query)
+        item.name?.toLowerCase().includes(query)
+        || item.email?.toLowerCase().includes(query)
+        || item.serviceLine?.toLowerCase().includes(query),
       );
     }
 
     return [];
   }, [activeTab, searchQuery, serviceLines, badges, consultores]);
 
-  // Paginação
   const totalPages = Math.max(1, Math.ceil(filteredData.length / ITEMS_PER_PAGE));
   const pagedData = useMemo(() => {
     const start = (page - 1) * ITEMS_PER_PAGE;
@@ -131,7 +130,6 @@ function HistoricoTM() {
   const previousPage = () => setPage((p) => Math.max(1, p - 1));
   const nextPage = () => setPage((p) => Math.min(totalPages, p + 1));
 
-  // Abrir modal
   const openModal = async (type, id) => {
     setModalType(type);
     setModalOpen(true);
@@ -147,7 +145,7 @@ function HistoricoTM() {
         data = await fetchDetalhesServiceLine(id);
       }
       setModalData(data);
-    } catch (error) {
+    } catch {
       setModalData(null);
     } finally {
       setModalLoading(false);
@@ -160,7 +158,6 @@ function HistoricoTM() {
     setModalData(null);
   };
 
-  // Renderizar status badge
   const renderStatusBadge = (status) => {
     const statusClasses = {
       completo: 'status-badge success',
@@ -168,24 +165,28 @@ function HistoricoTM() {
       pendente: 'status-badge warning',
       ativo: 'status-badge success',
       inativo: 'status-badge danger',
+      rejeitado: 'status-badge danger',
     };
-    const className = statusClasses[status?.toLowerCase()] || 'status-badge';
-    return <span className={className}>{status || '-'}</span>;
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    const mappedStatus = ['pendente-tm', 'pendente-sll'].includes(normalizedStatus)
+      ? 'pendente'
+      : normalizedStatus;
+    const className = statusClasses[mappedStatus] || 'status-badge';
+    return <span className={className}>{mappedStatus || '-'}</span>;
   };
 
   return (
     <Layout>
-      <div className="tm-export-page">
+      <div className="tm-export-page historico-page">
         <header className="tm-export-header">
           <h1>Histórico Geral</h1>
         </header>
 
         <p className="tm-export-scope-note">
-          Veja o que os seus consultores obtêm e estão a obter
+          Veja o progresso global dos consultores por Service Line, Badge e perfil.
         </p>
 
         <div className="tm-export-shell">
-          {/* Tabs */}
           <div className="tm-export-tabs">
             {tabs.map((tab) => (
               <button
@@ -199,8 +200,7 @@ function HistoricoTM() {
             ))}
           </div>
 
-          {/* Toolbar */}
-          <div className="tm-export-toolbar">
+          <div className="tm-export-toolbar historico-toolbar-single">
             <div className="tm-export-search">
               <Search size={18} />
               <input
@@ -210,22 +210,13 @@ function HistoricoTM() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <button type="button" className="tm-export-control-btn">
-              <Filter size={18} />
-              Filtrar pesquisa
-            </button>
-            <button type="button" className="tm-export-control-btn">
-              Ordenar
-            </button>
           </div>
 
           {isLoading && <p className="lp-progress-label">A carregar...</p>}
-
           {errorMessage && <p className="lp-progress-label">{errorMessage}</p>}
 
           {!isLoading && !errorMessage && (
             <>
-              {/* Tabela Service Lines */}
               {activeTab === 'service-lines' && (
                 <div className="orders-table-wrap">
                   <table className="orders-table">
@@ -255,7 +246,7 @@ function HistoricoTM() {
                           <td>
                             <button
                               type="button"
-                              className="tm-export-control-btn"
+                              className="tm-export-control-btn historico-action-btn"
                               onClick={() => openModal('serviceLine', item.id)}
                             >
                               <Eye size={16} />
@@ -269,7 +260,6 @@ function HistoricoTM() {
                 </div>
               )}
 
-              {/* Tabela Badges */}
               {activeTab === 'badges' && (
                 <div className="orders-table-wrap">
                   <table className="orders-table">
@@ -277,33 +267,29 @@ function HistoricoTM() {
                       <tr>
                         <th>Badge</th>
                         <th>Área</th>
-                        <th>Service Line</th>
                         <th>Nível</th>
                         <th>Consultores Obtidos</th>
                         <th>Em Progresso</th>
-                        <th>Estado</th>
                         <th>Ações</th>
                       </tr>
                     </thead>
                     <tbody>
                       {pagedData.length === 0 && (
                         <tr>
-                          <td colSpan={8} className="orders-empty-row">Nenhum badge encontrado.</td>
+                          <td colSpan={6} className="orders-empty-row">Nenhum badge encontrado.</td>
                         </tr>
                       )}
                       {pagedData.map((item) => (
                         <tr key={item.id}>
                           <td><strong>{item.name}</strong></td>
                           <td>{item.area || '-'}</td>
-                          <td>{item.serviceLine || '-'}</td>
-                          <td>{item.level || '-'}</td>
+                          <td>{normalizeLevelTitle(item.level)}</td>
                           <td>{item.consultoresObtidos || 0}</td>
                           <td>{item.emProgresso || 0}</td>
-                          <td>{renderStatusBadge(item.status)}</td>
                           <td>
                             <button
                               type="button"
-                              className="tm-export-control-btn"
+                              className="tm-export-control-btn historico-action-btn"
                               onClick={() => openModal('badge', item.id)}
                             >
                               <Eye size={16} />
@@ -317,7 +303,6 @@ function HistoricoTM() {
                 </div>
               )}
 
-              {/* Tabela Consultores */}
               {activeTab === 'consultores' && (
                 <div className="orders-table-wrap">
                   <table className="orders-table">
@@ -358,7 +343,7 @@ function HistoricoTM() {
                           <td>
                             <button
                               type="button"
-                              className="tm-export-control-btn"
+                              className="tm-export-control-btn historico-action-btn"
                               onClick={() => openModal('consultor', item.id)}
                             >
                               <Eye size={16} />
@@ -372,7 +357,6 @@ function HistoricoTM() {
                 </div>
               )}
 
-              {/* Paginação */}
               {filteredData.length > 0 && (
                 <div className="orders-pagination" role="navigation">
                   <button
@@ -408,7 +392,6 @@ function HistoricoTM() {
             </>
           )}
 
-          {/* Modal */}
           {modalOpen && (
             <div className="modal-overlay" onClick={closeModal}>
               <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -426,7 +409,6 @@ function HistoricoTM() {
                   {modalLoading && <p>A carregar...</p>}
                   {!modalLoading && modalData && (
                     <>
-                      {/* Detalhes do Consultor */}
                       {modalType === 'consultor' && modalData.consultor && (
                         <div className="modal-section">
                           <div className="modal-info">
@@ -491,14 +473,13 @@ function HistoricoTM() {
                         </div>
                       )}
 
-                      {/* Detalhes do Badge */}
                       {modalType === 'badge' && modalData.badge && (
                         <div className="modal-section">
                           <div className="modal-info">
                             <h3>{modalData.badge.name}</h3>
                             <p><strong>Área:</strong> {modalData.badge.areaName || '-'}</p>
                             <p><strong>Service Line:</strong> {modalData.badge.serviceLineName || '-'}</p>
-                            <p><strong>Nível:</strong> {modalData.badge.level || '-'}</p>
+                            <p><strong>Nível:</strong> {normalizeLevelTitle(modalData.badge.level)}</p>
                             <p><strong>Pontos:</strong> {modalData.badge.points}</p>
                           </div>
                           <h4>Consultores que Obtiveram ({modalData.totalObtidos})</h4>
@@ -552,7 +533,6 @@ function HistoricoTM() {
                         </div>
                       )}
 
-                      {/* Detalhes da Service Line */}
                       {modalType === 'serviceLine' && modalData.serviceLine && (
                         <div className="modal-section">
                           <div className="modal-info">

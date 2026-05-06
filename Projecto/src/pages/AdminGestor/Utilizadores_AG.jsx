@@ -48,6 +48,76 @@ const toAvatar = (seed) => {
   return `https://i.pravatar.cc/120?u=${encodeURIComponent(normalizedSeed)}`;
 };
 
+const DEFAULT_ROLE = 'consultor';
+const LOGIN_DATA_KEY = 'loginData';
+
+const normalizeRoleList = (rolesValue) => {
+  const rawRoles = Array.isArray(rolesValue) ? rolesValue : [rolesValue];
+  const parsedRoles = rawRoles
+    .map((role) => String(role || '').trim().toLowerCase())
+    .filter(Boolean);
+  const uniqueRoles = [...new Set(parsedRoles)];
+  return uniqueRoles.length > 0 ? uniqueRoles : [DEFAULT_ROLE];
+};
+
+const parseJsonSafely = (value) => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
+const updateStoredLoginDataPermissions = ({ accountId, id, roles, serviceLines }) => {
+  const targetAccountId = Number(accountId ?? id);
+  if (!Number.isInteger(targetAccountId) || targetAccountId <= 0) {
+    return false;
+  }
+
+  const normalizedRoles = normalizeRoleList(roles);
+  const primaryRole = normalizedRoles[0];
+  const hasServiceLineLeaderRole = normalizedRoles.includes('service-line-leader');
+  const primaryServiceLine = hasServiceLineLeaderRole && Array.isArray(serviceLines) && serviceLines.length > 0
+    ? String(serviceLines[0] || '').trim()
+    : '';
+  let hasUpdated = false;
+
+  const updateStorage = (storage) => {
+    const rawLoginData = storage.getItem(LOGIN_DATA_KEY);
+    if (!rawLoginData) {
+      return;
+    }
+
+    const parsedLoginData = parseJsonSafely(rawLoginData);
+    if (!parsedLoginData || Number(parsedLoginData?.id) !== targetAccountId) {
+      return;
+    }
+
+    const nextLoginData = {
+      ...parsedLoginData,
+      role: primaryRole,
+      roles: normalizedRoles,
+      serviceLine: primaryServiceLine,
+      service_line: primaryServiceLine,
+      serviceLineName: primaryServiceLine,
+      service_line_name: primaryServiceLine,
+    };
+
+    storage.setItem(LOGIN_DATA_KEY, JSON.stringify(nextLoginData));
+    hasUpdated = true;
+  };
+
+  updateStorage(sessionStorage);
+  updateStorage(localStorage);
+
+  if (hasUpdated) {
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('auth:loginData-updated'));
+  }
+
+  return hasUpdated;
+};
+
 function UtilizadoresAG() {
   const [activeTab, setActiveTab] = useState('users');
   const [searchTerm, setSearchTerm] = useState('');
@@ -194,18 +264,6 @@ function UtilizadoresAG() {
   }, [users, page]);
 
   const totalPages = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
-  
-  // Debug: Log pagination info
-  console.log('Pagination Debug:', { 
-    usersCount: users.length, 
-    pageSize: PAGE_SIZE, 
-    totalPages, 
-    currentPage: page,
-    activeTab,
-    searchTerm,
-    accountType,
-    users: users.map(u => ({ id: u.id, nome: u.nome, email: u.email, status: u.status, roles: u.roles }))
-  });
 
   useEffect(() => {
     setPage(1);
@@ -228,23 +286,22 @@ function UtilizadoresAG() {
 
       return {
         ...current,
-        roles: nextRoles.length > 0 ? nextRoles : ['consultor'],
+        roles: nextRoles.length > 0 ? nextRoles : [DEFAULT_ROLE],
+        serviceLineIds: nextRoles.includes('service-line-leader')
+          ? current.serviceLineIds.slice(0, 1)
+          : [],
       };
     });
   };
 
-  const toggleServiceLine = (formKey, serviceLineId) => {
+  const selectServiceLine = (formKey, serviceLineId) => {
     const setter = formKey === 'create' ? setCreateForm : setPermissionsForm;
+    const normalizedId = Number(serviceLineId);
 
     setter((current) => {
-      const hasId = current.serviceLineIds.includes(serviceLineId);
-      const nextIds = hasId
-        ? current.serviceLineIds.filter((id) => id !== serviceLineId)
-        : [...current.serviceLineIds, serviceLineId];
-
       return {
         ...current,
-        serviceLineIds: nextIds,
+        serviceLineIds: Number.isInteger(normalizedId) && normalizedId > 0 ? [normalizedId] : [],
       };
     });
   };
@@ -261,6 +318,13 @@ function UtilizadoresAG() {
   const handleCreateUser = async () => {
     // Clear previous errors
     setCreateModalError('');
+    const normalizedCreateRoles = normalizeRoleList(createForm.roles);
+    const createServiceLineIds = normalizedCreateRoles.includes('service-line-leader')
+      ? createForm.serviceLineIds
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0)
+        .slice(0, 1)
+      : [];
 
     if (!createForm.nome.trim() || !createForm.email.trim() || !createForm.senha.trim()) {
       setCreateModalError('Preencha nome, email e password.');
@@ -268,13 +332,13 @@ function UtilizadoresAG() {
     }
 
     // Validation for Service Line Leader role - only one service line (priority check)
-    if (createForm.roles.includes('service-line-leader') && createForm.serviceLineIds.length > 1) {
+    if (normalizedCreateRoles.includes('service-line-leader') && createServiceLineIds.length > 1) {
       setCreateModalError('Service Line Leader só pode ser associado a uma Service Line.');
       return;
     }
 
     // Validation for Service Line Leader role - at least one service line
-    if (createForm.roles.includes('service-line-leader') && createForm.serviceLineIds.length === 0) {
+    if (normalizedCreateRoles.includes('service-line-leader') && createServiceLineIds.length === 0) {
       setCreateModalError('Service Line Leader deve ter pelo menos uma Service Line atribuída.');
       return;
     }
@@ -289,13 +353,13 @@ function UtilizadoresAG() {
     }
 
     // Validation for duplicate Service Line Leader
-    if (createForm.roles.includes('service-line-leader') && createForm.serviceLineIds.length > 0) {
-      for (const serviceLineId of createForm.serviceLineIds) {
+    if (normalizedCreateRoles.includes('service-line-leader') && createServiceLineIds.length > 0) {
+      for (const serviceLineId of createServiceLineIds) {
         const existingSLL = users.find(user => 
           user.roles.includes('service-line-leader') &&
           user.serviceLines && 
           user.serviceLines.some(sl => {
-            const serviceLine = serviceLines.find(line => line.id === serviceLineId);
+            const serviceLine = serviceLines.find((line) => Number(line.id) === Number(serviceLineId));
             return serviceLine && sl === serviceLine.name;
           })
         );
@@ -313,8 +377,8 @@ function UtilizadoresAG() {
         nome: createForm.nome,
         email: createForm.email,
         senha: createForm.senha,
-        roles: createForm.roles,
-        serviceLineIds: createForm.serviceLineIds,
+        roles: normalizedCreateRoles,
+        serviceLineIds: createServiceLineIds,
       });
 
       setShowCreateModal(false);
@@ -322,7 +386,7 @@ function UtilizadoresAG() {
         nome: '',
         email: '',
         senha: '',
-        roles: ['consultor'],
+        roles: [DEFAULT_ROLE],
         serviceLineIds: [],
       });
 
@@ -338,11 +402,14 @@ function UtilizadoresAG() {
   const openPermissionsModal = (user) => {
     setSelectedUser(user);
     setPermissionsModalError(''); // Clear previous errors
+    const selectedServiceLineId = serviceLines
+      .filter((line) => (user.serviceLines || []).includes(line.name))
+      .map((line) => Number(line.id))
+      .find((id) => Number.isInteger(id) && id > 0);
+
     setPermissionsForm({
-      roles: Array.isArray(user.roles) && user.roles.length > 0 ? user.roles : ['consultor'],
-      serviceLineIds: serviceLines
-        .filter((line) => (user.serviceLines || []).includes(line.name))
-        .map((line) => Number(line.id)),
+      roles: Array.isArray(user.roles) && user.roles.length > 0 ? user.roles : [DEFAULT_ROLE],
+      serviceLineIds: selectedServiceLineId ? [selectedServiceLineId] : [],
     });
     setShowPermissionsModal(true);
   };
@@ -351,28 +418,35 @@ function UtilizadoresAG() {
     if (!selectedUser) {
       return;
     }
+    const normalizedPermissionRoles = normalizeRoleList(permissionsForm.roles);
+    const permissionServiceLineIds = normalizedPermissionRoles.includes('service-line-leader')
+      ? permissionsForm.serviceLineIds
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0)
+        .slice(0, 1)
+      : [];
 
     // Validation for Service Line Leader role - only one service line (priority check)
-    if (permissionsForm.roles.includes('service-line-leader') && permissionsForm.serviceLineIds.length > 1) {
+    if (normalizedPermissionRoles.includes('service-line-leader') && permissionServiceLineIds.length > 1) {
       setPermissionsModalError('Service Line Leader só pode ser associado a uma Service Line.');
       return;
     }
 
     // Validation for Service Line Leader role - at least one service line
-    if (permissionsForm.roles.includes('service-line-leader') && permissionsForm.serviceLineIds.length === 0) {
+    if (normalizedPermissionRoles.includes('service-line-leader') && permissionServiceLineIds.length === 0) {
       setPermissionsModalError('Service Line Leader deve ter pelo menos uma Service Line atribuída.');
       return;
     }
 
     // Validation for duplicate Service Line Leader
-    if (permissionsForm.roles.includes('service-line-leader') && permissionsForm.serviceLineIds.length > 0) {
-      for (const serviceLineId of permissionsForm.serviceLineIds) {
+    if (normalizedPermissionRoles.includes('service-line-leader') && permissionServiceLineIds.length > 0) {
+      for (const serviceLineId of permissionServiceLineIds) {
         const existingSLL = users.find(user => 
           user.id !== selectedUser.id && 
           user.roles.includes('service-line-leader') &&
           user.serviceLines && 
           user.serviceLines.some(sl => {
-            const serviceLine = serviceLines.find(line => line.id === serviceLineId);
+            const serviceLine = serviceLines.find((line) => Number(line.id) === Number(serviceLineId));
             return serviceLine && sl === serviceLine.name;
           })
         );
@@ -386,10 +460,13 @@ function UtilizadoresAG() {
 
     try {
       setIsSaving(true);
-      await updateAdminUserPermissions(selectedUser.id, {
-        roles: permissionsForm.roles,
-        serviceLineIds: permissionsForm.serviceLineIds,
+      const updatedUser = await updateAdminUserPermissions(selectedUser.id, {
+        roles: normalizedPermissionRoles,
+        serviceLineIds: permissionServiceLineIds,
       });
+      if (updatedUser?.id) {
+        updateStoredLoginDataPermissions(updatedUser);
+      }
       await refreshUsers();
       setShowPermissionsModal(false);
       setSelectedUser(null);
@@ -681,7 +758,7 @@ function UtilizadoresAG() {
                 </div>
               ) : (
                 <div className="ag-users-note">
-                  Preencha os dados do novo utilizador. Para Service Line Leader, selecione também a Service Line.
+                  Preencha os dados do novo utilizador. Para Service Line Leader, selecione uma Service Line.
                 </div>
               )}
 
@@ -727,13 +804,14 @@ function UtilizadoresAG() {
 
               {createForm.roles.includes('service-line-leader') && (
                 <div className="ag-users-roles-box">
-                  <strong>Service Lines</strong>
+                  <strong>Service Line</strong>
                   {serviceLines.map((line) => (
                     <label key={line.id} className="ag-users-check-row">
                       <input
-                        type="checkbox"
+                        type="radio"
+                        name="create-service-line"
                         checked={createForm.serviceLineIds.includes(Number(line.id))}
-                        onChange={() => toggleServiceLine('create', Number(line.id))}
+                        onChange={() => selectServiceLine('create', Number(line.id))}
                       />
                       <span>{line.name}</span>
                     </label>
@@ -779,7 +857,7 @@ function UtilizadoresAG() {
                 </div>
               ) : (
                 <div className="ag-users-note">
-                  Selecione os tipos de conta. Para Service Line Lider, selecione tambem a(s) Service Line(s).
+                  Selecione os tipos de conta. Para Service Line Lider, selecione tambem a Service Line.
                 </div>
               )}
 
@@ -799,13 +877,14 @@ function UtilizadoresAG() {
 
               {permissionsForm.roles.includes('service-line-leader') && (
                 <div className="ag-users-roles-box">
-                  <strong>Service Lines</strong>
+                  <strong>Service Line</strong>
                   {serviceLines.map((line) => (
                     <label key={line.id} className="ag-users-check-row">
                       <input
-                        type="checkbox"
+                        type="radio"
+                        name="permissions-service-line"
                         checked={permissionsForm.serviceLineIds.includes(Number(line.id))}
-                        onChange={() => toggleServiceLine('permissions', Number(line.id))}
+                        onChange={() => selectServiceLine('permissions', Number(line.id))}
                       />
                       <span>{line.name}</span>
                     </label>

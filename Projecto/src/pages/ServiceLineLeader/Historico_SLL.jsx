@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Filter, ChevronLeft, ChevronRight, Eye, X } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Eye, X } from 'lucide-react';
 import Layout from '../../components/Layout';
 import {
   fetchHistoricoAreasSLL,
@@ -9,6 +9,7 @@ import {
   fetchDetalhesBadgeSLL,
 } from '../../services/serviceLineLeaderService';
 import '../../css/TalentManager/Exportacoes_TM.css';
+import '../../css/Shared/HistoricoPages.css';
 
 const tabs = [
   { id: 'minha-sl', label: 'Minha Service Line' },
@@ -28,6 +29,22 @@ const getStoredLoginData = () => {
   }
 };
 
+const normalizeLevelTitle = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '-';
+  }
+
+  if (raw.includes(' - ')) {
+    const suffix = raw.split(' - ').slice(1).join(' - ').trim();
+    if (suffix) {
+      return suffix;
+    }
+  }
+
+  return raw.replace(/^nivel\s+/i, '').trim() || raw;
+};
+
 function HistoricoSLL() {
   const loginData = useMemo(() => getStoredLoginData(), []);
   const [activeTab, setActiveTab] = useState('minha-sl');
@@ -36,15 +53,13 @@ function HistoricoSLL() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Dados
   const [serviceLineData, setServiceLineData] = useState(null);
   const [areas, setAreas] = useState([]);
   const [badges, setBadges] = useState([]);
   const [consultores, setConsultores] = useState([]);
 
-  // Modal states
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState(null); // 'consultor', 'badge'
+  const [modalType, setModalType] = useState(null);
   const [modalData, setModalData] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
 
@@ -92,40 +107,35 @@ function HistoricoSLL() {
     };
   }, [loginData]);
 
-  // Reset page quando muda tab ou search
   useEffect(() => {
     setPage(1);
   }, [activeTab, searchQuery]);
 
-  // Filtrar dados baseado na tab ativa e search
   const filteredData = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
 
     if (activeTab === 'minha-sl') {
-      // Filtrar áreas
-      return areas.filter((item) =>
-        item.name?.toLowerCase().includes(query)
-      );
+      return areas.filter((item) => item.name?.toLowerCase().includes(query));
     }
 
     if (activeTab === 'badges') {
       return badges.filter((item) =>
-        item.name?.toLowerCase().includes(query) ||
-        item.area?.toLowerCase().includes(query)
+        item.name?.toLowerCase().includes(query)
+        || item.area?.toLowerCase().includes(query)
+        || item.level?.toLowerCase().includes(query),
       );
     }
 
     if (activeTab === 'consultores') {
       return consultores.filter((item) =>
-        item.name?.toLowerCase().includes(query) ||
-        item.email?.toLowerCase().includes(query)
+        item.name?.toLowerCase().includes(query)
+        || item.email?.toLowerCase().includes(query),
       );
     }
 
     return [];
-  }, [activeTab, searchQuery, serviceLine, badges, consultores]);
+  }, [activeTab, searchQuery, areas, badges, consultores]);
 
-  // Paginação
   const totalPages = Math.max(1, Math.ceil(filteredData.length / ITEMS_PER_PAGE));
   const pagedData = useMemo(() => {
     const start = (page - 1) * ITEMS_PER_PAGE;
@@ -136,7 +146,6 @@ function HistoricoSLL() {
   const previousPage = () => setPage((p) => Math.max(1, p - 1));
   const nextPage = () => setPage((p) => Math.min(totalPages, p + 1));
 
-  // Abrir modal
   const openModal = async (type, id) => {
     const accountId = Number(loginData?.id);
     if (!Number.isInteger(accountId) || accountId <= 0) return;
@@ -153,7 +162,7 @@ function HistoricoSLL() {
         data = await fetchDetalhesBadgeSLL(accountId, id);
       }
       setModalData(data);
-    } catch (error) {
+    } catch {
       setModalData(null);
     } finally {
       setModalLoading(false);
@@ -166,7 +175,6 @@ function HistoricoSLL() {
     setModalData(null);
   };
 
-  // Renderizar status badge
   const renderStatusBadge = (status) => {
     const statusClasses = {
       completo: 'status-badge success',
@@ -174,24 +182,28 @@ function HistoricoSLL() {
       pendente: 'status-badge warning',
       ativo: 'status-badge success',
       inativo: 'status-badge danger',
+      rejeitado: 'status-badge danger',
     };
-    const className = statusClasses[status?.toLowerCase()] || 'status-badge';
-    return <span className={className}>{status || '-'}</span>;
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    const mappedStatus = ['pendente-tm', 'pendente-sll'].includes(normalizedStatus)
+      ? 'pendente'
+      : normalizedStatus;
+    const className = statusClasses[mappedStatus] || 'status-badge';
+    return <span className={className}>{mappedStatus || '-'}</span>;
   };
 
   return (
     <Layout>
-      <div className="tm-export-page">
+      <div className="tm-export-page historico-page">
         <header className="tm-export-header">
-          <h1>Histórico de Áreas</h1>
+          <h1>Histórico da Service Line</h1>
         </header>
 
         <p className="tm-export-scope-note">
-          Veja que áreas os seus consultores obtêm e estão a obter
+          Acompanhe o desempenho e a evolução dos consultores da sua Service Line.
         </p>
 
         <div className="tm-export-shell">
-          {/* Tabs */}
           <div className="tm-export-tabs">
             {tabs.map((tab) => (
               <button
@@ -205,9 +217,8 @@ function HistoricoSLL() {
             ))}
           </div>
 
-          {/* Toolbar - só mostrar para badges e consultores */}
           {activeTab !== 'minha-sl' && (
-            <div className="tm-export-toolbar">
+            <div className="tm-export-toolbar historico-toolbar-single">
               <div className="tm-export-search">
                 <Search size={18} />
                 <input
@@ -217,40 +228,47 @@ function HistoricoSLL() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <button type="button" className="tm-export-control-btn">
-                <Filter size={18} />
-                Filtrar pesquisa
-              </button>
-              <button type="button" className="tm-export-control-btn">
-                Ordenar
-              </button>
             </div>
           )}
 
           {isLoading && <p className="lp-progress-label">A carregar...</p>}
-
           {errorMessage && <p className="lp-progress-label">{errorMessage}</p>}
 
           {!isLoading && !errorMessage && (
             <>
-              {/* Tabela Áreas da Service Line */}
               {activeTab === 'minha-sl' && (
                 <>
-                  {serviceLineData && (
-                    <div className="tm-export-scope-note" style={{ marginBottom: '16px' }}>
-                      <strong>{serviceLineData.name}</strong> —
-                      <span className="lp-progress-label" style={{ marginLeft: '12px' }}>
-                        <strong>{serviceLineData.totalBadges || 0}</strong> badges
-                      </span>
-                      <span className="lp-progress-label" style={{ marginLeft: '8px' }}>
-                        <strong>{serviceLineData.obtidas || 0}</strong> obtidas
-                      </span>
-                      <span className="lp-progress-label" style={{ marginLeft: '8px' }}>
-                        <strong>{serviceLineData.emProgresso || 0}</strong> em progresso
-                      </span>
-                    </div>
-                  )}
+                  <div className="orders-table-wrap">
+                    <table className="orders-table">
+                      <thead>
+                        <tr>
+                          <th>Service Line</th>
+                          <th>Total Badges</th>
+                          <th>Obtidas</th>
+                          <th>Em Progresso</th>
+                          <th>Consultores</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {!serviceLineData && (
+                          <tr>
+                            <td colSpan={5} className="orders-empty-row">Service Line não encontrada.</td>
+                          </tr>
+                        )}
+                        {serviceLineData && (
+                          <tr>
+                            <td><strong>{serviceLineData.name}</strong></td>
+                            <td>{serviceLineData.totalBadges || 0}</td>
+                            <td>{serviceLineData.obtidas || 0}</td>
+                            <td>{serviceLineData.emProgresso || 0}</td>
+                            <td>{serviceLineData.totalConsultores || 0}</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
 
+                  <h3 className="historico-section-title">Áreas da Service Line</h3>
                   <div className="orders-table-wrap">
                     <table className="orders-table">
                       <thead>
@@ -281,7 +299,6 @@ function HistoricoSLL() {
                 </>
               )}
 
-              {/* Tabela Badges */}
               {activeTab === 'badges' && (
                 <div className="orders-table-wrap">
                   <table className="orders-table">
@@ -292,28 +309,26 @@ function HistoricoSLL() {
                         <th>Nível</th>
                         <th>Consultores Obtidos</th>
                         <th>Em Progresso</th>
-                        <th>Estado</th>
                         <th>Ações</th>
                       </tr>
                     </thead>
                     <tbody>
                       {pagedData.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="orders-empty-row">Nenhum badge encontrado.</td>
+                          <td colSpan={6} className="orders-empty-row">Nenhum badge encontrado.</td>
                         </tr>
                       )}
                       {pagedData.map((item) => (
                         <tr key={item.id}>
                           <td><strong>{item.name}</strong></td>
                           <td>{item.area || '-'}</td>
-                          <td>{item.level || '-'}</td>
+                          <td>{normalizeLevelTitle(item.level)}</td>
                           <td>{item.consultoresObtidos || 0}</td>
                           <td>{item.emProgresso || 0}</td>
-                          <td>{renderStatusBadge(item.status)}</td>
                           <td>
                             <button
                               type="button"
-                              className="tm-export-control-btn"
+                              className="tm-export-control-btn historico-action-btn"
                               onClick={() => openModal('badge', item.id)}
                             >
                               <Eye size={16} />
@@ -327,7 +342,6 @@ function HistoricoSLL() {
                 </div>
               )}
 
-              {/* Tabela Consultores */}
               {activeTab === 'consultores' && (
                 <div className="orders-table-wrap">
                   <table className="orders-table">
@@ -368,7 +382,7 @@ function HistoricoSLL() {
                           <td>
                             <button
                               type="button"
-                              className="tm-export-control-btn"
+                              className="tm-export-control-btn historico-action-btn"
                               onClick={() => openModal('consultor', item.id)}
                             >
                               <Eye size={16} />
@@ -382,7 +396,6 @@ function HistoricoSLL() {
                 </div>
               )}
 
-              {/* Paginação */}
               {filteredData.length > 0 && (
                 <div className="orders-pagination" role="navigation">
                   <button
@@ -417,7 +430,7 @@ function HistoricoSLL() {
               )}
             </>
           )}
-          {/* Modal */}
+
           {modalOpen && (
             <div className="modal-overlay" onClick={closeModal}>
               <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -434,7 +447,6 @@ function HistoricoSLL() {
                   {modalLoading && <p>A carregar...</p>}
                   {!modalLoading && modalData && (
                     <>
-                      {/* Detalhes do Consultor */}
                       {modalType === 'consultor' && modalData.consultor && (
                         <div className="modal-section">
                           <div className="modal-info">
@@ -499,14 +511,13 @@ function HistoricoSLL() {
                         </div>
                       )}
 
-                      {/* Detalhes do Badge */}
                       {modalType === 'badge' && modalData.badge && (
                         <div className="modal-section">
                           <div className="modal-info">
                             <h3>{modalData.badge.name}</h3>
                             <p><strong>Área:</strong> {modalData.badge.areaName || '-'}</p>
                             <p><strong>Service Line:</strong> {modalData.badge.serviceLineName || '-'}</p>
-                            <p><strong>Nível:</strong> {modalData.badge.level || '-'}</p>
+                            <p><strong>Nível:</strong> {normalizeLevelTitle(modalData.badge.level)}</p>
                             <p><strong>Pontos:</strong> {modalData.badge.points}</p>
                           </div>
                           <h4>Consultores que Obtiveram ({modalData.totalObtidos})</h4>

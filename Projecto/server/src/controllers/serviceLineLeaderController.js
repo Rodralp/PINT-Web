@@ -1,10 +1,68 @@
-import { serviceLineLeaderService } from '../services/serviceLineLeaderService.js';
-import { sequelize } from '../config/database.js';
 import { QueryTypes } from 'sequelize';
+import { sequelize } from '../config/database.js';
+import { serviceLineLeaderService } from '../services/serviceLineLeaderService.js';
 
 const parseAccountId = (value) => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+const pendingEstadoNames = ['pendente-tm', 'pendente-sll'];
+const activeEstadoNames = [...pendingEstadoNames, 'aprovado'];
+
+const mapWorkflowStatusToUi = (statusValue) => {
+  const normalized = String(statusValue || '').trim().toLowerCase();
+
+  if (pendingEstadoNames.includes(normalized)) {
+    return 'pendente';
+  }
+
+  if (normalized === 'aprovado') {
+    return 'completo';
+  }
+
+  if (normalized === 'rejeitado' || normalized === 'evidencias_insuficientes') {
+    return 'rejeitado';
+  }
+
+  return normalized || 'pendente';
+};
+
+const getServiceLineForLeader = async (accountId) => {
+  const [row] = await sequelize.query(
+    `
+      SELECT sl.nsline, sl.sline
+      FROM sll_leader_sl sll
+      INNER JOIN service_line sl
+        ON sl.nsline = sll.nsline
+      WHERE sll.nutilizador = :accountId
+      ORDER BY sl.nsline ASC
+      LIMIT 1
+    `,
+    {
+      replacements: { accountId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return row || null;
+};
+
+// Minha Service Line - Página principal
+export const getMyServiceLine = async (req, res) => {
+  const accountId = parseAccountId(req.query?.accountId);
+
+  if (!accountId) {
+    res.status(400).json({ message: 'Account id is required.' });
+    return;
+  }
+
+  try {
+    const data = await serviceLineLeaderService.getMyServiceLine(accountId);
+    res.status(200).json(data || []);
+  } catch (error) {
+    res.status(500).json({ message: error?.message || 'Failed to fetch service line data.' });
+  }
 };
 
 // Histórico - Áreas da Service Line (tabela por áreas)
@@ -17,85 +75,122 @@ export const getHistoricoAreasSLL = async (req, res) => {
   }
 
   try {
-    // Buscar a service line do SLL
-    const [sllRow] = await sequelize.query(
-      `SELECT nsline FROM sll_leader_sl WHERE nutilizador = :accountId LIMIT 1`,
-      { replacements: { accountId }, type: QueryTypes.SELECT }
-    );
+    const serviceLine = await getServiceLineForLeader(accountId);
 
-    if (!sllRow) {
+    if (!serviceLine) {
       res.status(404).json({ message: 'Service Line Leader not found.' });
       return;
     }
 
-    const serviceLineId = sllRow.nsline;
+    const serviceLineId = Number(serviceLine.nsline);
 
-    // Buscar dados da service line + áreas
     const [serviceLineData] = await sequelize.query(
       `
+        WITH sl_badges AS (
+          SELECT bps.nbadge
+          FROM b_pertence_sl bps
+          WHERE bps.nsline = :serviceLineId
+        )
         SELECT
           sl.nsline AS id,
           sl.sline AS name,
-          COALESCE(slCounts.total_badges, 0) AS totalBadges,
-          COALESCE(slCounts.obtidas, 0) AS obtidas,
-          COALESCE(slCounts.em_progresso, 0) AS emProgresso,
-          COALESCE(slCounts.total_consultores, 0) AS totalConsultores
+          COALESCE((
+            SELECT COUNT(DISTINCT sb.nbadge)
+            FROM sl_badges sb
+          ), 0) AS "totalBadges",
+          COALESCE((
+            SELECT COUNT(DISTINCT cb.nbadge)
+            FROM c_obtem_b cb
+            INNER JOIN sl_badges sb
+              ON sb.nbadge = cb.nbadge
+          ), 0) AS obtidas,
+          COALESCE((
+            SELECT COUNT(DISTINCT p.nbadge)
+            FROM pedidos p
+            INNER JOIN estado e
+              ON e.nestado = p.estado
+            INNER JOIN sl_badges sb
+              ON sb.nbadge = p.nbadge
+            WHERE LOWER(COALESCE(e.estado, '')) IN (:pendingEstadoNames)
+          ), 0) AS "emProgresso",
+          COALESCE((
+            SELECT COUNT(DISTINCT origin.nutilizador)
+            FROM (
+              SELECT cb.nutilizador
+              FROM c_obtem_b cb
+              INNER JOIN sl_badges sb
+                ON sb.nbadge = cb.nbadge
+              UNION
+              SELECT p.nutilizador
+              FROM pedidos p
+              INNER JOIN estado e
+                ON e.nestado = p.estado
+              INNER JOIN sl_badges sb
+                ON sb.nbadge = p.nbadge
+              WHERE LOWER(COALESCE(e.estado, '')) IN (:activeEstadoNames)
+            ) origin
+            INNER JOIN utilizador u
+              ON u.nutilizador = origin.nutilizador
+            WHERE LOWER(COALESCE(u.permissoes, '')) LIKE '%consultor%'
+          ), 0) AS "totalConsultores"
         FROM service_line sl
-        LEFT JOIN (
-          SELECT
-            bps.nsline,
-            COUNT(DISTINCT b.nbadge) AS total_badges,
-            COUNT(DISTINCT CASE WHEN cb.nbadge IS NOT NULL THEN cb.nbadge END) AS obtidas,
-            COUNT(DISTINCT CASE WHEN p.npedido IS NOT NULL AND p.estado IN (2, 3) THEN p.nbadge END) AS em_progresso,
-            COUNT(DISTINCT u.nutilizador) AS total_consultores
-          FROM b_pertence_sl bps
-          JOIN badge b ON b.nbadge = bps.nbadge
-          LEFT JOIN c_obtem_b cb ON cb.nbadge = b.nbadge
-          LEFT JOIN pedidos p ON p.nbadge = b.nbadge AND p.estado IN (2, 3)
-          LEFT JOIN utilizador u ON (
-            cb.nutilizador = u.nutilizador OR
-            p.nutilizador = u.nutilizador
-          ) AND LOWER(u.permissoes) LIKE '%consultor%'
-          GROUP BY bps.nsline
-        ) slCounts ON slCounts.nsline = sl.nsline
         WHERE sl.nsline = :serviceLineId
+        LIMIT 1
       `,
-      { replacements: { serviceLineId }, type: QueryTypes.SELECT }
+      {
+        replacements: {
+          serviceLineId,
+          pendingEstadoNames,
+          activeEstadoNames,
+        },
+        type: QueryTypes.SELECT,
+      },
     );
 
-    // Buscar áreas da service line
     const areas = await sequelize.query(
       `
+        WITH sl_badges AS (
+          SELECT bps.nbadge
+          FROM b_pertence_sl bps
+          WHERE bps.nsline = :serviceLineId
+        ),
+        pending_badges AS (
+          SELECT DISTINCT p.nbadge
+          FROM pedidos p
+          INNER JOIN estado e
+            ON e.nestado = p.estado
+          INNER JOIN sl_badges sb
+            ON sb.nbadge = p.nbadge
+          WHERE LOWER(COALESCE(e.estado, '')) IN (:pendingEstadoNames)
+        )
         SELECT
           a.narea AS id,
           a.area AS name,
-          COALESCE(aCounts.total_badges, 0) AS totalBadges,
-          COALESCE(aCounts.obtidas, 0) AS obtidas,
-          COALESCE(aCounts.em_progresso, 0) AS emProgresso
+          COUNT(DISTINCT CASE WHEN sb.nbadge IS NOT NULL THEN bpa.nbadge END) AS "totalBadges",
+          COUNT(DISTINCT CASE WHEN sb.nbadge IS NOT NULL AND cb.nbadge IS NOT NULL THEN bpa.nbadge END) AS obtidas,
+          COUNT(DISTINCT CASE WHEN sb.nbadge IS NOT NULL AND pb.nbadge IS NOT NULL THEN bpa.nbadge END) AS "emProgresso"
         FROM area a
-        INNER JOIN badge b ON b.narea = a.narea
-        INNER JOIN b_pertence_sl bps ON bps.nbadge = b.nbadge AND bps.nsline = :serviceLineId
-        LEFT JOIN (
-          SELECT
-            b.narea,
-            COUNT(DISTINCT b.nbadge) AS total_badges,
-            COUNT(DISTINCT CASE WHEN cb.nbadge IS NOT NULL THEN cb.nbadge END) AS obtidas,
-            COUNT(DISTINCT CASE WHEN p.npedido IS NOT NULL AND p.estado IN (2, 3) THEN p.nbadge END) AS em_progresso
-          FROM badge b
-          LEFT JOIN c_obtem_b cb ON cb.nbadge = b.nbadge
-          LEFT JOIN pedidos p ON p.nbadge = b.nbadge AND p.estado IN (2, 3)
-          WHERE b.narea IS NOT NULL
-          GROUP BY b.narea
-        ) aCounts ON aCounts.narea = a.narea
-        GROUP BY a.narea, a.area, aCounts.total_badges, aCounts.obtidas, aCounts.em_progresso
+        LEFT JOIN b_pertence_a bpa
+          ON bpa.narea = a.narea
+        LEFT JOIN sl_badges sb
+          ON sb.nbadge = bpa.nbadge
+        LEFT JOIN c_obtem_b cb
+          ON cb.nbadge = bpa.nbadge
+        LEFT JOIN pending_badges pb
+          ON pb.nbadge = bpa.nbadge
+        WHERE a.nsline = :serviceLineId
+        GROUP BY a.narea, a.area
         ORDER BY a.area ASC
       `,
-      { replacements: { serviceLineId }, type: QueryTypes.SELECT }
+      {
+        replacements: { serviceLineId, pendingEstadoNames },
+        type: QueryTypes.SELECT,
+      },
     );
 
     res.status(200).json({
       serviceLine: serviceLineData || null,
-      areas: areas || []
+      areas: areas || [],
     });
   } catch (error) {
     res.status(500).json({ message: error?.message || 'Failed to fetch areas.' });
@@ -112,50 +207,82 @@ export const getHistoricoBadgesSLL = async (req, res) => {
   }
 
   try {
-    // Buscar a service line do SLL
-    const [sllRow] = await sequelize.query(
-      `SELECT nsline FROM sll_leader_sl WHERE nutilizador = :accountId LIMIT 1`,
-      { replacements: { accountId }, type: QueryTypes.SELECT }
-    );
+    const serviceLine = await getServiceLineForLeader(accountId);
 
-    if (!sllRow) {
+    if (!serviceLine) {
       res.status(404).json({ message: 'Service Line Leader not found.' });
       return;
     }
 
-    const serviceLineId = sllRow.nsline;
+    const serviceLineId = Number(serviceLine.nsline);
 
     const rows = await sequelize.query(
       `
+        WITH sl_badges AS (
+          SELECT bps.nbadge
+          FROM b_pertence_sl bps
+          WHERE bps.nsline = :serviceLineId
+        ),
+        obtidos_counts AS (
+          SELECT
+            cb.nbadge,
+            COUNT(DISTINCT cb.nutilizador) AS consultores_obtidos
+          FROM c_obtem_b cb
+          INNER JOIN sl_badges sb
+            ON sb.nbadge = cb.nbadge
+          GROUP BY cb.nbadge
+        ),
+        pending_counts AS (
+          SELECT
+            p.nbadge,
+            COUNT(DISTINCT p.nutilizador) AS em_progresso
+          FROM pedidos p
+          INNER JOIN estado e
+            ON e.nestado = p.estado
+          INNER JOIN sl_badges sb
+            ON sb.nbadge = p.nbadge
+          WHERE LOWER(COALESCE(e.estado, '')) IN (:pendingEstadoNames)
+          GROUP BY p.nbadge
+        )
         SELECT
           b.nbadge AS id,
           b.b_nome AS name,
-          a.area,
-          n.nivel AS level,
-          COALESCE(bCounts.consultores_obtidos, 0) AS consultoresObtidos,
-          COALESCE(bCounts.em_progresso, 0) AS emProgresso,
+          lvl.area,
+          lvl.nivel AS level,
+          COALESCE(oc.consultores_obtidos, 0) AS "consultoresObtidos",
+          COALESCE(pc.em_progresso, 0) AS "emProgresso",
           CASE
-            WHEN COALESCE(bCounts.consultores_obtidos, 0) > 0 THEN 'completo'
-            WHEN COALESCE(bCounts.em_progresso, 0) > 0 THEN 'a-fazer'
+            WHEN COALESCE(oc.consultores_obtidos, 0) > 0 THEN 'completo'
+            WHEN COALESCE(pc.em_progresso, 0) > 0 THEN 'a-fazer'
             ELSE 'a-fazer'
           END AS status
-        FROM badge b
-        INNER JOIN b_pertence_sl bps ON bps.nbadge = b.nbadge AND bps.nsline = :serviceLineId
-        LEFT JOIN area a ON a.narea = b.narea
-        LEFT JOIN nivel n ON n.nnivel = b.nnivel
-        LEFT JOIN (
+        FROM sl_badges sb
+        INNER JOIN badge b
+          ON b.nbadge = sb.nbadge
+        LEFT JOIN LATERAL (
           SELECT
-            b.nbadge,
-            COUNT(DISTINCT CASE WHEN cb.nutilizador IS NOT NULL THEN cb.nutilizador END) AS consultores_obtidos,
-            COUNT(DISTINCT CASE WHEN p.npedido IS NOT NULL AND p.estado IN (2, 3) THEN p.nutilizador END) AS em_progresso
-          FROM badge b
-          LEFT JOIN c_obtem_b cb ON cb.nbadge = b.nbadge
-          LEFT JOIN pedidos p ON p.nbadge = b.nbadge AND p.estado IN (2, 3)
-          GROUP BY b.nbadge
-        ) bCounts ON bCounts.nbadge = b.nbadge
+            a.area,
+            n.nivel
+          FROM nivel_contem_b ncb
+          LEFT JOIN nivel n
+            ON n.nnivel = ncb.nnivel
+          LEFT JOIN area a
+            ON a.narea = n.narea
+          WHERE ncb.nbadge = b.nbadge
+          ORDER BY n.nnivel ASC
+          LIMIT 1
+        ) lvl
+          ON TRUE
+        LEFT JOIN obtidos_counts oc
+          ON oc.nbadge = b.nbadge
+        LEFT JOIN pending_counts pc
+          ON pc.nbadge = b.nbadge
         ORDER BY b.b_nome ASC
       `,
-      { replacements: { serviceLineId }, type: QueryTypes.SELECT }
+      {
+        replacements: { serviceLineId, pendingEstadoNames },
+        type: QueryTypes.SELECT,
+      },
     );
 
     res.status(200).json(rows);
@@ -174,55 +301,83 @@ export const getHistoricoConsultoresSLL = async (req, res) => {
   }
 
   try {
-    // Buscar a service line do SLL
-    const [sllRow] = await sequelize.query(
-      `SELECT nsline FROM sll_leader_sl WHERE nutilizador = :accountId LIMIT 1`,
-      { replacements: { accountId }, type: QueryTypes.SELECT }
-    );
+    const serviceLine = await getServiceLineForLeader(accountId);
 
-    if (!sllRow) {
+    if (!serviceLine) {
       res.status(404).json({ message: 'Service Line Leader not found.' });
       return;
     }
 
-    const serviceLineId = sllRow.nsline;
+    const serviceLineId = Number(serviceLine.nsline);
 
     const rows = await sequelize.query(
       `
+        WITH sl_badges AS (
+          SELECT bps.nbadge
+          FROM b_pertence_sl bps
+          WHERE bps.nsline = :serviceLineId
+        ),
+        consultores_na_sl AS (
+          SELECT cb.nutilizador
+          FROM c_obtem_b cb
+          INNER JOIN sl_badges sb
+            ON sb.nbadge = cb.nbadge
+          UNION
+          SELECT p.nutilizador
+          FROM pedidos p
+          INNER JOIN sl_badges sb
+            ON sb.nbadge = p.nbadge
+        ),
+        points_badges AS (
+          SELECT
+            cb.nutilizador,
+            SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) AS points,
+            COUNT(DISTINCT cb.nbadge) AS badges_obtidas
+          FROM c_obtem_b cb
+          INNER JOIN badge b
+            ON b.nbadge = cb.nbadge
+          INNER JOIN sl_badges sb
+            ON sb.nbadge = cb.nbadge
+          GROUP BY cb.nutilizador
+        ),
+        progress_badges AS (
+          SELECT
+            p.nutilizador,
+            COUNT(DISTINCT p.nbadge) AS badges_em_progresso
+          FROM pedidos p
+          INNER JOIN estado e
+            ON e.nestado = p.estado
+          INNER JOIN sl_badges sb
+            ON sb.nbadge = p.nbadge
+          WHERE LOWER(COALESCE(e.estado, '')) IN (:pendingEstadoNames)
+          GROUP BY p.nutilizador
+        )
         SELECT
           u.nutilizador AS id,
           u.nome AS name,
           u.email,
           'https://i.pravatar.cc/120?u=' || COALESCE(NULLIF(REPLACE(LOWER(u.email), '@', '.'), ''), LOWER(REPLACE(u.nome, ' ', '.'))) AS avatar,
-          COALESCE(bs.points, 0) AS points,
-          COALESCE(bs.badges, 0) AS badgesObtidas,
-          COALESCE(cCounts.em_progresso, 0) AS badgesEmProgresso,
-          u.status
-        FROM utilizador u
-        INNER JOIN c_obtem_b cb ON cb.nutilizador = u.nutilizador
-        INNER JOIN b_pertence_sl bps ON bps.nbadge = cb.nbadge AND bps.nsline = :serviceLineId
-        LEFT JOIN (
-          SELECT
-            cb.nutilizador,
-            SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) AS points,
-            COUNT(DISTINCT cb.nbadge) AS badges
-          FROM c_obtem_b cb
-          JOIN badge b ON b.nbadge = cb.nbadge
-          GROUP BY cb.nutilizador
-        ) bs ON bs.nutilizador = u.nutilizador
-        LEFT JOIN (
-          SELECT
-            p.nutilizador,
-            COUNT(DISTINCT p.nbadge) AS em_progresso
-          FROM pedidos p
-          WHERE p.estado IN (2, 3)
-          GROUP BY p.nutilizador
-        ) cCounts ON cCounts.nutilizador = u.nutilizador
-        WHERE LOWER(u.permissoes) LIKE '%consultor%'
-        GROUP BY u.nutilizador, u.nome, u.email, u.status, bs.points, bs.badges, cCounts.em_progresso
+          COALESCE(pb.points, 0) AS points,
+          COALESCE(pb.badges_obtidas, 0) AS "badgesObtidas",
+          COALESCE(pr.badges_em_progresso, 0) AS "badgesEmProgresso",
+          CASE
+            WHEN LOWER(COALESCE(u.status, '')) IN ('ativo', 'inativo', 'pendente') THEN LOWER(u.status)
+            ELSE 'inativo'
+          END AS status
+        FROM consultores_na_sl csl
+        INNER JOIN utilizador u
+          ON u.nutilizador = csl.nutilizador
+        LEFT JOIN points_badges pb
+          ON pb.nutilizador = u.nutilizador
+        LEFT JOIN progress_badges pr
+          ON pr.nutilizador = u.nutilizador
+        WHERE LOWER(COALESCE(u.permissoes, '')) LIKE '%consultor%'
         ORDER BY u.nome ASC
       `,
-      { replacements: { serviceLineId }, type: QueryTypes.SELECT }
+      {
+        replacements: { serviceLineId, pendingEstadoNames },
+        type: QueryTypes.SELECT,
+      },
     );
 
     res.status(200).json(rows);
@@ -242,33 +397,78 @@ export const getDetalhesConsultorSLL = async (req, res) => {
   }
 
   try {
-    // Verificar se SLL tem acesso a este consultor
-    const [sllRow] = await sequelize.query(
-      `SELECT nsline FROM sll_leader_sl WHERE nutilizador = :accountId LIMIT 1`,
-      { replacements: { accountId }, type: QueryTypes.SELECT }
-    );
+    const serviceLine = await getServiceLineForLeader(accountId);
 
-    if (!sllRow) {
+    if (!serviceLine) {
       res.status(404).json({ message: 'Service Line Leader not found.' });
       return;
     }
 
-    const serviceLineId = sllRow.nsline;
+    const serviceLineId = Number(serviceLine.nsline);
 
-    // Buscar detalhes do consultor
+    const [hasAccessToConsultor] = await sequelize.query(
+      `
+        WITH sl_badges AS (
+          SELECT bps.nbadge
+          FROM b_pertence_sl bps
+          WHERE bps.nsline = :serviceLineId
+        )
+        SELECT 1
+        FROM (
+          SELECT cb.nutilizador
+          FROM c_obtem_b cb
+          INNER JOIN sl_badges sb
+            ON sb.nbadge = cb.nbadge
+          UNION
+          SELECT p.nutilizador
+          FROM pedidos p
+          INNER JOIN sl_badges sb
+            ON sb.nbadge = p.nbadge
+        ) src
+        WHERE src.nutilizador = :consultorId
+        LIMIT 1
+      `,
+      {
+        replacements: { serviceLineId, consultorId },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    if (!hasAccessToConsultor) {
+      res.status(404).json({ message: 'Consultor not found in this service line.' });
+      return;
+    }
+
     const [consultor] = await sequelize.query(
       `
         SELECT
           u.nutilizador AS id,
           u.nome AS name,
           u.email,
-          COALESCE(SUM(cb.pontos_obtidos), 0) AS totalPoints
+          COALESCE(points_by_sl.total_points, 0) AS "totalPoints"
         FROM utilizador u
-        LEFT JOIN c_obtem_b cb ON cb.nutilizador = u.nutilizador
+        LEFT JOIN (
+          SELECT
+            cb.nutilizador,
+            SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) AS total_points
+          FROM c_obtem_b cb
+          INNER JOIN badge b
+            ON b.nbadge = cb.nbadge
+          INNER JOIN b_pertence_sl bps
+            ON bps.nbadge = cb.nbadge
+           AND bps.nsline = :serviceLineId
+          WHERE cb.nutilizador = :consultorId
+          GROUP BY cb.nutilizador
+        ) points_by_sl
+          ON points_by_sl.nutilizador = u.nutilizador
         WHERE u.nutilizador = :consultorId
-        GROUP BY u.nutilizador, u.nome, u.email
+          AND LOWER(COALESCE(u.permissoes, '')) LIKE '%consultor%'
+        LIMIT 1
       `,
-      { replacements: { consultorId }, type: QueryTypes.SELECT }
+      {
+        replacements: { consultorId, serviceLineId },
+        type: QueryTypes.SELECT,
+      },
     );
 
     if (!consultor) {
@@ -276,53 +476,94 @@ export const getDetalhesConsultorSLL = async (req, res) => {
       return;
     }
 
-    // Buscar badges obtidos pelo consultor na service line do SLL
     const badgesObtidos = await sequelize.query(
       `
         SELECT
-          b.nbadge AS id,
+          cb.nbadge AS id,
           b.b_nome AS name,
-          a.area AS areaName,
-          sl.sline AS serviceLineName,
-          cb.data_obtencao AS obtainedDate,
-          COALESCE(cb.pontos_obtidos, b.pontos) AS points
+          lvl.area AS "areaName",
+          sl.sline AS "serviceLineName",
+          cb.data_obtencao AS "obtainedDate",
+          COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0) AS points
         FROM c_obtem_b cb
-        JOIN badge b ON b.nbadge = cb.nbadge
-        LEFT JOIN area a ON a.narea = b.narea
-        LEFT JOIN b_pertence_sl bps ON bps.nbadge = b.nbadge
-        LEFT JOIN service_line sl ON sl.nsline = bps.nsline
+        INNER JOIN badge b
+          ON b.nbadge = cb.nbadge
+        INNER JOIN b_pertence_sl bps
+          ON bps.nbadge = b.nbadge
+         AND bps.nsline = :serviceLineId
+        INNER JOIN service_line sl
+          ON sl.nsline = bps.nsline
+        LEFT JOIN LATERAL (
+          SELECT a.area
+          FROM nivel_contem_b ncb
+          LEFT JOIN nivel n
+            ON n.nnivel = ncb.nnivel
+          LEFT JOIN area a
+            ON a.narea = n.narea
+          WHERE ncb.nbadge = b.nbadge
+          ORDER BY n.nnivel ASC
+          LIMIT 1
+        ) lvl
+          ON TRUE
         WHERE cb.nutilizador = :consultorId
-          AND bps.nsline = :serviceLineId
-        ORDER BY cb.data_obtencao DESC
+        ORDER BY cb.data_obtencao DESC, cb.nbadge DESC
       `,
-      { replacements: { consultorId, serviceLineId }, type: QueryTypes.SELECT }
+      {
+        replacements: { consultorId, serviceLineId },
+        type: QueryTypes.SELECT,
+      },
     );
 
-    // Buscar badges em progresso
-    const badgesEmProgresso = await sequelize.query(
+    const rawBadgesEmProgresso = await sequelize.query(
       `
-        SELECT
-          b.nbadge AS id,
+        SELECT DISTINCT ON (p.nbadge)
+          p.nbadge AS id,
           b.b_nome AS name,
-          a.area AS areaName,
-          p.estado AS status,
-          p.data_pedido AS requestDate
+          lvl.area AS "areaName",
+          sl.sline AS "serviceLineName",
+          LOWER(COALESCE(e.estado, '')) AS workflow_status,
+          p.data_submissao AS "requestDate"
         FROM pedidos p
-        JOIN badge b ON b.nbadge = p.nbadge
-        LEFT JOIN area a ON a.narea = b.narea
-        LEFT JOIN b_pertence_sl bps ON bps.nbadge = b.nbadge
+        INNER JOIN badge b
+          ON b.nbadge = p.nbadge
+        INNER JOIN b_pertence_sl bps
+          ON bps.nbadge = b.nbadge
+         AND bps.nsline = :serviceLineId
+        INNER JOIN service_line sl
+          ON sl.nsline = bps.nsline
+        INNER JOIN estado e
+          ON e.nestado = p.estado
+        LEFT JOIN LATERAL (
+          SELECT a.area
+          FROM nivel_contem_b ncb
+          LEFT JOIN nivel n
+            ON n.nnivel = ncb.nnivel
+          LEFT JOIN area a
+            ON a.narea = n.narea
+          WHERE ncb.nbadge = b.nbadge
+          ORDER BY n.nnivel ASC
+          LIMIT 1
+        ) lvl
+          ON TRUE
         WHERE p.nutilizador = :consultorId
-          AND p.estado IN (2, 3)
-          AND bps.nsline = :serviceLineId
-        ORDER BY p.data_pedido DESC
+          AND LOWER(COALESCE(e.estado, '')) IN (:pendingEstadoNames)
+        ORDER BY p.nbadge, p.data_submissao DESC, p.npedido DESC
       `,
-      { replacements: { consultorId, serviceLineId }, type: QueryTypes.SELECT }
+      {
+        replacements: { consultorId, serviceLineId, pendingEstadoNames },
+        type: QueryTypes.SELECT,
+      },
     );
+
+    const badgesEmProgresso = rawBadgesEmProgresso.map((badge) => ({
+      ...badge,
+      status: mapWorkflowStatusToUi(badge.workflow_status),
+    }));
 
     res.status(200).json({
       consultor,
       badgesObtidos: badgesObtidos || [],
-      badgesEmProgresso: badgesEmProgresso || []
+      badgesEmProgresso: badgesEmProgresso || [],
     });
   } catch (error) {
     res.status(500).json({ message: error?.message || 'Failed to fetch consultor details.' });
@@ -340,36 +581,51 @@ export const getDetalhesBadgeSLL = async (req, res) => {
   }
 
   try {
-    const [sllRow] = await sequelize.query(
-      `SELECT nsline FROM sll_leader_sl WHERE nutilizador = :accountId LIMIT 1`,
-      { replacements: { accountId }, type: QueryTypes.SELECT }
-    );
+    const serviceLine = await getServiceLineForLeader(accountId);
 
-    if (!sllRow) {
+    if (!serviceLine) {
       res.status(404).json({ message: 'Service Line Leader not found.' });
       return;
     }
 
-    const serviceLineId = sllRow.nsline;
+    const serviceLineId = Number(serviceLine.nsline);
 
-    // Buscar detalhes do badge
     const [badge] = await sequelize.query(
       `
         SELECT
           b.nbadge AS id,
           b.b_nome AS name,
-          b.descricao AS description,
-          a.area AS areaName,
-          n.nivel AS level,
-          b.pontos AS points
+          lvl.area AS "areaName",
+          sl.sline AS "serviceLineName",
+          lvl.nivel AS level,
+          COALESCE(NULLIF(b.pontos, 0), 0) AS points
         FROM badge b
-        LEFT JOIN area a ON a.narea = b.narea
-        LEFT JOIN nivel n ON n.nnivel = b.nnivel
-        LEFT JOIN b_pertence_sl bps ON bps.nbadge = b.nbadge
-        WHERE b.nbadge = :badgeId AND bps.nsline = :serviceLineId
+        INNER JOIN b_pertence_sl bps
+          ON bps.nbadge = b.nbadge
+         AND bps.nsline = :serviceLineId
+        INNER JOIN service_line sl
+          ON sl.nsline = bps.nsline
+        LEFT JOIN LATERAL (
+          SELECT
+            a.area,
+            n.nivel
+          FROM nivel_contem_b ncb
+          LEFT JOIN nivel n
+            ON n.nnivel = ncb.nnivel
+          LEFT JOIN area a
+            ON a.narea = n.narea
+          WHERE ncb.nbadge = b.nbadge
+          ORDER BY n.nnivel ASC
+          LIMIT 1
+        ) lvl
+          ON TRUE
+        WHERE b.nbadge = :badgeId
         LIMIT 1
       `,
-      { replacements: { badgeId, serviceLineId }, type: QueryTypes.SELECT }
+      {
+        replacements: { badgeId, serviceLineId },
+        type: QueryTypes.SELECT,
+      },
     );
 
     if (!badge) {
@@ -377,45 +633,73 @@ export const getDetalhesBadgeSLL = async (req, res) => {
       return;
     }
 
-    // Buscar consultores que obtiveram este badge
     const consultoresObtidos = await sequelize.query(
       `
         SELECT
           u.nutilizador AS id,
           u.nome AS name,
           u.email,
-          cb.data_obtencao AS obtainedDate
+          sl.sline AS "serviceLineName",
+          cb.data_obtencao AS "obtainedDate"
         FROM c_obtem_b cb
-        JOIN utilizador u ON u.nutilizador = cb.nutilizador
+        INNER JOIN utilizador u
+          ON u.nutilizador = cb.nutilizador
+        INNER JOIN b_pertence_sl bps
+          ON bps.nbadge = cb.nbadge
+         AND bps.nsline = :serviceLineId
+        INNER JOIN service_line sl
+          ON sl.nsline = bps.nsline
         WHERE cb.nbadge = :badgeId
-        ORDER BY cb.data_obtencao DESC
+          AND LOWER(COALESCE(u.permissoes, '')) LIKE '%consultor%'
+        ORDER BY cb.data_obtencao DESC, u.nome ASC
       `,
-      { replacements: { badgeId }, type: QueryTypes.SELECT }
+      {
+        replacements: { badgeId, serviceLineId },
+        type: QueryTypes.SELECT,
+      },
     );
 
-    // Buscar consultores em progresso
-    const consultoresEmProgresso = await sequelize.query(
+    const rawConsultoresEmProgresso = await sequelize.query(
       `
-        SELECT
+        SELECT DISTINCT ON (p.nutilizador)
           u.nutilizador AS id,
           u.nome AS name,
           u.email,
-          p.data_pedido AS requestDate,
-          p.estado AS status
+          sl.sline AS "serviceLineName",
+          p.data_submissao AS "requestDate",
+          LOWER(COALESCE(e.estado, '')) AS workflow_status
         FROM pedidos p
-        JOIN utilizador u ON u.nutilizador = p.nutilizador
-        WHERE p.nbadge = :badgeId AND p.estado IN (2, 3)
-        ORDER BY p.data_pedido DESC
+        INNER JOIN utilizador u
+          ON u.nutilizador = p.nutilizador
+        INNER JOIN estado e
+          ON e.nestado = p.estado
+        INNER JOIN b_pertence_sl bps
+          ON bps.nbadge = p.nbadge
+         AND bps.nsline = :serviceLineId
+        INNER JOIN service_line sl
+          ON sl.nsline = bps.nsline
+        WHERE p.nbadge = :badgeId
+          AND LOWER(COALESCE(e.estado, '')) IN (:pendingEstadoNames)
+          AND LOWER(COALESCE(u.permissoes, '')) LIKE '%consultor%'
+        ORDER BY p.nutilizador, p.data_submissao DESC, p.npedido DESC
       `,
-      { replacements: { badgeId }, type: QueryTypes.SELECT }
+      {
+        replacements: { badgeId, serviceLineId, pendingEstadoNames },
+        type: QueryTypes.SELECT,
+      },
     );
+
+    const consultoresEmProgresso = rawConsultoresEmProgresso.map((consultor) => ({
+      ...consultor,
+      status: mapWorkflowStatusToUi(consultor.workflow_status),
+    }));
 
     res.status(200).json({
       badge,
       consultoresObtidos: consultoresObtidos || [],
       consultoresEmProgresso: consultoresEmProgresso || [],
       totalObtidos: consultoresObtidos?.length || 0,
-      totalEmProgresso: consultoresEmProgresso?.length || 0
+      totalEmProgresso: consultoresEmProgresso?.length || 0,
     });
   } catch (error) {
     res.status(500).json({ message: error?.message || 'Failed to fetch badge details.' });
