@@ -37,7 +37,6 @@ const sidebarConfig = [
       { id: 'ranking_C', labelKey: 'sidebar_ranking', icon: Crown, route: '/consultor/ranking' },
       { id: 'lembretes_C', labelKey: 'sidebar_reminders', icon: Pin, route: '/consultor/lembretes' },
       { id: 'exportacoes_C', labelKey: 'sidebar_exports', icon: ArrowDownToLine, route: '/consultor/exportacoes' },
-      { id: 'definicoes_C', labelKey: 'sidebar_settings', icon: Settings, route: '/consultor/definicoes' },
     ],
   },
   {
@@ -79,7 +78,6 @@ const sidebarConfig = [
       { id: 'pedidos_AG', labelKey: 'sidebar_manage_requests', icon: FilePenLine, route: '/admin-gestor/pedidos' },
       { id: 'exportacoes_AG', labelKey: 'sidebar_exports_admin', icon: ArrowDownToLine, route: '/admin-gestor/exportacoes' },
       { id: 'gestao_AG', labelKey: 'sidebar_general_management', icon: Settings, route: '/admin-gestor/gestao-geral' },
-      { id: 'definicoes_AG', labelKey: 'sidebar_settings', icon: CircleUserRound, route: '/admin-gestor/definicoes' },
     ],
   },
 ];
