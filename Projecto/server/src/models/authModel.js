@@ -114,7 +114,7 @@ const getAdminUsersBaseQuery = `
     u.email,
     u.permissoes,
     u.status,
-    CURRENT_TIMESTAMP AS joined_at,
+    '2024-01-01' AS joined_at,
     COALESCE(bs.points, 0) AS points,
     COALESCE(bs.badges, 0) AS badges,
     COALESCE(sl.service_lines, '') AS service_lines
@@ -521,7 +521,26 @@ export const authModel = {
       throw error;
     }
 
-    const targetStatus = normalizedDecision === 'approve' ? 'ativo' : 'inativo';
-    return this.updateAdminUserStatus(accountId, { status: targetStatus });
+    if (normalizedDecision === 'approve') {
+      // Approve: set status to 'ativo'
+      return this.updateAdminUserStatus(accountId, { status: 'ativo' });
+    } else {
+      // Reject: delete the user from database
+      const result = await sequelize.query(
+        'DELETE FROM utilizador WHERE nutilizador = :accountId',
+        {
+          replacements: { accountId: Number(accountId) },
+          type: QueryTypes.DELETE,
+        }
+      );
+      
+      if (result[0] === 0) {
+        const error = new Error('User not found.');
+        error.statusCode = 404;
+        throw error;
+      }
+      
+      return { deleted: true, id: accountId };
+    }
   },
 };

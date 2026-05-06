@@ -150,8 +150,8 @@
 }
 
 .ag-users-name-cell img {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
   object-fit: cover;
   border: 1px solid #d6deeb;
@@ -205,6 +205,7 @@
 
 .ag-users-outline-btn,
 .ag-users-danger-btn,
+.ag-users-success-btn,
 .ag-users-reject-btn,
 .ag-users-approve-btn {
   border: none;
@@ -229,6 +230,16 @@
 }
 
 .ag-users-danger-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ag-users-success-btn {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.ag-users-success-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -271,6 +282,12 @@
 }
 
 .ag-users-pagination span {
+  background: #1d8cf8;
+  color: #ffffff;
+  border-color: #1d8cf8;
+}
+
+.ag-users-pagination button.current {
   background: #1d8cf8;
   color: #ffffff;
   border-color: #1d8cf8;

@@ -43,7 +43,10 @@ const toRoleLabel = (roles) => {
   return list.map((role) => roleLabels[role] || role).join(' + ');
 };
 
-const toAvatar = (seed) => `https://i.pravatar.cc/100?u=${encodeURIComponent(String(seed || 'user'))}`;
+const toAvatar = (seed) => {
+  const normalizedSeed = String(seed || 'user').toLowerCase().replace('@', '.');
+  return `https://i.pravatar.cc/120?u=${encodeURIComponent(normalizedSeed)}`;
+};
 
 function UtilizadoresAG() {
   const [activeTab, setActiveTab] = useState('users');
@@ -60,6 +63,8 @@ function UtilizadoresAG() {
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [permissionsModalError, setPermissionsModalError] = useState('');
+  const [createModalError, setCreateModalError] = useState('');
 
   const [createForm, setCreateForm] = useState({
     nome: '',
@@ -189,6 +194,18 @@ function UtilizadoresAG() {
   }, [users, page]);
 
   const totalPages = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
+  
+  // Debug: Log pagination info
+  console.log('Pagination Debug:', { 
+    usersCount: users.length, 
+    pageSize: PAGE_SIZE, 
+    totalPages, 
+    currentPage: page,
+    activeTab,
+    searchTerm,
+    accountType,
+    users: users.map(u => ({ id: u.id, nome: u.nome, email: u.email, status: u.status, roles: u.roles }))
+  });
 
   useEffect(() => {
     setPage(1);
@@ -242,9 +259,52 @@ function UtilizadoresAG() {
   };
 
   const handleCreateUser = async () => {
+    // Clear previous errors
+    setCreateModalError('');
+
     if (!createForm.nome.trim() || !createForm.email.trim() || !createForm.senha.trim()) {
-      setStatusMessage('Preencha nome, email e password.');
+      setCreateModalError('Preencha nome, email e password.');
       return;
+    }
+
+    // Validation for Service Line Leader role - only one service line (priority check)
+    if (createForm.roles.includes('service-line-leader') && createForm.serviceLineIds.length > 1) {
+      setCreateModalError('Service Line Leader só pode ser associado a uma Service Line.');
+      return;
+    }
+
+    // Validation for Service Line Leader role - at least one service line
+    if (createForm.roles.includes('service-line-leader') && createForm.serviceLineIds.length === 0) {
+      setCreateModalError('Service Line Leader deve ter pelo menos uma Service Line atribuída.');
+      return;
+    }
+
+    // Validation for duplicate email
+    const existingUser = users.find(user => 
+      user.email.toLowerCase() === createForm.email.toLowerCase().trim()
+    );
+    if (existingUser) {
+      setCreateModalError('Já existe um utilizador com este email.');
+      return;
+    }
+
+    // Validation for duplicate Service Line Leader
+    if (createForm.roles.includes('service-line-leader') && createForm.serviceLineIds.length > 0) {
+      for (const serviceLineId of createForm.serviceLineIds) {
+        const existingSLL = users.find(user => 
+          user.roles.includes('service-line-leader') &&
+          user.serviceLines && 
+          user.serviceLines.some(sl => {
+            const serviceLine = serviceLines.find(line => line.id === serviceLineId);
+            return serviceLine && sl === serviceLine.name;
+          })
+        );
+        
+        if (existingSLL) {
+          setCreateModalError(`Esta Service Line já tem um Service Line Leader: ${existingSLL.nome}`);
+          return;
+        }
+      }
     }
 
     try {
@@ -277,6 +337,7 @@ function UtilizadoresAG() {
 
   const openPermissionsModal = (user) => {
     setSelectedUser(user);
+    setPermissionsModalError(''); // Clear previous errors
     setPermissionsForm({
       roles: Array.isArray(user.roles) && user.roles.length > 0 ? user.roles : ['consultor'],
       serviceLineIds: serviceLines
@@ -289,6 +350,38 @@ function UtilizadoresAG() {
   const handleSavePermissions = async () => {
     if (!selectedUser) {
       return;
+    }
+
+    // Validation for Service Line Leader role - only one service line (priority check)
+    if (permissionsForm.roles.includes('service-line-leader') && permissionsForm.serviceLineIds.length > 1) {
+      setPermissionsModalError('Service Line Leader só pode ser associado a uma Service Line.');
+      return;
+    }
+
+    // Validation for Service Line Leader role - at least one service line
+    if (permissionsForm.roles.includes('service-line-leader') && permissionsForm.serviceLineIds.length === 0) {
+      setPermissionsModalError('Service Line Leader deve ter pelo menos uma Service Line atribuída.');
+      return;
+    }
+
+    // Validation for duplicate Service Line Leader
+    if (permissionsForm.roles.includes('service-line-leader') && permissionsForm.serviceLineIds.length > 0) {
+      for (const serviceLineId of permissionsForm.serviceLineIds) {
+        const existingSLL = users.find(user => 
+          user.id !== selectedUser.id && 
+          user.roles.includes('service-line-leader') &&
+          user.serviceLines && 
+          user.serviceLines.some(sl => {
+            const serviceLine = serviceLines.find(line => line.id === serviceLineId);
+            return serviceLine && sl === serviceLine.name;
+          })
+        );
+        
+        if (existingSLL) {
+          setPermissionsModalError(`Esta Service Line já tem um Service Line Leader: ${existingSLL.nome}`);
+          return;
+        }
+      }
     }
 
     try {
@@ -404,7 +497,10 @@ function UtilizadoresAG() {
                 <button
                   type="button"
                   className="ag-users-primary-btn"
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={() => {
+                  setCreateModalError('');
+                  setShowCreateModal(true);
+                }}
                 >
                   <UserPlus2 size={16} />
                   Adicionar Utilizador
@@ -492,7 +588,7 @@ function UtilizadoresAG() {
                             </button>
                             <button
                               type="button"
-                              className={`${String(user.status).toLowerCase() === 'ativo' ? 'ag-users-danger-btn' : 'ag-users-action-btn ag-users-action-secondary'}`}
+                              className={`${String(user.status).toLowerCase() === 'ativo' ? 'ag-users-danger-btn' : 'ag-users-success-btn'}`}
                               disabled={!['ativo', 'inativo'].includes(String(user.status).toLowerCase()) || isSaving}
                               onClick={() => handleDeactivateUser(user)}
                             >
@@ -539,34 +635,55 @@ function UtilizadoresAG() {
             </table>
           </div>
 
-          <footer className="ag-users-pagination">
-            <button
-              type="button"
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
-              disabled={page <= 1}
-            >
-              &lt;
-            </button>
-            <span>{page}</span>
-            <button
-              type="button"
-              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-              disabled={page >= totalPages}
-            >
-              &gt;
-            </button>
-          </footer>
+          {totalPages > 1 && (
+            <footer className="ag-users-pagination">
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                disabled={page <= 1}
+              >
+                &lt;
+              </button>
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNum) => (
+                <button
+                  key={pageNum}
+                  type="button"
+                  onClick={() => setPage(pageNum)}
+                  className={page === pageNum ? 'current' : ''}
+                >
+                  {pageNum}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                disabled={page >= totalPages}
+              >
+                &gt;
+              </button>
+            </footer>
+          )}
         </section>
 
         {showCreateModal && (
           <div className="ag-users-modal-overlay" role="dialog" aria-modal="true">
-            <div className="ag-users-modal-card">
+            <div className="ag-users-modal-card" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
               <div className="ag-users-modal-head">
                 <h2>Adicionar Utilizador</h2>
                 <button type="button" onClick={() => setShowCreateModal(false)}>
                   <X size={18} />
                 </button>
               </div>
+
+              {createModalError ? (
+                <div className="ag-users-note" style={{ backgroundColor: '#fee2e2', borderColor: '#fca5a5', color: '#b91c1c' }}>
+                  {createModalError}
+                </div>
+              ) : (
+                <div className="ag-users-note">
+                  Preencha os dados do novo utilizador. Para Service Line Leader, selecione também a Service Line.
+                </div>
+              )}
 
               <label htmlFor="ag-create-nome">Nome</label>
               <input
@@ -639,7 +756,7 @@ function UtilizadoresAG() {
 
         {showPermissionsModal && selectedUser && (
           <div className="ag-users-modal-overlay" role="dialog" aria-modal="true">
-            <div className="ag-users-modal-card wide">
+            <div className="ag-users-modal-card wide" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
               <div className="ag-users-modal-head">
                 <div>
                   <h2>Editar Permissoes de Acesso</h2>
@@ -656,9 +773,15 @@ function UtilizadoresAG() {
                 </button>
               </div>
 
-              <div className="ag-users-note">
-                Selecione os tipos de conta. Para Service Line Lider, selecione tambem a(s) Service Line(s).
-              </div>
+              {permissionsModalError ? (
+                <div className="ag-users-note" style={{ backgroundColor: '#fee2e2', borderColor: '#fca5a5', color: '#b91c1c' }}>
+                  {permissionsModalError}
+                </div>
+              ) : (
+                <div className="ag-users-note">
+                  Selecione os tipos de conta. Para Service Line Lider, selecione tambem a(s) Service Line(s).
+                </div>
+              )}
 
               <div className="ag-users-roles-box">
                 <strong>Tipos de Conta</strong>
