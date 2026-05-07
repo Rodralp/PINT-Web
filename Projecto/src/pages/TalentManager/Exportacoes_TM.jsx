@@ -1,6 +1,19 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, ArrowDownToLine, FileDown, ArrowLeft, ChevronLeft, SlidersHorizontal } from 'lucide-react';
+import {
+  Search,
+  Filter,
+  ArrowDownToLine,
+  FileDown,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  SlidersHorizontal,
+  Trophy,
+  Clock3,
+  Medal,
+  TrendingUp,
+} from 'lucide-react';
 import Layout from '../../components/Layout';
 import { fetchManagedRequests } from '../../services/requestManagementService';
 import { fetchHistoricoBadges, fetchHistoricoConsultores } from '../../services/talentManagerService';
