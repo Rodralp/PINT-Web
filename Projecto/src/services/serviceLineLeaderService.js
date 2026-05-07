@@ -29,3 +29,25 @@ export async function fetchDetalhesBadgeSLL(accountId, badgeId) {
   const response = await apiClient.get(`/service-line-leader/historico/badge?accountId=${encodeURIComponent(accountId)}&badgeId=${encodeURIComponent(badgeId)}`);
   return response.data;
 }
+
+export async function fetchHistoricoPorEstado(accountId, type, estado, entityId) {
+  let endpoint = '';
+  let id = '';
+  
+  // Extrair o tipo base (serviceLine, area, badge, consultor) e o ID
+  if (type.includes('serviceLine')) {
+    endpoint = '/service-line-leader/historico/service-line';
+  } else if (type.includes('area')) {
+    endpoint = '/service-line-leader/historico/area';
+    id = `&areaId=${encodeURIComponent(entityId)}`;
+  } else if (type.includes('badge')) {
+    endpoint = '/service-line-leader/historico/badge-estado';
+    id = `&badgeId=${encodeURIComponent(entityId)}`;
+  } else if (type.includes('consultor')) {
+    endpoint = '/service-line-leader/historico/consultor-estado';
+    id = `&consultorId=${encodeURIComponent(entityId)}`;
+  }
+  
+  const response = await apiClient.get(`${endpoint}?accountId=${encodeURIComponent(accountId)}${id}&estado=${encodeURIComponent(estado)}`);
+  return response.data;
+}

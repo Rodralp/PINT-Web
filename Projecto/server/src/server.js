@@ -10,7 +10,8 @@ const startServer = async () => {
     await connectToDatabase();
     await applySchema();
     await syncDatabase();
-    await seedDatabase();
+    // Temporarily disabled to avoid duplicate key errors
+    // await seedDatabase();
 
     app.listen(PORT, () => {
       console.log(`API running on http://localhost:${PORT}`);
