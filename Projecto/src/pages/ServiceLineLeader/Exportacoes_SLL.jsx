@@ -15,7 +15,9 @@ import {
   Trophy,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
-import '../../css/TalentManager/Exportacoes_TM.css';
+import { fetchManagedRequests } from '../../services/requestManagementService';
+import { fetchMyServiceLine, fetchHistoricoBadgesSLL, fetchHistoricoConsultoresSLL } from '../../services/serviceLineLeaderService';
+import '../../css/ServiceLineLeader/Exportacoes_SLL.css';
 
 const tabs = [
   { id: 'pedidos', label: 'Pedidos de Badges' },
@@ -78,32 +80,6 @@ const serviceLineByEmail = {
   'ana.costa@softinsa.pt': 'LowCode',
   'joaogomes1234@softinsa.pt': 'LowCode',
 };
-
-const requestSeedRows = [
-  { id: 1, detailId: 1, consultant: 'Ana Costa', badge: 'UX/UI Design', level: 'Especialista', date: '05/12/2025', status: 'pendente', serviceLine: 'LowCode' },
-  { id: 2, detailId: 2, consultant: 'Pedro Mendes', badge: 'Data Analytics', level: 'Intermédio', date: '04/12/2025', status: 'rejeitado', serviceLine: 'Cloud' },
-  { id: 3, detailId: 3, consultant: 'Maria Santos', badge: 'Cloud Architecture', level: 'Sénior', date: '03/12/2025', status: 'enviado', serviceLine: 'Data & AI' },
-  { id: 4, detailId: 4, consultant: 'João Silva', badge: 'LowCode (Outsystems)', level: 'Líder de Conhecimento', date: '01/12/2025', status: 'pendente', serviceLine: 'LowCode' },
-  { id: 5, detailId: 5, consultant: 'Rita Oliveira', badge: 'DevOps', level: 'Intermédio', date: '30/11/2025', status: 'pendente', serviceLine: 'Data & AI' },
-  { id: 6, detailId: 6, consultant: 'Carlos Ferreira', badge: 'Cybersecurity', level: 'Líder de Conhecimento', date: '28/11/2025', status: 'enviado', serviceLine: 'Cybersecurity' },
-  { id: 7, detailId: 7, consultant: 'Bruno Alves', badge: 'Machine Learning', level: 'Sénior', date: '25/11/2025', status: 'enviado', serviceLine: 'Cloud' },
-  { id: 8, detailId: 8, consultant: 'Sofia Rodrigues', badge: 'Mobile Development', level: 'Júnior', date: '22/11/2025', status: 'rejeitado', serviceLine: 'LowCode' },
-  { id: 9, detailId: 9, consultant: 'Tiago Martins', badge: 'Blockchain', level: 'Especialista', date: '20/11/2025', status: 'enviado', serviceLine: 'Cybersecurity' },
-  { id: 10, detailId: 10, consultant: 'Inês Carvalho', badge: 'IoT Solutions', level: 'Intermédio', date: '18/11/2025', status: 'pendente', serviceLine: 'Data & AI' },
-];
-
-const consultantSeedRows = [
-  { id: 1, rankSeed: 1, name: 'João Gomes', email: 'joaogomes1234@softinsa.pt', points: 2450, joinedAt: '15/01/2023', badges: 12, status: 'ativo', serviceLine: 'LowCode' },
-  { id: 2, rankSeed: 2, name: 'Maria Santos', email: 'maria.santos@softinsa.pt', points: 2200, joinedAt: '20/02/2023', badges: 10, status: 'ativo', serviceLine: 'Data & AI' },
-  { id: 3, rankSeed: 3, name: 'Pedro Mendes', email: 'pedro.mendes@softinsa.pt', points: 1950, joinedAt: '10/03/2023', badges: 9, status: 'ativo', serviceLine: 'Cloud' },
-  { id: 4, rankSeed: 4, name: 'Ana Costa', email: 'ana.costa@softinsa.pt', points: 1700, joinedAt: '05/04/2023', badges: 8, status: 'inativo', serviceLine: 'LowCode' },
-  { id: 5, rankSeed: 5, name: 'Carlos Ferreira', email: 'carlos.ferreira@softinsa.pt', points: 1500, joinedAt: '12/05/2023', badges: 7, status: 'ativo', serviceLine: 'Cybersecurity' },
-  { id: 6, rankSeed: 6, name: 'Rita Oliveira', email: 'rita.oliveira@softinsa.pt', points: 1450, joinedAt: '18/06/2023', badges: 7, status: 'ativo', serviceLine: 'Data & AI' },
-  { id: 7, rankSeed: 7, name: 'Bruno Alves', email: 'bruno.alves@softinsa.pt', points: 1350, joinedAt: '22/07/2023', badges: 6, status: 'ativo', serviceLine: 'Cloud' },
-  { id: 8, rankSeed: 8, name: 'Sofia Rodrigues', email: 'sofia.rodrigues@softinsa.pt', points: 1280, joinedAt: '14/08/2023', badges: 6, status: 'inativo', serviceLine: 'LowCode' },
-  { id: 9, rankSeed: 9, name: 'Tiago Martins', email: 'tiago.martins@softinsa.pt', points: 1150, joinedAt: '05/09/2023', badges: 5, status: 'ativo', serviceLine: 'Cybersecurity' },
-  { id: 10, rankSeed: 10, name: 'Inês Carvalho', email: 'ines.carvalho@softinsa.pt', points: 1100, joinedAt: '11/10/2023', badges: 5, status: 'ativo', serviceLine: 'Data & AI' },
-];
 
 const badgeLevels = [
   { id: 'junior', label: 'Júnior', points: 100, badgeImage: '/badges/Júnior.png' },
@@ -172,45 +148,6 @@ const normalizeLevelId = (level) => {
   return 'junior';
 };
 
-const buildRequestRows = () =>
-  Array.from({ length: 3 }, (_, cycle) =>
-    requestSeedRows.map((item) => ({
-      ...item,
-      id: item.id + cycle * 100,
-      date: shiftPtDate(item.date, cycle * 2),
-    })),
-  ).flat();
-
-const buildConsultantRows = () =>
-  Array.from({ length: 3 }, (_, cycle) =>
-    consultantSeedRows.map((item) => ({
-      ...item,
-      id: item.id + cycle * 100,
-      points: Math.max(850, item.points - cycle * 170),
-      badges: Math.max(3, item.badges - cycle),
-      joinedAt: shiftPtDate(item.joinedAt, cycle * 4),
-    })),
-  ).flat();
-
-const buildBadgeItems = () => {
-  let nextId = 1;
-
-  return badgeFamilies.flatMap((family, areaOrder) =>
-    badgeLevels.map((level, levelOrder) => ({
-      id: `badge-${nextId++}`,
-      area: family.area,
-      areaOrder,
-      serviceLine: family.serviceLine,
-      levelId: level.id,
-      level: level.label,
-      levelOrder,
-      points: level.points,
-      badgeImage: level.badgeImage,
-      date: '12 Jan 2026',
-    })),
-  );
-};
-
 const getStoredLoginData = () => {
   const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
 
@@ -262,17 +199,339 @@ const resolveUserServiceLine = (loginData) => {
 
 const getLoginName = (loginData) => loginData?.nome || '';
 
+const translateLevel = (levelKey) => {
+  const translations = {
+    'badge_level_junior': 'Júnior',
+    'badge_level_intermediate': 'Intermédio',
+    'badge_level_senior': 'Sénior',
+    'badge_level_specialist': 'Especialista',
+    'badge_level_knowledge_lead': 'Líder de Conhecimento',
+    'junior': 'Júnior',
+    'intermedio': 'Intermédio',
+    'senior': 'Sénior',
+    'especialista': 'Especialista',
+    'lider': 'Líder de Conhecimento'
+  };
+  return translations[levelKey] || levelKey;
+};
+
+const generateBadgesCSV = (badges) => {
+  const BOM = '\uFEFF';
+  const headers = ['Nome da Badge', 'Tipo', 'Área', 'Pontos', 'Data de Conquista', 'ID'];
+  const rows = badges.map(badge => {
+    const levelName = translateLevel(badge.levelId || badge.level);
+    return [
+      `"${badge.area} - ${levelName}"`,
+      `"${levelName}"`,
+      `"${badge.area}"`,
+      badge.points,
+      `"${badge.date}"`,
+      `"${badge.id}"`
+    ];
+  });
+
+  return BOM + [
+    headers.join(';'),
+    ...rows.map(row => row.join(';'))
+  ].join('\n');
+};
+
+const generateBadgePagesPDF = (badges, userName) => {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Badges Export</title>
+      <style>
+        @media print { @page { size: A4 portrait; margin: 0; } body { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .no-print { display: none; } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 40px; }
+        .page-break { page-break-after: always; }
+        .badge-card { background: white; border-radius: 24px; padding: 60px 80px; max-width: 600px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(0, 102, 255, 0.15); border: 4px solid #0066ff; position: relative; margin-bottom: 40px; }
+        .brand { font-size: 18px; font-weight: 700; color: #0066ff; letter-spacing: 2px; margin-bottom: 20px; text-transform: uppercase; }
+        .title { font-size: 28px; font-weight: 700; color: #495057; margin-bottom: 30px; }
+        .badge-container { margin: 30px 0 40px 0; display: flex; justify-content: center; align-items: center; }
+        .badge-image-simple { width: 120px; height: 120px; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.1)); }
+        .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #e9ecef; font-size: 16px; }
+        .detail-label { font-weight: 600; color: #495057; }
+        .detail-value { font-weight: 700; color: #0066ff; }
+        .text-light { font-size: 16px; color: #868e96; margin: 12px 0; }
+        .user-name { font-size: 22px; font-weight: 700; color: #343a40; margin: 8px 0; }
+        .area { font-size: 20px; font-weight: 700; color: #343a40; margin: 8px 0; }
+        .level { font-size: 16px; color: #868e96; margin: 8px 0; }
+        .date { font-size: 15px; color: #868e96; margin-top: 20px; }
+      </style>
+    </head>
+    <body>
+      ${badges.map((badge, index) => `
+        <div class="badge-card ${index < badges.length - 1 ? 'page-break' : ''}">
+          <div class="brand">SOFTINSA</div>
+          <div class="title">Badge ${index + 1} de ${badges.length}</div>
+          <div class="badge-container">
+            <img src="${badge.badgeImage}" alt="${translateLevel(badge.levelId || badge.level)}" class="badge-image-simple" />
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Área</span>
+            <span class="detail-value">${badge.area}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Nível</span>
+            <span class="detail-value">${translateLevel(badge.levelId || badge.level)}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Pontos</span>
+            <span class="detail-value">${badge.points}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Data</span>
+            <span class="detail-value">${badge.date}</span>
+          </div>
+          <div class="text-light">Atribuído a</div>
+          <div class="user-name">${userName}</div>
+        </div>
+      `).join('')}
+    </body>
+    </html>
+  `;
+  return html;
+};
+
+const generateRequestsPDF = (requests) => {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Pedidos de Badges</title>
+      <style>
+        @media print { @page { size: A4 landscape; margin: 20px; } body { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8f9fa; padding: 40px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 28px; color: #343a40; margin-bottom: 8px; }
+        .header p { color: #868e96; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        thead { background: #0066ff; color: white; }
+        th { padding: 14px 16px; text-align: left; font-weight: 600; font-size: 14px; }
+        td { padding: 12px 16px; border-bottom: 1px solid #e9ecef; font-size: 14px; color: #495057; }
+        tr:last-child td { border-bottom: none; }
+        .status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+        .status.sent { background: #d1ecf1; color: #0c5460; }
+        .status.pending { background: #fff3cd; color: #856404; }
+        .status.rejected { background: #f8d7da; color: #721c24; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>Pedidos de Badges</h1>
+        <p>Data de exportação: ${new Date().toLocaleDateString('pt-PT')}</p>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Consultor</th>
+            <th>Badge</th>
+            <th>Nível</th>
+            <th>Data</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${requests.map(req => `
+            <tr>
+              <td>${req.id}</td>
+              <td>${req.consultant}</td>
+              <td>${req.badge}</td>
+              <td>${req.level}</td>
+              <td>${req.date}</td>
+              <td><span class="status ${req.status}">${req.status}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </body>
+    </html>
+  `;
+  return html;
+};
+
+const generateRequestsCSV = (requests) => {
+  const BOM = '\uFEFF';
+  const headers = ['ID', 'Consultor', 'Badge', 'Nível', 'Data', 'Estado'];
+  const rows = requests.map(req => [
+    req.id,
+    `"${req.consultant}"`,
+    `"${req.badge}"`,
+    `"${req.level}"`,
+    `"${req.date}"`,
+    `"${req.status}"`
+  ]);
+  return BOM + [headers.join(';'), ...rows.map(row => row.join(';'))].join('\n');
+};
+
+const generateConsultantsPDF = (consultants) => {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Consultores</title>
+      <style>
+        @media print { @page { size: A4 landscape; margin: 20px; } body { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8f9fa; padding: 40px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 28px; color: #343a40; margin-bottom: 8px; }
+        .header p { color: #868e96; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        thead { background: #0066ff; color: white; }
+        th { padding: 14px 16px; text-align: left; font-weight: 600; font-size: 14px; }
+        td { padding: 12px 16px; border-bottom: 1px solid #e9ecef; font-size: 14px; color: #495057; }
+        tr:last-child td { border-bottom: none; }
+        .status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+        .status.ativo { background: #d4edda; color: #155724; }
+        .status.inativo { background: #f8d7da; color: #721c24; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>Consultores</h1>
+        <p>Data de exportação: ${new Date().toLocaleDateString('pt-PT')}</p>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Ranking</th>
+            <th>Nome</th>
+            <th>Email</th>
+            <th>Pontos</th>
+            <th>Data de Entrada</th>
+            <th>Badges</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${consultants.map((c, index) => `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${c.name}</td>
+              <td>${c.email}</td>
+              <td>${c.points}</td>
+              <td>${c.joinedAt}</td>
+              <td>${c.badges}</td>
+              <td><span class="status ${c.status}">${c.status}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </body>
+    </html>
+  `;
+  return html;
+};
+
+const generateConsultantsCSV = (consultants) => {
+  const BOM = '\uFEFF';
+  const headers = ['Ranking', 'Nome', 'Email', 'Pontos', 'Data de Entrada', 'Badges', 'Estado'];
+  const rows = consultants.map((c, index) => [
+    index + 1,
+    `"${c.name}"`,
+    `"${c.email}"`,
+    c.points,
+    `"${c.joinedAt}"`,
+    c.badges,
+    `"${c.status}"`
+  ]);
+  return BOM + [headers.join(';'), ...rows.map(row => row.join(';'))].join('\n');
+};
+
 function ExportacoesSLL() {
   const navigate = useNavigate();
-  const requestItems = useMemo(() => buildRequestRows(), []);
-  const consultantItems = useMemo(() => buildConsultantRows(), []);
-  const badgeItems = useMemo(() => buildBadgeItems(), []);
-  const loginData = useMemo(() => getStoredLoginData(), []);
-  const currentServiceLine = useMemo(() => resolveUserServiceLine(loginData), [loginData]);
-  const scopedRequestItems = useMemo(
-    () => requestItems.filter((item) => item.serviceLine === currentServiceLine),
-    [requestItems, currentServiceLine],
-  );
+  const [requestItems, setRequestItems] = useState([]);
+  const [consultantItems, setConsultantItems] = useState([]);
+  const [badgeItems, setBadgeItems] = useState([]);
+  const [loginData, setLoginData] = useState(null);
+  const [currentServiceLine, setCurrentServiceLine] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Get login data
+        const storedLoginData = getStoredLoginData();
+        setLoginData(storedLoginData);
+        
+        if (!storedLoginData?.id) {
+          throw new Error('Utilizador não autenticado');
+        }
+        
+        // Get service line
+        const serviceLineData = await fetchMyServiceLine(storedLoginData.id);
+        const serviceLine = serviceLineData?.nome || 'LowCode';
+        setCurrentServiceLine(serviceLine);
+        
+        // Load requests
+        const requestsData = await fetchManagedRequests('service-line-leader');
+        const formattedRequests = requestsData
+          .filter(req => req.serviceLine?.nome === serviceLine)
+          .map(req => ({
+            id: req.id,
+            detailId: req.id,
+            consultant: req.consultor?.nome || 'N/A',
+            badge: req.badge?.nome || 'N/A',
+            level: req.badge?.nivel || 'N/A',
+            date: new Date(req.dataPedido).toLocaleDateString('pt-PT'),
+            status: req.estado,
+            serviceLine: serviceLine
+          }));
+        
+        // Load badges
+        const badgesData = await fetchHistoricoBadgesSLL(storedLoginData.id);
+        const formattedBadges = badgesData.map(badge => ({
+          id: badge.id,
+          area: badge.area?.nome || 'N/A',
+          levelId: badge.nivel,
+          level: badge.nivelLabel || badge.nivel,
+          points: badge.pontos || 0,
+          badgeImage: badge.imagem || '/badges/default.png',
+          date: new Date(badge.dataObtencao).toLocaleDateString('pt-PT'),
+          serviceLine: serviceLine
+        }));
+        
+        // Load consultants
+        const consultantsData = await fetchHistoricoConsultoresSLL(storedLoginData.id);
+        const formattedConsultants = consultantsData.map(consultant => ({
+          id: consultant.id,
+          name: consultant.nome,
+          email: consultant.email,
+          points: consultant.pontos || 0,
+          joinedAt: new Date(consultant.dataEntrada).toLocaleDateString('pt-PT'),
+          badges: consultant.badgesCount || 0,
+          status: consultant.status || 'ativo',
+          serviceLine: serviceLine
+        }));
+        
+        setRequestItems(formattedRequests);
+        setBadgeItems(formattedBadges);
+        setConsultantItems(formattedConsultants);
+      } catch (err) {
+        console.error('Error loading export data:', err);
+        setError('Falha ao carregar dados para exportação');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
+  }, []);
+  
+  const scopedRequestItems = requestItems; // Already filtered by service line
   const scopedConsultantItems = useMemo(
     () => consultantItems.filter((item) => item.serviceLine === currentServiceLine),
     [consultantItems, currentServiceLine],
@@ -287,9 +546,9 @@ function ExportacoesSLL() {
   const [activeFilter, setActiveFilter] = useState(tabDefaults.pedidos.filter);
   const [sortBy, setSortBy] = useState(tabDefaults.pedidos.sort);
   const [activeRequestStatuses, setActiveRequestStatuses] = useState(requestStatusFilters.map((item) => item.id));
-  const [selectedRequestIds, setSelectedRequestIds] = useState(() => scopedRequestItems.slice(0, 7).map((item) => item.id));
-  const [selectedBadgeIds, setSelectedBadgeIds] = useState(() => scopedBadgeItems.slice(0, 13).map((item) => item.id));
-  const [selectedConsultantIds, setSelectedConsultantIds] = useState(() => scopedConsultantItems.slice(0, 4).map((item) => item.id));
+  const [selectedRequestIds, setSelectedRequestIds] = useState([]);
+  const [selectedBadgeIds, setSelectedBadgeIds] = useState([]);
+  const [selectedConsultantIds, setSelectedConsultantIds] = useState([]);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [page, setPage] = useState(1);
@@ -358,7 +617,7 @@ function ExportacoesSLL() {
     }
 
     if (sortBy === 'consultor_az') {
-      nextRows.sort((a, b) => a.consultant.localeCompare(b.consultant));
+      nextRows.sort((a, b) => (a.consultant || '').localeCompare(b.consultant || ''));
       return nextRows;
     }
 
@@ -394,7 +653,7 @@ function ExportacoesSLL() {
     }
 
     if (sortBy === 'area_asc') {
-      nextRows.sort((a, b) => a.area.localeCompare(b.area) || a.points - b.points);
+      nextRows.sort((a, b) => (a.area || '').localeCompare(b.area || '') || a.points - b.points);
       return nextRows;
     }
 
@@ -420,12 +679,12 @@ function ExportacoesSLL() {
     const nextRows = [...filteredConsultants];
 
     if (sortBy === 'points_asc') {
-      nextRows.sort((a, b) => a.points - b.points || a.name.localeCompare(b.name));
+      nextRows.sort((a, b) => a.points - b.points || (a.name || '').localeCompare(b.name || ''));
       return nextRows;
     }
 
     if (sortBy === 'nome_az') {
-      nextRows.sort((a, b) => a.name.localeCompare(b.name));
+      nextRows.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       return nextRows;
     }
 
@@ -434,7 +693,7 @@ function ExportacoesSLL() {
       return nextRows;
     }
 
-    nextRows.sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
+    nextRows.sort((a, b) => b.points - a.points || (a.name || '').localeCompare(b.name || ''));
     return nextRows;
   }, [filteredConsultants, sortBy]);
 
@@ -604,6 +863,166 @@ function ExportacoesSLL() {
     setPage((current) => Math.min(totalPages, current + 1));
   };
 
+  // Export handlers
+  const exportBadgesToPDF = () => {
+    const selected = badgeItems.filter((item) => selectedBadgeIds.includes(item.id));
+    if (selected.length === 0) {
+      alert('Por favor, selecione pelo menos um badge para exportar.');
+      return;
+    }
+    try {
+      const htmlContent = generateBadgePagesPDF(selected, userName);
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      setTimeout(() => printWindow.print(), 500);
+    } catch (error) {
+      console.error('Error generating badge pages:', error);
+      alert('Erro ao gerar páginas das badges. Por favor, tente novamente.');
+    }
+  };
+
+  const exportBadgesToExcel = () => {
+    const selected = badgeItems.filter((item) => selectedBadgeIds.includes(item.id));
+    if (selected.length === 0) {
+      alert('Por favor, selecione pelo menos um badge para exportar.');
+      return;
+    }
+    try {
+      const csvContent = generateBadgesCSV(selected);
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `badges-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generating CSV:', error);
+      alert('Erro ao gerar CSV. Por favor, tente novamente.');
+    }
+  };
+
+  const exportRequestsToPDF = () => {
+    const selected = requestItems.filter((item) => selectedRequestIds.includes(item.id));
+    if (selected.length === 0) {
+      alert('Por favor, selecione pelo menos um pedido para exportar.');
+      return;
+    }
+    try {
+      const htmlContent = generateRequestsPDF(selected);
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      setTimeout(() => printWindow.print(), 500);
+    } catch (error) {
+      console.error('Error generating requests PDF:', error);
+      alert('Erro ao gerar PDF dos pedidos. Por favor, tente novamente.');
+    }
+  };
+
+  const exportRequestsToExcel = () => {
+    const selected = requestItems.filter((item) => selectedRequestIds.includes(item.id));
+    if (selected.length === 0) {
+      alert('Por favor, selecione pelo menos um pedido para exportar.');
+      return;
+    }
+    try {
+      const csvContent = generateRequestsCSV(selected);
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `pedidos-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generating requests CSV:', error);
+      alert('Erro ao gerar CSV dos pedidos. Por favor, tente novamente.');
+    }
+  };
+
+  const exportConsultantsToPDF = () => {
+    const selected = consultantItems.filter((item) => selectedConsultantIds.includes(item.id));
+    if (selected.length === 0) {
+      alert('Por favor, selecione pelo menos um consultor para exportar.');
+      return;
+    }
+    try {
+      const htmlContent = generateConsultantsPDF(selected);
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      setTimeout(() => printWindow.print(), 500);
+    } catch (error) {
+      console.error('Error generating consultants PDF:', error);
+      alert('Erro ao gerar PDF dos consultores. Por favor, tente novamente.');
+    }
+  };
+
+  const exportConsultantsToExcel = () => {
+    const selected = consultantItems.filter((item) => selectedConsultantIds.includes(item.id));
+    if (selected.length === 0) {
+      alert('Por favor, selecione pelo menos um consultor para exportar.');
+      return;
+    }
+    try {
+      const csvContent = generateConsultantsCSV(selected);
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `consultores-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generating consultants CSV:', error);
+      alert('Erro ao gerar CSV dos consultores. Por favor, tente novamente.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="tm-export-page">
+          <header className="tm-export-header">
+            <button type="button" className="tm-export-back-btn" onClick={handleGoBack} aria-label="Voltar">
+              <ArrowLeft size={22} />
+            </button>
+            <h1>Exportações Service Line</h1>
+          </header>
+          <div className="tm-export-loading">
+            <p>A carregar dados...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="tm-export-page">
+          <header className="tm-export-header">
+            <button type="button" className="tm-export-back-btn" onClick={handleGoBack} aria-label="Voltar">
+              <ArrowLeft size={22} />
+            </button>
+            <h1>Exportações Service Line</h1>
+          </header>
+          <div className="tm-export-error">
+            <p>{error}</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="tm-export-page">
@@ -725,11 +1144,11 @@ function ExportacoesSLL() {
                     {allSelectedCurrentTab ? 'Desselecionar todos' : 'Selecionar todos'}
                   </button>
                   <span className="tm-export-selected-count">{selectedCount} selecionados</span>
-                  <button type="button" className="tm-export-btn secondary" aria-label="Exportar pedidos em PDF">
+                  <button type="button" className="tm-export-btn secondary" aria-label="Exportar pedidos em PDF" onClick={exportRequestsToPDF}>
                     <FileDown size={16} />
                     <span>Exportar PDF</span>
                   </button>
-                  <button type="button" className="tm-export-btn primary" aria-label="Exportar pedidos em Excel">
+                  <button type="button" className="tm-export-btn primary" aria-label="Exportar pedidos em Excel" onClick={exportRequestsToExcel}>
                     <ArrowDownToLine size={16} />
                     <span>Exportar Excel</span>
                   </button>
@@ -819,11 +1238,11 @@ function ExportacoesSLL() {
                     {allSelectedCurrentTab ? 'Desselecionar todos' : 'Selecionar todos'}
                   </button>
                   <span className="tm-export-selected-count">{selectedCount} selecionados</span>
-                  <button type="button" className="tm-export-btn secondary" aria-label="Exportar badges em PDF">
+                  <button type="button" className="tm-export-btn secondary" aria-label="Exportar badges em PDF" onClick={exportBadgesToPDF}>
                     <FileDown size={16} />
                     <span>Exportar PDF</span>
                   </button>
-                  <button type="button" className="tm-export-btn primary" aria-label="Exportar badges em Excel">
+                  <button type="button" className="tm-export-btn primary" aria-label="Exportar badges em Excel" onClick={exportBadgesToExcel}>
                     <ArrowDownToLine size={16} />
                     <span>Exportar Excel</span>
                   </button>
@@ -873,11 +1292,11 @@ function ExportacoesSLL() {
                     {allSelectedCurrentTab ? 'Desselecionar todos' : 'Selecionar todos'}
                   </button>
                   <span className="tm-export-selected-count">{selectedCount} selecionados</span>
-                  <button type="button" className="tm-export-btn secondary" aria-label="Exportar consultores em PDF">
+                  <button type="button" className="tm-export-btn secondary" aria-label="Exportar consultores em PDF" onClick={exportConsultantsToPDF}>
                     <FileDown size={16} />
                     <span>Exportar PDF</span>
                   </button>
-                  <button type="button" className="tm-export-btn primary" aria-label="Exportar consultores em Excel">
+                  <button type="button" className="tm-export-btn primary" aria-label="Exportar consultores em Excel" onClick={exportConsultantsToExcel}>
                     <ArrowDownToLine size={16} />
                     <span>Exportar Excel</span>
                   </button>

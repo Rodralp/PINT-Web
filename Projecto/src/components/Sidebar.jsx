@@ -48,7 +48,6 @@ const sidebarConfig = [
       { id: 'pedidos_TM', labelKey: 'sidebar_manage_requests', icon: FilePenLine, route: '/talent-manager/pedidos' },
       { id: 'historico_TM', labelKey: 'sidebar_history', icon: History, route: '/talent-manager/historico' },
       { id: 'exportacoes_TM', labelKey: 'sidebar_exports_tm', icon: ArrowDownToLine, route: '/talent-manager/exportacoes' },
-      { id: 'definicoes_TM', labelKey: 'sidebar_settings', icon: Settings, route: '/talent-manager/definicoes' },
     ],
   },
   {
@@ -62,7 +61,6 @@ const sidebarConfig = [
       { id: 'pedidos_SLL', labelKey: 'sidebar_manage_requests', icon: FilePenLine, route: '/service-line-leader/pedidos' },
       { id: 'historico_SLL', labelKey: 'sidebar_history', icon: History, route: '/service-line-leader/historico' },
       { id: 'exportacoes_SLL', labelKey: 'sidebar_exports_sll', icon: ArrowDownToLine, route: '/service-line-leader/exportacoes' },
-      { id: 'definicoes_SLL', labelKey: 'sidebar_settings', icon: Settings, route: '/service-line-leader/definicoes' },
     ],
   },
   {
