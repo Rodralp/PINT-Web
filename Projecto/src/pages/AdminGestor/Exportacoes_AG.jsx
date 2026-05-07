@@ -251,7 +251,7 @@ const translateLevel = (levelKey) => {
 
 const generateBadgesCSV = (badges) => {
   const BOM = '\uFEFF';
-  const headers = ['Nome da Badge', 'Tipo', 'Área', 'Pontos', 'Data de Conquista', 'ID'];
+  const headers = ['Nome da Badge', 'Tipo', 'Área', 'Pontos', 'Data', 'ID'];
   const rows = badges.map(badge => {
     const levelName = translateLevel(badge.levelId || badge.level);
     return [
@@ -321,7 +321,7 @@ const generateBadgePagesPDF = (badges, userName) => {
             <span class="detail-label">Data</span>
             <span class="detail-value">${badge.date}</span>
           </div>
-          <div class="text-light">Atribuído a</div>
+          <div class="text-light">Dados da Badge</div>
           <div class="user-name">${userName}</div>
         </div>
       `).join('')}

@@ -2,26 +2,60 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Clock3, Download, FileDown, Filter, Search, SlidersHorizontal, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
-import { fetchMyBadges } from '../../services/consultorService';
+import { fetchHistoricoBadges } from '../../services/talentManagerService';
 import '../../css/Consultor/Exportacoes_C.css';
 
 const badgeLevels = [
-  { levelKey: 'badge_level_junior', points: 100, badgeImage: '/badges/J%C3%BAnior.png' },
-  { levelKey: 'badge_level_intermediate', points: 150, badgeImage: '/badges/Interm%C3%A9dio.png' },
-  { levelKey: 'badge_level_senior', points: 200, badgeImage: '/badges/S%C3%A9nior.png' },
-  { levelKey: 'badge_level_specialist', points: 250, badgeImage: '/badges/Especialista.png' },
-  { levelKey: 'badge_level_knowledge_lead', points: 300, badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png' },
+  { id: 'junior', label: 'Júnior', points: 100, badgeImage: '/badges/J%C3%BAnior.png' },
+  { id: 'intermedio', label: 'Intermédio', points: 150, badgeImage: '/badges/Interm%C3%A9dio.png' },
+  { id: 'senior', label: 'Sénior', points: 200, badgeImage: '/badges/S%C3%A9nior.png' },
+  { id: 'especialista', label: 'Especialista', points: 250, badgeImage: '/badges/Especialista.png' },
+  { id: 'lider', label: 'Líder de Conhecimento', points: 300, badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png' },
 ];
+
+const normalizeLevelId = (level) => {
+  const normalized = String(level || '').toLowerCase().trim();
+  const mapping = {
+    'nivel junior': 'junior',
+    'nivel intermediario': 'intermedio',
+    'nivel intermediário': 'intermedio',
+    'nivel senior': 'senior',
+    'nivel sénior': 'senior',
+    'nivel especialista': 'especialista',
+    'nivel lider de conhecimento': 'lider',
+    'nivel líder de conhecimento': 'lider',
+    'junior': 'junior',
+    'intermediario': 'intermedio',
+    'intermediário': 'intermedio',
+    'senior': 'senior',
+    'sénior': 'senior',
+    'especialista': 'especialista',
+    'lider': 'lider',
+    'líder': 'lider',
+  };
+  return mapping[normalized] || 'junior';
+};
+
+const buildBadgeDisplayMeta = (level) => {
+  const levelId = normalizeLevelId(level);
+  const template = badgeLevels.find((item) => item.id === levelId) || badgeLevels[0];
+
+  return {
+    levelId,
+    points: Number(template?.points) || 0,
+    badgeImage: template?.badgeImage || '/badges/J%C3%BAnior.png',
+  };
+};
 
 const badgeAreas = ['LowCode (Outsystems)', 'Cloud Architecture'];
 
 const badgeFilters = [
   { id: 'todos', labelKey: 'exports_filter_all' },
-  { id: 'badge_level_junior', labelKey: 'badge_level_junior' },
-  { id: 'badge_level_intermediate', labelKey: 'badge_level_intermediate' },
-  { id: 'badge_level_senior', labelKey: 'badge_level_senior' },
-  { id: 'badge_level_specialist', labelKey: 'badge_level_specialist' },
-  { id: 'badge_level_knowledge_lead', labelKey: 'badge_level_knowledge_lead' },
+  { id: 'junior', labelKey: 'badge_level_junior' },
+  { id: 'intermedio', labelKey: 'badge_level_intermediate' },
+  { id: 'senior', labelKey: 'badge_level_senior' },
+  { id: 'especialista', labelKey: 'badge_level_specialist' },
+  { id: 'lider', labelKey: 'badge_level_knowledge_lead' },
 ];
 
 const pageSizes = {
@@ -41,14 +75,26 @@ const defaultExportBadges = () =>
     })),
   );
 
-const normalizeBadge = (item) => ({
-  ...item,
-  typeId: item.typeId || item.levelKey || item.level || item.subtitleKey || 'badge_level_junior',
-  levelKey: item.levelKey || item.typeId || item.level || item.subtitleKey || 'badge_level_junior',
-  area: item.area || item.badge || item.title || 'LowCode (Outsystems)',
-  points: Number(item.points) || 0,
-  date: item.date || '12 Jan 2026',
-});
+const normalizeBadge = (item) => {
+  console.log('🔧 Normalizing badge item:', item);
+  
+  // Use the same template system as AdminGestor and TalentManager
+  const meta = buildBadgeDisplayMeta(item.level);
+  
+  const normalized = {
+    ...item,
+    typeId: meta.levelId,
+    levelKey: meta.levelId,
+    area: item.area || item.badge || item.title || 'LowCode (Outsystems)',
+    points: meta.points, // Use template points instead of API points
+    date: item.date || '12 Jan 2026',
+    badgeImage: meta.badgeImage, // Use template image
+    levelId: meta.levelId, // Add levelId for filtering
+  };
+  
+  console.log('✅ Normalized badge:', normalized);
+  return normalized;
+};
 
 const getLoginName = () => {
   const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
@@ -118,7 +164,7 @@ const translateLevel = (levelKey) => {
 const generateBadgesCSV = (badges) => {
   // Use semicolon separator for European Excel format and BOM for UTF-8 support
   const BOM = '\uFEFF';
-  const headers = ['Nome da Badge', 'Tipo', 'Área', 'Pontos', 'Data de Conquista', 'ID'];
+  const headers = ['Nome da Badge', 'Tipo', 'Área', 'Pontos', 'Data', 'ID'];
   const rows = badges.map(badge => {
     const levelName = translateLevel(badge.levelKey);
     return [
@@ -290,7 +336,6 @@ const generateProfessionalCertificatePDF = (badge, userName) => {
 
         <div class="text-light">Certificamos que</div>
         <div class="name">${userName}</div>
-        <div class="text-light">conquistou a badge</div>
         <div class="area">${badge.area}</div>
         <div class="level">${translateLevel(badge.levelKey)}</div>
         <div class="date">${badge.date || new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
@@ -435,7 +480,7 @@ const generateBadgePagesPDF = (badges, userName) => {
             <span class="detail-value">${badge.id}</span>
           </div>
 
-          <div class="text-light" style="margin-top: 30px;">Conquistado por</div>
+          <div class="text-light" style="margin-top: 30px;">Dados da Badge</div>
           <div class="user-name">${userName}</div>
           <div class="date">${badge.date || new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
         </div>
@@ -451,7 +496,8 @@ const generateBadgePagesPDF = (badges, userName) => {
 function Exportacoes() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('badges');
-  const [badgeItems, setBadgeItems] = useState(defaultExportBadges);
+  const [badgeItems, setBadgeItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('todos');
   const [sortBy, setSortBy] = useState('points_desc');
@@ -462,18 +508,74 @@ function Exportacoes() {
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const filterDropdownRef = useRef(null);
   const sortDropdownRef = useRef(null);
+  const isLoadingRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadBadges = async () => {
+      // Prevent duplicate API calls
+      if (isLoadingRef.current) {
+        console.log('API call already in progress, skipping...');
+        return;
+      }
+      
+      isLoadingRef.current = true;
+      setIsLoading(true);
+      
       try {
-        const data = await fetchMyBadges();
-        if (isMounted && Array.isArray(data) && data.length > 0) {
-          setBadgeItems(data.map(normalizeBadge));
+        console.log('🔄 Starting fetchMyBadges...');
+        
+        // Check authentication first
+        const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
+        console.log('Stored login data:', storedLoginData);
+        
+        if (storedLoginData) {
+          try {
+            const parsed = JSON.parse(storedLoginData);
+            console.log('Parsed login data:', parsed);
+            console.log('User ID:', parsed.id);
+            console.log('User role:', parsed.role);
+          } catch (e) {
+            console.error('Failed to parse login data:', e);
+          }
+        } else {
+          console.error('No login data found - user not authenticated');
         }
-      } catch {
-        // Mantem os dados locais quando a API nao estiver disponivel.
+        
+        const data = await fetchHistoricoBadges();
+        console.log('✅ API Response:', data);
+        console.log('Is array?', Array.isArray(data));
+        console.log('Data length:', data?.length);
+        
+        if (Array.isArray(data)) {
+          console.log('🔍 API Response Structure:', data[0]); // Show first badge structure
+          const normalizedBadges = data.map(normalizeBadge);
+          console.log('Normalized badges:', normalizedBadges);
+          console.log('Normalized badges length:', normalizedBadges.length);
+          
+          if (normalizedBadges.length > 0) {
+            console.log('🎯 SUCCESS: Setting database badges');
+            setBadgeItems(normalizedBadges);
+          } else {
+            console.log('⚠️ WARNING: No badges found in database, using default data');
+            setBadgeItems(defaultExportBadges());
+          }
+        } else {
+          console.log('❌ ERROR: Invalid data format, using default data');
+          setBadgeItems(defaultExportBadges());
+        }
+      } catch (error) {
+        console.error('❌ API ERROR:', error);
+        console.error('Error details:', error.message);
+        if (isMounted) {
+          setBadgeItems(defaultExportBadges());
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+        isLoadingRef.current = false;
       }
     };
 
@@ -514,40 +616,64 @@ function Exportacoes() {
   ]), [t]);
 
   const filteredBadges = useMemo(() => {
+    console.log('🔍 Filtering badges:', { activeFilter, searchTerm, totalBadges: badgeItems.length });
+    console.log('📊 Sample badge data:', JSON.stringify(badgeItems[0], null, 2));
+    
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
-    return badgeItems.filter((item) => {
-      const levelKey = item.levelKey || 'badge_level_junior';
-      const translatedLevel = t(levelKey).toLowerCase();
-      const filterMatch =
-        activeFilter === 'todos'
-        || item.typeId === activeFilter
-        || levelKey === activeFilter;
-      const searchMatch =
+    const filtered = badgeItems.filter((item) => {
+      const matchesSearch =
         normalizedSearch.length === 0
         || item.area.toLowerCase().includes(normalizedSearch)
-        || translatedLevel.includes(normalizedSearch);
+        || item.level.toLowerCase().includes(normalizedSearch);
+      
+      // Fix filter logic to match working AdminGestor implementation
+      const matchesLevel = activeFilter === 'todos' || item.levelId === activeFilter;
+      
+      console.log('🔍 Filter check:', JSON.stringify({
+        item: item.area + ' - ' + item.level,
+        matchesSearch,
+        matchesLevel,
+        activeFilter,
+        searchTerm,
+        itemLevelId: item.levelId,
+        itemLevel: item.level
+      }));
 
-      return filterMatch && searchMatch;
+      return matchesSearch && matchesLevel;
     });
-  }, [badgeItems, activeFilter, searchTerm, t]);
+    
+    console.log('✅ Filtered result:', JSON.stringify({ before: badgeItems.length, after: filtered.length }));
+    console.log('🎯 Filtered badges:', filtered.map(f => ({ area: f.area, level: f.level, levelId: f.levelId, points: f.points })).slice(0, 3));
+    return filtered;
+  }, [badgeItems, activeFilter, searchTerm]);
 
   const sortedBadges = useMemo(() => {
-    return [...filteredBadges].sort((a, b) => {
-      if (sortBy === 'points_asc') {
-        return a.points - b.points;
-      }
+    console.log('🔄 Sorting badges:', JSON.stringify({ sortBy, totalBadges: filteredBadges.length }));
+    
+    const nextRows = [...filteredBadges];
 
-      if (sortBy === 'area_asc') {
-        return a.area.localeCompare(b.area);
-      }
+    if (sortBy === 'points_desc') {
+      nextRows.sort((a, b) => b.points - a.points || a.area.localeCompare(b.area));
+      console.log('📊 Sorted by points desc:', nextRows.map(b => ({ area: b.area, points: b.points })));
+      return nextRows;
+    }
 
-      if (sortBy === 'area_desc') {
-        return b.area.localeCompare(a.area);
-      }
+    if (sortBy === 'points_asc') {
+      nextRows.sort((a, b) => a.points - b.points || a.area.localeCompare(b.area));
+      console.log('📊 Sorted by points asc:', nextRows.map(b => ({ area: b.area, points: b.points })));
+      return nextRows;
+    }
 
-      return b.points - a.points;
-    });
+    if (sortBy === 'area_asc') {
+      nextRows.sort((a, b) => (a.area || '').localeCompare(b.area || '') || a.points - b.points);
+      console.log('📊 Sorted by area asc:', nextRows.map(b => ({ area: b.area, points: b.points })));
+      return nextRows;
+    }
+
+    nextRows.sort((a, b) => a.area.localeCompare(b.area) || a.level.localeCompare(b.level));
+    console.log('📊 Default sort:', nextRows.map(b => ({ area: b.area, level: b.level })));
+    return nextRows;
   }, [filteredBadges, sortBy]);
 
   const itemsPerPage = pageSizes[activeTab];

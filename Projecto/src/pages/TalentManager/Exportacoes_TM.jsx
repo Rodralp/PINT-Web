@@ -250,7 +250,7 @@ const translateLevel = (levelKey) => {
 
 const generateBadgesCSV = (badges) => {
   const BOM = '\uFEFF';
-  const headers = ['Nome da Badge', 'Tipo', 'Área', 'Pontos', 'Data de Conquista', 'ID'];
+  const headers = ['Nome da Badge', 'Tipo', 'Área', 'Pontos', 'Data', 'ID'];
   const rows = badges.map(badge => {
     const levelName = translateLevel(badge.levelId || badge.level);
     return [
