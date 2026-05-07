@@ -7,8 +7,10 @@ import {
   fetchHistoricoConsultoresSLL,
   fetchDetalhesConsultorSLL,
   fetchDetalhesBadgeSLL,
+  fetchHistoricoPorEstado,
 } from '../../services/serviceLineLeaderService';
 import '../../css/TalentManager/Exportacoes_TM.css';
+import '../../css/TalentManager/historico-actions.css';
 import '../../css/Shared/HistoricoPages.css';
 
 const tabs = [
@@ -83,6 +85,11 @@ function HistoricoSLL() {
           fetchHistoricoConsultoresSLL(accountId).catch(() => []),
         ]);
 
+        // Debug logging
+        console.log('Service Line Data:', slData);
+        console.log('Badges Data:', bData);
+        console.log('Consultores Data:', cData);
+
         if (isMounted) {
           setServiceLineData(slData?.serviceLine || null);
           setAreas(Array.isArray(slData?.areas) ? slData.areas : []);
@@ -90,6 +97,7 @@ function HistoricoSLL() {
           setConsultores(Array.isArray(cData) ? cData : []);
         }
       } catch (error) {
+        console.error('Error loading data:', error);
         if (isMounted) {
           setErrorMessage(error?.message || 'Erro ao carregar dados.');
         }
@@ -150,6 +158,8 @@ function HistoricoSLL() {
     const accountId = Number(loginData?.id);
     if (!Number.isInteger(accountId) || accountId <= 0) return;
 
+    console.log(`Opening modal: type=${type}, id=${id}, accountId=${accountId}`);
+    
     setModalType(type);
     setModalOpen(true);
     setModalLoading(true);
@@ -157,12 +167,26 @@ function HistoricoSLL() {
     try {
       let data;
       if (type === 'consultor') {
+        console.log('Fetching consultant details...');
         data = await fetchDetalhesConsultorSLL(accountId, id);
       } else if (type === 'badge') {
+        console.log('Fetching badge details...');
         data = await fetchDetalhesBadgeSLL(accountId, id);
+      } else if (type.includes('Pendentes')) {
+        console.log('Fetching pending items...');
+        data = await fetchHistoricoPorEstado(accountId, type, 'pendente', id);
+      } else if (type.includes('Aceites')) {
+        console.log('Fetching accepted items...');
+        data = await fetchHistoricoPorEstado(accountId, type, 'aceite', id);
+      } else if (type.includes('Rejeitados')) {
+        console.log('Fetching rejected items...');
+        data = await fetchHistoricoPorEstado(accountId, type, 'rejeitado', id);
       }
+      
+      console.log('Modal data received:', data);
       setModalData(data);
-    } catch {
+    } catch (error) {
+      console.error('Error fetching modal data:', error);
       setModalData(null);
     } finally {
       setModalLoading(false);
@@ -244,24 +268,49 @@ function HistoricoSLL() {
                         <tr>
                           <th>Service Line</th>
                           <th>Total Badges</th>
-                          <th>Obtidas</th>
-                          <th>Em Progresso</th>
                           <th>Consultores</th>
+                          <th>Ações</th>
                         </tr>
                       </thead>
                       <tbody>
                         {!serviceLineData && (
                           <tr>
-                            <td colSpan={5} className="orders-empty-row">Service Line não encontrada.</td>
+                            <td colSpan={4} className="orders-empty-row">Service Line não encontrada.</td>
                           </tr>
                         )}
                         {serviceLineData && (
                           <tr>
                             <td><strong>{serviceLineData.name}</strong></td>
                             <td>{serviceLineData.totalBadges || 0}</td>
-                            <td>{serviceLineData.obtidas || 0}</td>
-                            <td>{serviceLineData.emProgresso || 0}</td>
                             <td>{serviceLineData.totalConsultores || 0}</td>
+                            <td>
+                              <div className="historico-actions-group">
+                                <button
+                                  type="button"
+                                  className="tm-export-control-btn historico-action-btn"
+                                  onClick={() => openModal('serviceLinePendentes', serviceLineData.id)}
+                                >
+                                  <Eye size={16} />
+                                  Ver Pendentes
+                                </button>
+                                <button
+                                  type="button"
+                                  className="tm-export-control-btn historico-action-btn"
+                                  onClick={() => openModal('serviceLineAceites', serviceLineData.id)}
+                                >
+                                  <Eye size={16} />
+                                  Ver Aceites
+                                </button>
+                                <button
+                                  type="button"
+                                  className="tm-export-control-btn historico-action-btn"
+                                  onClick={() => openModal('serviceLineRejeitados', serviceLineData.id)}
+                                >
+                                  <Eye size={16} />
+                                  Ver Rejeitados
+                                </button>
+                              </div>
+                            </td>
                           </tr>
                         )}
                       </tbody>
@@ -275,22 +324,47 @@ function HistoricoSLL() {
                         <tr>
                           <th>Área</th>
                           <th>Total Badges</th>
-                          <th>Obtidas</th>
-                          <th>Em Progresso</th>
+                          <th>Ações</th>
                         </tr>
                       </thead>
                       <tbody>
                         {pagedData.length === 0 && (
                           <tr>
-                            <td colSpan={4} className="orders-empty-row">Nenhuma área encontrada.</td>
+                            <td colSpan={3} className="orders-empty-row">Nenhuma área encontrada.</td>
                           </tr>
                         )}
                         {pagedData.map((item) => (
                           <tr key={item.id}>
                             <td><strong>{item.name}</strong></td>
                             <td>{item.totalBadges || 0}</td>
-                            <td>{item.obtidas || 0}</td>
-                            <td>{item.emProgresso || 0}</td>
+                            <td>
+                              <div className="historico-actions-group">
+                                <button
+                                  type="button"
+                                  className="tm-export-control-btn historico-action-btn"
+                                  onClick={() => openModal('areaPendentes', item.id)}
+                                >
+                                  <Eye size={16} />
+                                  Ver Pendentes
+                                </button>
+                                <button
+                                  type="button"
+                                  className="tm-export-control-btn historico-action-btn"
+                                  onClick={() => openModal('areaAceites', item.id)}
+                                >
+                                  <Eye size={16} />
+                                  Ver Aceites
+                                </button>
+                                <button
+                                  type="button"
+                                  className="tm-export-control-btn historico-action-btn"
+                                  onClick={() => openModal('areaRejeitados', item.id)}
+                                >
+                                  <Eye size={16} />
+                                  Ver Rejeitados
+                                </button>
+                              </div>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -307,15 +381,13 @@ function HistoricoSLL() {
                         <th>Badge</th>
                         <th>Área</th>
                         <th>Nível</th>
-                        <th>Consultores Obtidos</th>
-                        <th>Em Progresso</th>
                         <th>Ações</th>
                       </tr>
                     </thead>
                     <tbody>
                       {pagedData.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="orders-empty-row">Nenhum badge encontrado.</td>
+                          <td colSpan={4} className="orders-empty-row">Nenhum badge encontrado.</td>
                         </tr>
                       )}
                       {pagedData.map((item) => (
@@ -323,17 +395,33 @@ function HistoricoSLL() {
                           <td><strong>{item.name}</strong></td>
                           <td>{item.area || '-'}</td>
                           <td>{normalizeLevelTitle(item.level)}</td>
-                          <td>{item.consultoresObtidos || 0}</td>
-                          <td>{item.emProgresso || 0}</td>
                           <td>
-                            <button
-                              type="button"
-                              className="tm-export-control-btn historico-action-btn"
-                              onClick={() => openModal('badge', item.id)}
-                            >
-                              <Eye size={16} />
-                              Ver mais
-                            </button>
+                            <div className="historico-actions-group">
+                              <button
+                                type="button"
+                                className="tm-export-control-btn historico-action-btn"
+                                onClick={() => openModal('badgePendentes', item.id)}
+                              >
+                                <Eye size={16} />
+                                Ver Pendentes
+                              </button>
+                              <button
+                                type="button"
+                                className="tm-export-control-btn historico-action-btn"
+                                onClick={() => openModal('badgeAceites', item.id)}
+                              >
+                                <Eye size={16} />
+                                Ver Aceites
+                              </button>
+                              <button
+                                type="button"
+                                className="tm-export-control-btn historico-action-btn"
+                                onClick={() => openModal('badgeRejeitados', item.id)}
+                              >
+                                <Eye size={16} />
+                                Ver Rejeitados
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -350,8 +438,6 @@ function HistoricoSLL() {
                         <th>Consultor</th>
                         <th>Email</th>
                         <th>Pontos</th>
-                        <th>Badges Obtidas</th>
-                        <th>Em Progresso</th>
                         <th>Estado</th>
                         <th>Ações</th>
                       </tr>
@@ -359,7 +445,7 @@ function HistoricoSLL() {
                     <tbody>
                       {pagedData.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="orders-empty-row">Nenhum consultor encontrado.</td>
+                          <td colSpan={5} className="orders-empty-row">Nenhum consultor encontrado.</td>
                         </tr>
                       )}
                       {pagedData.map((item) => (
@@ -376,18 +462,34 @@ function HistoricoSLL() {
                           </td>
                           <td>{item.email}</td>
                           <td>{item.points || 0}</td>
-                          <td>{item.badgesObtidas || 0}</td>
-                          <td>{item.badgesEmProgresso || 0}</td>
                           <td>{renderStatusBadge(item.status)}</td>
                           <td>
-                            <button
-                              type="button"
-                              className="tm-export-control-btn historico-action-btn"
-                              onClick={() => openModal('consultor', item.id)}
-                            >
-                              <Eye size={16} />
-                              Ver mais
-                            </button>
+                            <div className="historico-actions-group">
+                              <button
+                                type="button"
+                                className="tm-export-control-btn historico-action-btn"
+                                onClick={() => openModal('consultorPendentes', item.id)}
+                              >
+                                <Eye size={16} />
+                                Ver Pendentes
+                              </button>
+                              <button
+                                type="button"
+                                className="tm-export-control-btn historico-action-btn"
+                                onClick={() => openModal('consultorAceites', item.id)}
+                              >
+                                <Eye size={16} />
+                                Ver Aceites
+                              </button>
+                              <button
+                                type="button"
+                                className="tm-export-control-btn historico-action-btn"
+                                onClick={() => openModal('consultorRejeitados', item.id)}
+                              >
+                                <Eye size={16} />
+                                Ver Rejeitados
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -438,6 +540,18 @@ function HistoricoSLL() {
                   <h2>
                     {modalType === 'consultor' && 'Detalhes do Consultor'}
                     {modalType === 'badge' && 'Detalhes do Badge'}
+                    {modalType.includes('serviceLine') && modalType.includes('Pendentes') && 'Pedidos Pendentes da Service Line'}
+                    {modalType.includes('serviceLine') && modalType.includes('Aceites') && 'Pedidos Aceites da Service Line'}
+                    {modalType.includes('serviceLine') && modalType.includes('Rejeitados') && 'Pedidos Rejeitados da Service Line'}
+                    {modalType.includes('area') && modalType.includes('Pendentes') && 'Pedidos Pendentes da Área'}
+                    {modalType.includes('area') && modalType.includes('Aceites') && 'Pedidos Aceites da Área'}
+                    {modalType.includes('area') && modalType.includes('Rejeitados') && 'Pedidos Rejeitados da Área'}
+                    {modalType.includes('badge') && modalType.includes('Pendentes') && 'Pedidos Pendentes do Badge'}
+                    {modalType.includes('badge') && modalType.includes('Aceites') && 'Pedidos Aceites do Badge'}
+                    {modalType.includes('badge') && modalType.includes('Rejeitados') && 'Pedidos Rejeitados do Badge'}
+                    {modalType.includes('consultor') && modalType.includes('Pendentes') && 'Pedidos Pendentes do Consultor'}
+                    {modalType.includes('consultor') && modalType.includes('Aceites') && 'Pedidos Aceites do Consultor'}
+                    {modalType.includes('consultor') && modalType.includes('Rejeitados') && 'Pedidos Rejeitados do Consultor'}
                   </h2>
                   <button type="button" className="modal-close" onClick={closeModal}>
                     <X size={24} />
@@ -567,6 +681,102 @@ function HistoricoSLL() {
                             </table>
                           ) : (
                             <p>Nenhum consultor em progresso.</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Novos modais para Pendentes/Aceites/Rejeitados */}
+                      {(modalType.includes('Pendentes') || modalType.includes('Aceites') || modalType.includes('Rejeitados')) && (
+                        <div className="modal-section">
+                          {Array.isArray(modalData) && modalData.length > 0 ? (
+                            <table className="orders-table">
+                              <thead>
+                                <tr>
+                                  {modalType.includes('serviceLine') && (
+                                    <>
+                                      <th>ID</th>
+                                      <th>Service Line</th>
+                                      <th>Descrição</th>
+                                      <th>Data</th>
+                                      <th>Estado</th>
+                                    </>
+                                  )}
+                                  {modalType.includes('area') && (
+                                    <>
+                                      <th>ID</th>
+                                      <th>Área</th>
+                                      <th>Badge</th>
+                                      <th>Consultor</th>
+                                      <th>Data</th>
+                                      <th>Estado</th>
+                                    </>
+                                  )}
+                                  {modalType.includes('badge') && (
+                                    <>
+                                      <th>ID</th>
+                                      <th>Badge</th>
+                                      <th>Consultor</th>
+                                      <th>Data</th>
+                                      <th>Estado</th>
+                                    </>
+                                  )}
+                                  {modalType.includes('consultor') && (
+                                    <>
+                                      <th>ID</th>
+                                      <th>Consultor</th>
+                                      <th>Badge</th>
+                                      <th>Data</th>
+                                      <th>Estado</th>
+                                    </>
+                                  )}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {modalData.map((item) => (
+                                  <tr key={item.id}>
+                                    {modalType.includes('serviceLine') && (
+                                      <>
+                                        <td>{item.id}</td>
+                                        <td>{item.name}</td>
+                                        <td>{item.descricao}</td>
+                                        <td>{item.data}</td>
+                                        <td>{renderStatusBadge(item.estado)}</td>
+                                      </>
+                                    )}
+                                    {modalType.includes('area') && (
+                                      <>
+                                        <td>{item.id}</td>
+                                        <td>{item.name}</td>
+                                        <td>{item.badge}</td>
+                                        <td>{item.consultor}</td>
+                                        <td>{item.data}</td>
+                                        <td>{renderStatusBadge(item.estado)}</td>
+                                      </>
+                                    )}
+                                    {modalType.includes('badge') && (
+                                      <>
+                                        <td>{item.id}</td>
+                                        <td>{item.name}</td>
+                                        <td>{item.consultor}</td>
+                                        <td>{item.data}</td>
+                                        <td>{renderStatusBadge(item.estado)}</td>
+                                      </>
+                                    )}
+                                    {modalType.includes('consultor') && (
+                                      <>
+                                        <td>{item.id}</td>
+                                        <td>{item.name}</td>
+                                        <td>{item.badge}</td>
+                                        <td>{item.data}</td>
+                                        <td>{renderStatusBadge(item.estado)}</td>
+                                      </>
+                                    )}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          ) : (
+                            <p>Nenhum registro encontrado.</p>
                           )}
                         </div>
                       )}

@@ -24,5 +24,7 @@ export const connectToDatabase = async () => {
 };
 
 export const syncDatabase = async () => {
-  await sequelize.sync({ alter: true });
+  // Temporarily disabled to avoid conflicts with existing database schema
+  // await sequelize.sync({ alter: true });
+  console.log('Database sync skipped - using existing schema');
 };
