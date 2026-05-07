@@ -89,15 +89,6 @@ const badgeLevels = [
   { id: 'lider', label: 'Líder de Conhecimento', points: 300, badgeImage: '/badges/Líder de Conhecimento.png' },
 ];
 
-const badgeFamilies = [
-  { area: 'LowCode (Outsystems)', serviceLine: 'LowCode' },
-  { area: 'Cloud Architecture', serviceLine: 'Cloud' },
-  { area: 'Data Analytics', serviceLine: 'Data & AI' },
-  { area: 'UX/UI Design', serviceLine: 'LowCode' },
-  { area: 'DevOps', serviceLine: 'Cloud' },
-  { area: 'Cybersecurity', serviceLine: 'Cybersecurity' },
-];
-
 const requestStatusMeta = {
   enviado: { label: 'Enviados', className: 'sent' },
   pendente: { label: 'Pendente', className: 'pending' },
@@ -105,21 +96,19 @@ const requestStatusMeta = {
 };
 
 const parsePtDate = (value) => {
-  const [day, month, year] = String(value).split('/').map(Number);
-  return new Date(year, (month || 1) - 1, day || 1);
-};
+  const normalized = String(value || '').trim();
 
-const formatPtDate = (date) => {
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-};
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(normalized)) {
+    const [day, month, year] = normalized.split('/').map(Number);
+    return new Date(year, (month || 1) - 1, day || 1);
+  }
 
-const shiftPtDate = (value, monthsToSubtract) => {
-  const baseDate = parsePtDate(value);
-  baseDate.setMonth(baseDate.getMonth() - monthsToSubtract);
-  return formatPtDate(baseDate);
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return new Date(0);
+  }
+
+  return parsed;
 };
 
 const normalizeLevelId = (level) => {
@@ -146,6 +135,95 @@ const normalizeLevelId = (level) => {
   }
 
   return 'junior';
+};
+
+const normalizeLevelTitle = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return 'N/A';
+  }
+
+  if (raw.includes(' - ')) {
+    const suffix = raw.split(' - ').slice(1).join(' - ').trim();
+    if (suffix) {
+      return suffix;
+    }
+  }
+
+  return raw.replace(/^nivel\s+/i, '').trim() || raw;
+};
+
+const formatDateForUi = (value, fallback = '--/--/----') => {
+  const normalized = String(value || '').trim();
+  if (!normalized) {
+    return fallback;
+  }
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(normalized)) {
+    return normalized;
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return fallback;
+  }
+
+  return parsed.toLocaleDateString('pt-PT');
+};
+
+const normalizeRequestExportStatus = (request) => {
+  const tableStatus = String(request?.tableStatus || '').trim().toLowerCase();
+  if (tableStatus === 'aprovado') {
+    return 'enviado';
+  }
+
+  if (tableStatus === 'rejeitado') {
+    return 'rejeitado';
+  }
+
+  const workflowStatus = String(request?.status || '').trim().toLowerCase();
+  if (workflowStatus === 'aprovado') {
+    return 'enviado';
+  }
+
+  if (workflowStatus === 'rejeitado') {
+    return 'rejeitado';
+  }
+
+  return 'pendente';
+};
+
+const normalizeConsultantStatus = (status) => {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (normalized === 'ativo' || normalized === 'inativo' || normalized === 'pendente') {
+    return normalized;
+  }
+
+  return 'inativo';
+};
+
+const toConsultantStatusLabel = (status) => {
+  const normalized = normalizeConsultantStatus(status);
+  if (normalized === 'ativo') {
+    return 'Ativo';
+  }
+
+  if (normalized === 'pendente') {
+    return 'Pendente';
+  }
+
+  return 'Inativo';
+};
+
+const buildBadgeDisplayMeta = (level) => {
+  const levelId = normalizeLevelId(level);
+  const template = badgeLevels.find((item) => item.id === levelId) || badgeLevels[0];
+
+  return {
+    levelId,
+    points: Number(template?.points) || 0,
+    badgeImage: template?.badgeImage || '/badges/default.png',
+  };
 };
 
 const getStoredLoginData = () => {
@@ -471,50 +549,53 @@ function ExportacoesSLL() {
           throw new Error('Utilizador não autenticado');
         }
         
-        // Get service line
-        const serviceLineData = await fetchMyServiceLine(storedLoginData.id);
-        const serviceLine = serviceLineData?.nome || 'LowCode';
-        setCurrentServiceLine(serviceLine);
-        
-        // Load requests
-        const requestsData = await fetchManagedRequests('service-line-leader');
-        const formattedRequests = requestsData
-          .filter(req => req.serviceLine?.nome === serviceLine)
-          .map(req => ({
-            id: req.id,
-            detailId: req.id,
-            consultant: req.consultor?.nome || 'N/A',
-            badge: req.badge?.nome || 'N/A',
-            level: req.badge?.nivel || 'N/A',
-            date: new Date(req.dataPedido).toLocaleDateString('pt-PT'),
-            status: req.estado,
-            serviceLine: serviceLine
-          }));
-        
-        // Load badges
-        const badgesData = await fetchHistoricoBadgesSLL(storedLoginData.id);
-        const formattedBadges = badgesData.map(badge => ({
-          id: badge.id,
-          area: badge.area?.nome || 'N/A',
-          levelId: badge.nivel,
-          level: badge.nivelLabel || badge.nivel,
-          points: badge.pontos || 0,
-          badgeImage: badge.imagem || '/badges/default.png',
-          date: new Date(badge.dataObtencao).toLocaleDateString('pt-PT'),
-          serviceLine: serviceLine
+        const [serviceLineData, requestsData, badgesData, consultantsData] = await Promise.all([
+          fetchMyServiceLine(storedLoginData.id),
+          fetchManagedRequests('service-line-leader'),
+          fetchHistoricoBadgesSLL(storedLoginData.id),
+          fetchHistoricoConsultoresSLL(storedLoginData.id),
+        ]);
+
+        const serviceLineName = (
+          Array.isArray(serviceLineData)
+            ? serviceLineData[0]?.name
+            : serviceLineData?.name
+        ) || resolveUserServiceLine(storedLoginData);
+        setCurrentServiceLine(serviceLineName);
+
+        const formattedRequests = (Array.isArray(requestsData) ? requestsData : []).map((request) => ({
+          id: Number(request?.id),
+          detailId: Number(request?.id),
+          consultant: String(request?.consultant || 'N/A'),
+          badge: String(request?.badge || 'N/A'),
+          level: normalizeLevelTitle(request?.level || request?.levelLabel || 'N/A'),
+          date: formatDateForUi(request?.date),
+          status: normalizeRequestExportStatus(request),
         }));
-        
-        // Load consultants
-        const consultantsData = await fetchHistoricoConsultoresSLL(storedLoginData.id);
-        const formattedConsultants = consultantsData.map(consultant => ({
-          id: consultant.id,
-          name: consultant.nome,
-          email: consultant.email,
-          points: consultant.pontos || 0,
-          joinedAt: new Date(consultant.dataEntrada).toLocaleDateString('pt-PT'),
-          badges: consultant.badgesCount || 0,
-          status: consultant.status || 'ativo',
-          serviceLine: serviceLine
+
+        const formattedBadges = (Array.isArray(badgesData) ? badgesData : []).map((badge) => {
+          const levelTitle = normalizeLevelTitle(badge?.level || badge?.nivel);
+          const meta = buildBadgeDisplayMeta(levelTitle);
+
+          return {
+            id: Number(badge?.id),
+            area: String(badge?.area || badge?.name || 'N/A'),
+            levelId: meta.levelId,
+            level: levelTitle,
+            points: meta.points,
+            badgeImage: meta.badgeImage,
+            date: formatDateForUi(badge?.obtainedDate || badge?.dataObtencao),
+          };
+        });
+
+        const formattedConsultants = (Array.isArray(consultantsData) ? consultantsData : []).map((consultant) => ({
+          id: Number(consultant?.id),
+          name: String(consultant?.name || consultant?.nome || 'N/A'),
+          email: String(consultant?.email || 'N/A'),
+          points: Number(consultant?.points || consultant?.pontos || 0),
+          joinedAt: formatDateForUi(consultant?.joinedAt || consultant?.dataEntrada),
+          badges: Number(consultant?.badgesObtidas || consultant?.badges || 0),
+          status: normalizeConsultantStatus(consultant?.status),
         }));
         
         setRequestItems(formattedRequests);
@@ -531,15 +612,9 @@ function ExportacoesSLL() {
     loadData();
   }, []);
   
-  const scopedRequestItems = requestItems; // Already filtered by service line
-  const scopedConsultantItems = useMemo(
-    () => consultantItems.filter((item) => item.serviceLine === currentServiceLine),
-    [consultantItems, currentServiceLine],
-  );
-  const scopedBadgeItems = useMemo(
-    () => badgeItems.filter((item) => item.serviceLine === currentServiceLine),
-    [badgeItems, currentServiceLine],
-  );
+  const scopedRequestItems = requestItems;
+  const scopedConsultantItems = consultantItems;
+  const scopedBadgeItems = badgeItems;
 
   const [activeTab, setActiveTab] = useState('pedidos');
   const [searchTerm, setSearchTerm] = useState('');
@@ -643,12 +718,12 @@ function ExportacoesSLL() {
     const nextRows = [...filteredBadges];
 
     if (sortBy === 'points_desc') {
-      nextRows.sort((a, b) => b.points - a.points || a.areaOrder - b.areaOrder);
+      nextRows.sort((a, b) => b.points - a.points || (a.area || '').localeCompare(b.area || ''));
       return nextRows;
     }
 
     if (sortBy === 'points_asc') {
-      nextRows.sort((a, b) => a.points - b.points || a.areaOrder - b.areaOrder);
+      nextRows.sort((a, b) => a.points - b.points || (a.area || '').localeCompare(b.area || ''));
       return nextRows;
     }
 
@@ -657,7 +732,7 @@ function ExportacoesSLL() {
       return nextRows;
     }
 
-    nextRows.sort((a, b) => a.areaOrder - b.areaOrder || a.levelOrder - b.levelOrder);
+    nextRows.sort((a, b) => (a.area || '').localeCompare(b.area || '') || (a.level || '').localeCompare(b.level || ''));
     return nextRows;
   }, [filteredBadges, sortBy]);
 
@@ -1178,7 +1253,7 @@ function ExportacoesSLL() {
                       <th>Nome do Consultor</th>
                       <th>Badge Pedida</th>
                       <th>Nível</th>
-                      <th>Data do Pedido ↓</th>
+                      <th>Data do Pedido</th>
                       <th>Estado do Pedido</th>
                       <th>Detalhes do Pedido</th>
                     </tr>
@@ -1215,7 +1290,7 @@ function ExportacoesSLL() {
                             <button
                               type="button"
                               className="tm-export-view-btn"
-                              onClick={() => navigate(`/talent-manager/pedidos/${item.detailId}`)}
+                              onClick={() => navigate(`/service-line-leader/pedidos/${item.detailId}`)}
                             >
                               Ver
                             </button>
@@ -1357,7 +1432,7 @@ function ExportacoesSLL() {
                           </td>
                           <td>
                             <span className={`tm-export-consultor-status ${item.status}`}>
-                              {item.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                              {toConsultantStatusLabel(item.status)}
                             </span>
                           </td>
                         </tr>
@@ -1396,3 +1471,4 @@ function ExportacoesSLL() {
 }
 
 export default ExportacoesSLL;
+

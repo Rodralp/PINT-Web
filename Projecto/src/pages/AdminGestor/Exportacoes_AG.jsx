@@ -73,47 +73,12 @@ const tabDefaults = {
   consultores: { filter: 'todos', sort: 'points_desc' },
 };
 
-const requestSeedRows = [
-  { id: 1, detailId: 1, consultant: 'Ana Costa', badge: 'UX/UI Design', level: 'Especialista', date: '05/12/2025', status: 'pendente' },
-  { id: 2, detailId: 2, consultant: 'Pedro Mendes', badge: 'Data Analytics', level: 'Intermédio', date: '04/12/2025', status: 'rejeitado' },
-  { id: 3, detailId: 3, consultant: 'Maria Santos', badge: 'Cloud Architecture', level: 'Sénior', date: '03/12/2025', status: 'enviado' },
-  { id: 4, detailId: 4, consultant: 'João Silva', badge: 'LowCode (Outsystems)', level: 'Líder de Conhecimento', date: '01/12/2025', status: 'pendente' },
-  { id: 5, detailId: 5, consultant: 'Rita Oliveira', badge: 'DevOps', level: 'Intermédio', date: '30/11/2025', status: 'pendente' },
-  { id: 6, detailId: 6, consultant: 'Carlos Ferreira', badge: 'Cybersecurity', level: 'Líder de Conhecimento', date: '28/11/2025', status: 'enviado' },
-  { id: 7, detailId: 7, consultant: 'Bruno Alves', badge: 'Machine Learning', level: 'Sénior', date: '25/11/2025', status: 'enviado' },
-  { id: 8, detailId: 8, consultant: 'Sofia Rodrigues', badge: 'Mobile Development', level: 'Júnior', date: '22/11/2025', status: 'rejeitado' },
-  { id: 9, detailId: 9, consultant: 'Tiago Martins', badge: 'Blockchain', level: 'Especialista', date: '20/11/2025', status: 'enviado' },
-  { id: 10, detailId: 10, consultant: 'Inês Carvalho', badge: 'IoT Solutions', level: 'Intermédio', date: '18/11/2025', status: 'pendente' },
-];
-
-const consultantSeedRows = [
-  { id: 1, rankSeed: 1, name: 'João Gomes', email: 'joaogomes1234@softinsa.pt', points: 2450, joinedAt: '15/01/2023', badges: 12, status: 'ativo' },
-  { id: 2, rankSeed: 2, name: 'Maria Santos', email: 'maria.santos@softinsa.pt', points: 2200, joinedAt: '20/02/2023', badges: 10, status: 'ativo' },
-  { id: 3, rankSeed: 3, name: 'Pedro Mendes', email: 'pedro.mendes@softinsa.pt', points: 1950, joinedAt: '10/03/2023', badges: 9, status: 'ativo' },
-  { id: 4, rankSeed: 4, name: 'Ana Costa', email: 'ana.costa@softinsa.pt', points: 1700, joinedAt: '05/04/2023', badges: 8, status: 'inativo' },
-  { id: 5, rankSeed: 5, name: 'Carlos Ferreira', email: 'carlos.ferreira@softinsa.pt', points: 1500, joinedAt: '12/05/2023', badges: 7, status: 'ativo' },
-  { id: 6, rankSeed: 6, name: 'Rita Oliveira', email: 'rita.oliveira@softinsa.pt', points: 1450, joinedAt: '18/06/2023', badges: 7, status: 'ativo' },
-  { id: 7, rankSeed: 7, name: 'Bruno Alves', email: 'bruno.alves@softinsa.pt', points: 1350, joinedAt: '22/07/2023', badges: 6, status: 'ativo' },
-  { id: 8, rankSeed: 8, name: 'Sofia Rodrigues', email: 'sofia.rodrigues@softinsa.pt', points: 1280, joinedAt: '14/08/2023', badges: 6, status: 'inativo' },
-  { id: 9, rankSeed: 9, name: 'Tiago Martins', email: 'tiago.martins@softinsa.pt', points: 1150, joinedAt: '05/09/2023', badges: 5, status: 'ativo' },
-  { id: 10, rankSeed: 10, name: 'Inês Carvalho', email: 'ines.carvalho@softinsa.pt', points: 1100, joinedAt: '11/10/2023', badges: 5, status: 'ativo' },
-];
-
 const badgeLevels = [
   { id: 'junior', label: 'Júnior', points: 100, badgeImage: '/badges/Júnior.png' },
   { id: 'intermedio', label: 'Intermédio', points: 150, badgeImage: '/badges/Intermédio.png' },
   { id: 'senior', label: 'Sénior', points: 200, badgeImage: '/badges/Sénior.png' },
   { id: 'especialista', label: 'Especialista', points: 250, badgeImage: '/badges/Especialista.png' },
   { id: 'lider', label: 'Líder de Conhecimento', points: 300, badgeImage: '/badges/Líder de Conhecimento.png' },
-];
-
-const badgeAreas = [
-  'LowCode (Outsystems)',
-  'Cloud Architecture',
-  'Data Analytics',
-  'UX/UI Design',
-  'DevOps',
-  'Cybersecurity',
 ];
 
 const requestStatusMeta = {
@@ -123,21 +88,19 @@ const requestStatusMeta = {
 };
 
 const parsePtDate = (value) => {
-  const [day, month, year] = String(value).split('/').map(Number);
-  return new Date(year, (month || 1) - 1, day || 1);
-};
+  const normalized = String(value || '').trim();
 
-const formatPtDate = (date) => {
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-};
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(normalized)) {
+    const [day, month, year] = normalized.split('/').map(Number);
+    return new Date(year, (month || 1) - 1, day || 1);
+  }
 
-const shiftPtDate = (value, monthsToSubtract) => {
-  const baseDate = parsePtDate(value);
-  baseDate.setMonth(baseDate.getMonth() - monthsToSubtract);
-  return formatPtDate(baseDate);
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return new Date(0);
+  }
+
+  return parsed;
 };
 
 const normalizeLevelId = (level) => {
@@ -166,42 +129,93 @@ const normalizeLevelId = (level) => {
   return 'junior';
 };
 
-const buildRequestRows = () =>
-  Array.from({ length: 3 }, (_, cycle) =>
-    requestSeedRows.map((item) => ({
-      ...item,
-      id: item.id + cycle * 100,
-      date: shiftPtDate(item.date, cycle * 2),
-    })),
-  ).flat();
+const normalizeLevelTitle = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return 'N/A';
+  }
 
-const buildConsultantRows = () =>
-  Array.from({ length: 3 }, (_, cycle) =>
-    consultantSeedRows.map((item) => ({
-      ...item,
-      id: item.id + cycle * 100,
-      points: Math.max(850, item.points - cycle * 170),
-      badges: Math.max(3, item.badges - cycle),
-      joinedAt: shiftPtDate(item.joinedAt, cycle * 4),
-    })),
-  ).flat();
+  if (raw.includes(' - ')) {
+    const suffix = raw.split(' - ').slice(1).join(' - ').trim();
+    if (suffix) {
+      return suffix;
+    }
+  }
 
-const buildBadgeItems = () => {
-  let nextId = 1;
+  return raw.replace(/^nivel\s+/i, '').trim() || raw;
+};
 
-  return badgeAreas.flatMap((area, areaOrder) =>
-    badgeLevels.map((level, levelOrder) => ({
-      id: `badge-${nextId++}`,
-      area,
-      areaOrder,
-      levelId: level.id,
-      level: level.label,
-      levelOrder,
-      points: level.points,
-      badgeImage: level.badgeImage,
-      date: '12 Jan 2026',
-    })),
-  );
+const formatDateForUi = (value, fallback = '--/--/----') => {
+  const normalized = String(value || '').trim();
+  if (!normalized) {
+    return fallback;
+  }
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(normalized)) {
+    return normalized;
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return fallback;
+  }
+
+  return parsed.toLocaleDateString('pt-PT');
+};
+
+const normalizeRequestExportStatus = (request) => {
+  const tableStatus = String(request?.tableStatus || '').trim().toLowerCase();
+  if (tableStatus === 'aprovado') {
+    return 'enviado';
+  }
+
+  if (tableStatus === 'rejeitado') {
+    return 'rejeitado';
+  }
+
+  const workflowStatus = String(request?.status || '').trim().toLowerCase();
+  if (workflowStatus === 'aprovado') {
+    return 'enviado';
+  }
+
+  if (workflowStatus === 'rejeitado') {
+    return 'rejeitado';
+  }
+
+  return 'pendente';
+};
+
+const normalizeConsultantStatus = (status) => {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (normalized === 'ativo' || normalized === 'inativo' || normalized === 'pendente') {
+    return normalized;
+  }
+
+  return 'inativo';
+};
+
+const toConsultantStatusLabel = (status) => {
+  const normalized = normalizeConsultantStatus(status);
+  if (normalized === 'ativo') {
+    return 'Ativo';
+  }
+
+  if (normalized === 'pendente') {
+    return 'Pendente';
+  }
+
+  return 'Inativo';
+};
+
+const buildBadgeDisplayMeta = (level) => {
+  const levelId = normalizeLevelId(level);
+  const template = badgeLevels.find((item) => item.id === levelId) || badgeLevels[0];
+
+  return {
+    levelId,
+    points: Number(template?.points) || 0,
+    badgeImage: template?.badgeImage || '/badges/default.png',
+  };
 };
 
 const getLoginName = () => {
@@ -480,43 +494,48 @@ function ExportacoesAG() {
       try {
         setLoading(true);
         setError(null);
-        
-        // Load requests
-        const requestsData = await fetchManagedRequests('admin-gestor');
-        const formattedRequests = requestsData.map(req => ({
-          id: req.id,
-          detailId: req.id,
-          consultant: req.consultor?.nome || 'N/A',
-          badge: req.badge?.nome || 'N/A',
-          level: req.badge?.nivel || 'N/A',
-          date: new Date(req.dataPedido).toLocaleDateString('pt-PT'),
-          status: req.estado
+
+        const [requestsData, consultantsData, badgesData] = await Promise.all([
+          fetchManagedRequests('admin-gestor'),
+          fetchAdminUsers({ tab: 'users', search: '', accountType: 'consultor' }),
+          fetchHistoricoBadges(),
+        ]);
+
+        const formattedRequests = (Array.isArray(requestsData) ? requestsData : []).map((request) => ({
+          id: Number(request?.id),
+          detailId: Number(request?.id),
+          consultant: String(request?.consultant || 'N/A'),
+          badge: String(request?.badge || 'N/A'),
+          level: normalizeLevelTitle(request?.level || request?.levelLabel || 'N/A'),
+          date: formatDateForUi(request?.date),
+          status: normalizeRequestExportStatus(request),
         }));
-        
-        // Load consultants (users)
-        const consultantsData = await fetchAdminUsers();
-        const formattedConsultants = consultantsData.map(consultant => ({
-          id: consultant.id,
-          name: consultant.nome,
-          email: consultant.email,
-          points: consultant.points || 0,
-          joinedAt: consultant.joinedAt || '--/--/----',
-          badges: consultant.badges || 0,
-          status: consultant.status || 'ativo'
+
+        const formattedConsultants = (Array.isArray(consultantsData) ? consultantsData : []).map((consultant) => ({
+          id: Number(consultant?.id),
+          name: String(consultant?.nome || consultant?.name || 'N/A'),
+          email: String(consultant?.email || 'N/A'),
+          points: Number(consultant?.points || 0),
+          joinedAt: formatDateForUi(consultant?.joinedAt),
+          badges: Number(consultant?.badges || 0),
+          status: normalizeConsultantStatus(consultant?.status),
         }));
-        
-        // Load badges using talent manager service (admin needs access to all badges)
-        const badgesData = await fetchHistoricoBadges();
-        const formattedBadges = badgesData.map(badge => ({
-          id: badge.id,
-          area: badge.area?.nome || 'N/A',
-          levelId: badge.nivel,
-          level: badge.nivelLabel || badge.nivel,
-          points: badge.pontos || 0,
-          badgeImage: badge.imagem || '/badges/default.png',
-          date: new Date(badge.dataObtencao).toLocaleDateString('pt-PT')
-        }));
-        
+
+        const formattedBadges = (Array.isArray(badgesData) ? badgesData : []).map((badge) => {
+          const levelTitle = normalizeLevelTitle(badge?.level);
+          const meta = buildBadgeDisplayMeta(levelTitle);
+
+          return {
+            id: Number(badge?.id),
+            area: String(badge?.area || badge?.name || 'N/A'),
+            levelId: meta.levelId,
+            level: levelTitle,
+            points: meta.points,
+            badgeImage: meta.badgeImage,
+            date: formatDateForUi(badge?.obtainedDate || badge?.dataObtencao),
+          };
+        });
+
         setRequestItems(formattedRequests);
         setConsultantItems(formattedConsultants);
         setBadgeItems(formattedBadges);
@@ -633,12 +652,12 @@ function ExportacoesAG() {
     const nextRows = [...filteredBadges];
 
     if (sortBy === 'points_desc') {
-      nextRows.sort((a, b) => b.points - a.points || a.areaOrder - b.areaOrder);
+      nextRows.sort((a, b) => b.points - a.points || a.area.localeCompare(b.area));
       return nextRows;
     }
 
     if (sortBy === 'points_asc') {
-      nextRows.sort((a, b) => a.points - b.points || a.areaOrder - b.areaOrder);
+      nextRows.sort((a, b) => a.points - b.points || a.area.localeCompare(b.area));
       return nextRows;
     }
 
@@ -647,7 +666,7 @@ function ExportacoesAG() {
       return nextRows;
     }
 
-    nextRows.sort((a, b) => a.areaOrder - b.areaOrder || a.levelOrder - b.levelOrder);
+    nextRows.sort((a, b) => a.area.localeCompare(b.area) || a.level.localeCompare(b.level));
     return nextRows;
   }, [filteredBadges, sortBy]);
 
@@ -1164,7 +1183,7 @@ function ExportacoesAG() {
                       <th>Nome do Consultor</th>
                       <th>Badge Pedida</th>
                       <th>Nível</th>
-                      <th>Data do Pedido ↓</th>
+                      <th>Data do Pedido</th>
                       <th>Estado do Pedido</th>
                       <th>Detalhes do Pedido</th>
                     </tr>
@@ -1343,7 +1362,7 @@ function ExportacoesAG() {
                           </td>
                           <td>
                             <span className={`tm-export-consultor-status ${item.status}`}>
-                              {item.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                              {toConsultantStatusLabel(item.status)}
                             </span>
                           </td>
                         </tr>
@@ -1382,3 +1401,4 @@ function ExportacoesAG() {
 }
 
 export default ExportacoesAG;
+
