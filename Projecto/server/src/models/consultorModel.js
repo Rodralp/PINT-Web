@@ -664,7 +664,7 @@ const buildProfileData = async (accountId) => {
         CASE 
           WHEN e.estado = 'candidatura_em_progresso' THEN 'Candidatura submetida para ' || b.b_nome
           WHEN e.estado = 'em_validacao' THEN 'Candidatura em validação: ' || b.b_nome
-          WHEN e.estado = 'aprovado' THEN 'Badge conquistada: ' || b.b_nome
+          WHEN e.estado = 'aprovado' THEN 'Badge aprovada: ' || b.b_nome
           WHEN e.estado = 'rejeitado' THEN 'Candidatura rejeitada: ' || b.b_nome
           WHEN e.estado = 'evidencias_insuficientes' THEN 'Evidências insuficientes: ' || b.b_nome
           ELSE 'Atividade em badge'
