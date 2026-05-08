@@ -11,6 +11,7 @@
     "db:create": "node server/src/scripts/createDatabase.js",
     "db:init": "node server/src/scripts/initSchema.js",
     "db:setup": "npm run db:create && npm run db:init",
+    "db:migrate:badge-types": "node server/src/scripts/migrateBadgeTypesAndNames.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

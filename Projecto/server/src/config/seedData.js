@@ -97,6 +97,34 @@ const defaultLevelNames = [
   'Nivel Lider de Conhecimento',
 ];
 
+const defaultBadgeTypes = [
+  {
+    ntipo: 1,
+    tipo: 'Nível Júnior',
+    matchers: ['junior'],
+  },
+  {
+    ntipo: 2,
+    tipo: 'Nível Intermédio',
+    matchers: ['intermedio', 'interm'],
+  },
+  {
+    ntipo: 3,
+    tipo: 'Nível Sénior',
+    matchers: ['senior'],
+  },
+  {
+    ntipo: 4,
+    tipo: 'Nível Especialista',
+    matchers: ['especialista'],
+  },
+  {
+    ntipo: 5,
+    tipo: 'Nível Lider de Conhecimento',
+    matchers: ['lider de conhecimento', 'lider'],
+  },
+];
+
 const getLevelLabel = (rawLevelName) => {
   const raw = String(rawLevelName || '').trim();
   if (!raw.includes(' - ')) {
@@ -106,31 +134,36 @@ const getLevelLabel = (rawLevelName) => {
   return raw.split(' - ').slice(1).join(' - ').trim() || 'Nivel';
 };
 
-const buildSafeBadgeName = (areaName, rawLevelName) => {
-  const MAX_BADGE_NAME_LENGTH = 25;
-  const levelLabel = getLevelLabel(rawLevelName);
-  const normalizedArea = String(areaName || 'Badge')
-    .replace(/\s*\([^)]*\)\s*/g, ' ')
+const normalizeForCompare = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
+const buildSimpleBadgeName = (areaName) =>
+  String(areaName || 'Badge')
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim()
+    .slice(0, 25) || 'Badge';
 
-  const candidate = `${normalizedArea} ${levelLabel}`.replace(/\s+/g, ' ').trim();
-  if (candidate.length <= MAX_BADGE_NAME_LENGTH) {
-    return candidate;
+const buildSimpleBadgeDescription = (areaName) =>
+  `Badge da area ${buildSimpleBadgeName(areaName)}.`;
+
+const resolveBadgeTypeIdFromLevel = (rawLevelName, badgeTypeIdByIndex) => {
+  const normalizedLevelLabel = normalizeForCompare(getLevelLabel(rawLevelName));
+
+  for (const badgeType of defaultBadgeTypes) {
+    const matchesBadgeType = badgeType.matchers.some((matcher) =>
+      normalizedLevelLabel.includes(matcher),
+    );
+
+    if (matchesBadgeType) {
+      return badgeTypeIdByIndex.get(badgeType.ntipo) ?? badgeType.ntipo;
+    }
   }
 
-  const initials = normalizedArea
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join('');
-  const compactCandidate = `${initials} ${levelLabel}`.trim();
-
-  if (compactCandidate.length <= MAX_BADGE_NAME_LENGTH) {
-    return compactCandidate;
-  }
-
-  return candidate.slice(0, MAX_BADGE_NAME_LENGTH).trim();
+  return badgeTypeIdByIndex.get(1) ?? 1;
 };
 
 const normalizeRoles = (rolesValue) => {
@@ -398,41 +431,109 @@ const assignServiceLineToEachLeader = async (accounts, serviceLineIds, transacti
   }
 };
 
-const ensureDefaultBadgeType = async (transaction) => {
-  const defaultTypeName = 'Tecnico';
+const ensureBadgeTypes = async (transaction) => {
+  const badgeTypeIdByIndex = new Map();
 
-  const [existingType] = await sequelize.query(
-    `
-      SELECT ntipo
-      FROM tipo
-      WHERE LOWER(tipo) = LOWER(:defaultTypeName)
-      LIMIT 1
-    `,
-    {
-      replacements: { defaultTypeName },
-      type: QueryTypes.SELECT,
-      transaction,
-    },
-  );
+  for (const badgeType of defaultBadgeTypes) {
+    const [existingById] = await sequelize.query(
+      `
+        SELECT ntipo
+        FROM tipo
+        WHERE ntipo = :ntipo
+        LIMIT 1
+      `,
+      {
+        replacements: { ntipo: badgeType.ntipo },
+        type: QueryTypes.SELECT,
+        transaction,
+      },
+    );
 
-  if (existingType?.ntipo) {
-    return Number(existingType.ntipo);
+    if (!existingById?.ntipo) {
+      await sequelize.query(
+        `
+          INSERT INTO tipo (ntipo, tipo)
+          OVERRIDING SYSTEM VALUE
+          VALUES (:ntipo, :tmpTipo)
+        `,
+        {
+          replacements: {
+            ntipo: badgeType.ntipo,
+            tmpTipo: `__tmp_tipo_${badgeType.ntipo}__`,
+          },
+          type: QueryTypes.INSERT,
+          transaction,
+        },
+      );
+    }
+
+    badgeTypeIdByIndex.set(badgeType.ntipo, badgeType.ntipo);
   }
 
-  const [insertedType] = await sequelize.query(
+  for (const badgeType of defaultBadgeTypes) {
+    await sequelize.query(
+      `
+        UPDATE tipo
+        SET tipo = :tmpTipo
+        WHERE ntipo = :ntipo
+      `,
+      {
+        replacements: {
+          ntipo: badgeType.ntipo,
+          tmpTipo: `__tmp_tipo_${badgeType.ntipo}__`,
+        },
+        type: QueryTypes.UPDATE,
+        transaction,
+      },
+    );
+  }
+
+  await sequelize.query(
     `
-      INSERT INTO tipo (tipo)
-      VALUES (:defaultTypeName)
-      RETURNING ntipo
+      UPDATE tipo
+      SET tipo = CONCAT(tipo, ' (extra ', ntipo, ')')
+      WHERE ntipo NOT IN (${defaultBadgeTypes.map((type) => type.ntipo).join(', ')})
+        AND tipo IN (:targetNames)
     `,
     {
-      replacements: { defaultTypeName },
+      replacements: {
+        targetNames: defaultBadgeTypes.map((type) => type.tipo),
+      },
+      type: QueryTypes.UPDATE,
+      transaction,
+    },
+  );
+
+  for (const badgeType of defaultBadgeTypes) {
+    await sequelize.query(
+      `
+        UPDATE tipo
+        SET tipo = :tipo
+        WHERE ntipo = :ntipo
+      `,
+      {
+        replacements: { ntipo: badgeType.ntipo, tipo: badgeType.tipo },
+        type: QueryTypes.UPDATE,
+        transaction,
+      },
+    );
+  }
+
+  await sequelize.query(
+    `
+      SELECT setval(
+        pg_get_serial_sequence('tipo', 'ntipo'),
+        COALESCE((SELECT MAX(ntipo) FROM tipo), 1),
+        true
+      )
+    `,
+    {
       type: QueryTypes.SELECT,
       transaction,
     },
   );
 
-  return Number(insertedType.ntipo);
+  return badgeTypeIdByIndex;
 };
 
 const ensureEstadosAndMockData = async (accounts, transaction) => {
@@ -440,7 +541,7 @@ const ensureEstadosAndMockData = async (accounts, transaction) => {
   // 1=rejeitado, 2=pendente-tm, 3=pendente-sll, 4=aprovado
   const estados = ['rejeitado', 'pendente-tm', 'pendente-sll', 'aprovado'];
   const estadoIds = {};
-  const defaultBadgeTypeId = await ensureDefaultBadgeType(transaction);
+  const badgeTypeIdByIndex = await ensureBadgeTypes(transaction);
   
   for (const st of estados) {
     const [existing] = await sequelize.query(
@@ -474,13 +575,15 @@ const ensureEstadosAndMockData = async (accounts, transaction) => {
       SELECT nbadge FROM nivel_contem_b WHERE nnivel = :nnivel LIMIT 1
     `, { replacements: { nnivel: n.nnivel }, type: QueryTypes.SELECT, transaction });
 
+    const b_nome = buildSimpleBadgeName(n.area);
+    const b_descricao = buildSimpleBadgeDescription(n.area);
+    const ntipo = resolveBadgeTypeIdFromLevel(n.nivel, badgeTypeIdByIndex);
     let nbadge = null;
+
     if (!existingCb) {
-      const b_nome = buildSafeBadgeName(n.area, n.nivel);
-      const b_descricao = `${n.area} - ${getLevelLabel(n.nivel)}`;
       const [insertedB] = await sequelize.query(`
           INSERT INTO badge (b_nome, b_descricao, ntipo) VALUES (:b_nome, :b_descricao, :ntipo) RETURNING nbadge
-        `, { replacements: { b_nome, b_descricao, ntipo: defaultBadgeTypeId }, type: QueryTypes.SELECT, transaction });
+        `, { replacements: { b_nome, b_descricao, ntipo }, type: QueryTypes.SELECT, transaction });
       nbadge = Number(insertedB.nbadge);
 
       await sequelize.query(`INSERT INTO nivel_contem_b (nnivel, nbadge) VALUES (:nnivel, :nbadge)`,
@@ -492,6 +595,22 @@ const ensureEstadosAndMockData = async (accounts, transaction) => {
     } else {
       nbadge = Number(existingCb.nbadge);
     }
+
+    await sequelize.query(
+      `
+        UPDATE badge
+        SET b_nome = :b_nome,
+            b_descricao = :b_descricao,
+            ntipo = :ntipo
+        WHERE nbadge = :nbadge
+      `,
+      {
+        replacements: { nbadge, b_nome, b_descricao, ntipo },
+        type: QueryTypes.UPDATE,
+        transaction,
+      },
+    );
+
     badgesByNivel[n.nnivel] = nbadge;
   }
 
