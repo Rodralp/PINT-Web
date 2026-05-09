@@ -19,14 +19,14 @@ const ensureDataRegistoColumn = async () => {
     );
 
     if (!columnExists) {
-      console.log('⚠️ Adding missing data_registo column to utilizador table...');
+
       await sequelize.query(
         `
           ALTER TABLE utilizador
           ADD COLUMN data_registo DATE NOT NULL DEFAULT CURRENT_DATE
         `,
       );
-      console.log('✅ data_registo column added successfully');
+
     }
   } catch (error) {
     console.error('❌ Error ensuring data_registo column:', error);
@@ -37,6 +37,7 @@ const MANAGER_BADGES_TIMELINE_DAYS = 12;
 const MANAGER_NEW_CONSULTORES_DAYS = 10;
 const MANAGER_TOP_CONSULTORES_LIMIT = 4;
 const MANAGER_RECENT_ACTIVITY_LIMIT = 4;
+const CONSULTOR_TIMELINE_DAYS = 12;
 
 const managerRoleSet = new Set(['talent-manager', 'service-line-leader', 'admin-gestor']);
 
@@ -49,23 +50,47 @@ const defaultManagerDashboard = Object.freeze({
   recentActivities: [],
 });
 
+const formatDateKey = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const buildDailySeries = (rows, totalDays = 12) => {
   const countsByDate = new Map();
 
   for (const row of rows || []) {
-    const dateKey = String(row.activity_date || '').slice(0, 10);
+    const dateKey = formatDateKey(row.activity_date);
     if (!dateKey) {
       continue;
     }
 
     const currentValue = countsByDate.get(dateKey) || 0;
-    countsByDate.set(dateKey, currentValue + Number(row.activity_count) || 0);
+    countsByDate.set(dateKey, currentValue + (Number(row.activity_count) || 0));
   }
 
   return Array.from({ length: totalDays }, (_, index) => {
     const date = new Date();
+    date.setHours(0, 0, 0, 0);
     date.setDate(date.getDate() - (totalDays - 1 - index));
-    const dateKey = date.toISOString().slice(0, 10);
+    const dateKey = formatDateKey(date);
     return countsByDate.get(dateKey) || 0;
   });
 };
@@ -127,6 +152,17 @@ const normalizeServiceLineIds = (rows) => {
   return ids.length > 0 ? ids : [-1];
 };
 
+const getUtilizadorIdByAccountId = async (accountId) => {
+  const [row] = await sequelize.query(
+    `SELECT nutilizador FROM utilizador WHERE nutilizador = :accountId LIMIT 1`,
+    {
+      replacements: { accountId: Number(accountId) },
+      type: QueryTypes.SELECT,
+    }
+  );
+  return row ? Number(row.nutilizador) : null;
+};
+
 const getServiceLineScopeForRole = async (role, accountId) => {
   if (role !== 'service-line-leader') {
     return { hasServiceLineScope: false, serviceLineIds: [-1] };
@@ -137,15 +173,20 @@ const getServiceLineScopeForRole = async (role, accountId) => {
     return { hasServiceLineScope: true, serviceLineIds: [-1] };
   }
 
+  const utilizadorId = await getUtilizadorIdByAccountId(parsedAccountId);
+  if (!utilizadorId) {
+    return { hasServiceLineScope: true, serviceLineIds: [-1] };
+  }
+
   const rows = await sequelize.query(
     `
       SELECT nsline
       FROM sll_leader_sl
-      WHERE nutilizador = :accountId
+      WHERE nutilizador = :utilizadorId
       ORDER BY nsline ASC
     `,
     {
-      replacements: { accountId: parsedAccountId },
+      replacements: { utilizadorId },
       type: QueryTypes.SELECT,
     },
   );
@@ -180,6 +221,20 @@ const getPendingStatesByRole = (role) => {
   return ['pendente-tm', 'em_validacao'];
 };
 
+const getVisibleStatesByRole = (role) => {
+  const allStates = ['rejeitado', 'pendente-tm', 'pendente-sll', 'aprovado'];
+
+  if (role === 'service-line-leader') {
+    return ['rejeitado', 'pendente-sll', 'aprovado'];
+  }
+
+  if (role === 'talent-manager' || role === 'admin-gestor') {
+    return allStates;
+  }
+
+  return allStates;
+};
+
 const getManagerDashboardDataFromDb = async (role, accountId) => {
   if (!managerRoleSet.has(role)) {
     return clone(defaultManagerDashboard);
@@ -195,23 +250,38 @@ const getManagerDashboardDataFromDb = async (role, accountId) => {
   };
 
   const pendingStates = getPendingStatesByRole(role);
+  const visibleStates = getVisibleStatesByRole(role);
 
-  console.log(`🔄 Model: Executing dashboard queries for role: ${role}, accountId: ${accountId}`);
-  console.log('🔄 Model: Service line scope:', scope);
+
+
 
   const [badgesTimelineRows, novosConsultoresRows, onlineUsersRows, pendingRequestsRows, topConsultoresRows, activitiesRows] = await Promise.all([
     sequelize.query(
       `
+        WITH latest AS (
+          SELECT DISTINCT ON (p.nutilizador, p.nbadge)
+            p.npedido,
+            p.data_submissao,
+            p.estado
+          FROM pedidos AS p
+          WHERE ${buildScopedBadgeCondition('p.nbadge')}
+          ORDER BY p.nutilizador, p.nbadge, p.data_submissao DESC, p.npedido DESC
+        )
         SELECT
-          DATE(p.data_submissao) AS activity_date,
-          COUNT(DISTINCT p.npedido) AS activity_count
-        FROM pedidos AS p
-        WHERE ${buildScopedBadgeCondition('p.nbadge')}
-        GROUP BY DATE(p.data_submissao)
+          DATE(l.data_submissao) AS activity_date,
+          COUNT(DISTINCT l.npedido) AS activity_count
+        FROM latest AS l
+        LEFT JOIN estado AS e
+          ON e.nestado = l.estado
+        WHERE LOWER(COALESCE(e.estado, '')) IN (:visibleStates)
+        GROUP BY DATE(l.data_submissao)
         ORDER BY activity_date ASC
       `,
       {
-        replacements: commonScopeReplacements,
+        replacements: {
+          ...commonScopeReplacements,
+          visibleStates,
+        },
         type: QueryTypes.SELECT,
       },
     ),
@@ -251,12 +321,19 @@ const getManagerDashboardDataFromDb = async (role, accountId) => {
     ),
     sequelize.query(
       `
-        SELECT COUNT(DISTINCT p.npedido)::int AS total
-        FROM pedidos AS p
+        WITH latest AS (
+          SELECT DISTINCT ON (p.nutilizador, p.nbadge)
+            p.npedido,
+            p.estado
+          FROM pedidos AS p
+          WHERE ${buildScopedBadgeCondition('p.nbadge')}
+          ORDER BY p.nutilizador, p.nbadge, p.npedido DESC
+        )
+        SELECT COUNT(l.npedido)::int AS total
+        FROM latest AS l
         LEFT JOIN estado AS e
-          ON e.nestado = p.estado
+          ON e.nestado = l.estado
         WHERE LOWER(COALESCE(e.estado, '')) IN (:pendingStates)
-          AND ${buildScopedBadgeCondition('p.nbadge')}
       `,
       {
         replacements: {
@@ -381,13 +458,13 @@ const getManagerDashboardDataFromDb = async (role, accountId) => {
     ),
   ]);
 
-  console.log('📊 Model: Query results:');
-  console.log('  badgesTimelineRows:', badgesTimelineRows?.length || 0, 'records');
-  console.log('  novosConsultoresRows:', novosConsultoresRows?.length || 0, 'records');
-  console.log('  onlineUsersRows:', onlineUsersRows);
-  console.log('  pendingRequestsRows:', pendingRequestsRows);
-  console.log('  topConsultoresRows:', topConsultoresRows?.length || 0, 'records');
-  console.log('  activitiesRows:', activitiesRows?.length || 0, 'records');
+
+
+
+
+
+
+
 
   const topConsultores = (Array.isArray(topConsultoresRows) ? topConsultoresRows : []).map((row, index) => ({
     id: Number(row.id),
@@ -414,90 +491,47 @@ const getManagerDashboardDataFromDb = async (role, accountId) => {
     recentActivities,
   };
 
-  console.log('✅ Model: Final dashboard data:', {
-    badgesTimelineValues: result.badgesTimelineValues.length,
-    novosConsultoresValues: result.novosConsultoresValues.length,
-    onlineUsers: result.onlineUsers,
-    pendingRequests: result.pendingRequests,
-    topConsultores: result.topConsultores.length,
-    recentActivities: result.recentActivities.length,
-  });
-
   return result;
 };
 
-const dashboardData = {
-  consultor: {
-    timelineValues: [3, 2, 5, 4, 6, 3, 7, 5, 8, 4, 6, 9],
-    stats: [
-      {
-        titleKey: 'dashboard_stat_badges_title',
-        value: '12',
-        noteKey: 'dashboard_stat_badges_note',
-        iconKey: 'award',
-        tone: 'gold',
-      },
-      {
-        titleKey: 'dashboard_stat_streak_title',
-        value: '0',
-        noteKey: 'dashboard_stat_streak_note',
-        iconKey: 'flame',
-        tone: 'fire',
-      },
-      {
-        titleKey: 'dashboard_stat_requests_title',
-        value: '5',
-        noteKey: 'dashboard_stat_requests_note',
-        iconKey: 'clock',
-        tone: 'blue',
-      },
-      {
-        titleKey: 'dashboard_stat_ranking_title',
-        value: '#15',
-        noteKey: 'dashboard_stat_ranking_note',
-        iconKey: 'crown',
-        tone: 'rank',
-      },
-    ],
-    inProgressItems: [
-      {
-        title: 'LowCode (Outsystems)',
-        subtitleKey: 'badge_level_specialist',
-        accent: 'warning',
-        iconKey: 'alertTriangle',
-      },
-      {
-        title: 'LowCode (Outsystems)',
-        subtitleKey: 'badge_level_senior',
-        accent: 'yellow',
-        iconKey: 'searchCheck',
-      },
-      {
-        title: 'LowCode (Outsystems)',
-        subtitleKey: 'badge_level_intermediate',
-        accent: 'info',
-        iconKey: 'clock',
-      },
-    ],
-    suggestionItems: [
-      {
-        title: 'LowCode (Outsystems)',
-        subtitleKey: 'badge_level_knowledge_lead',
-        accent: 'success',
-      },
-      {
-        title: 'Cloud Architecture',
-        subtitleKey: 'badge_level_specialist',
-        accent: 'violet',
-      },
-      {
-        title: 'C++ Mastery',
-        subtitleKey: 'badge_level_senior',
-        accent: 'amber',
-      },
-    ],
+const defaultConsultorStats = Object.freeze([
+  {
+    titleKey: 'dashboard_stat_badges_title',
+    value: '0',
+    noteKey: 'dashboard_stat_badges_note',
+    iconKey: 'award',
+    tone: 'gold',
   },
-};
+  {
+    titleKey: 'dashboard_stat_streak_title',
+    value: '0',
+    noteKey: 'dashboard_stat_streak_note',
+    iconKey: 'flame',
+    tone: 'fire',
+  },
+  {
+    titleKey: 'dashboard_stat_requests_title',
+    value: '0',
+    noteKey: 'dashboard_stat_requests_note',
+    iconKey: 'clock',
+    tone: 'blue',
+  },
+  {
+    titleKey: 'dashboard_stat_ranking_title',
+    value: '#0',
+    noteKey: 'dashboard_stat_ranking_note',
+    iconKey: 'crown',
+    tone: 'rank',
+  },
+]);
+
+const defaultConsultorDashboard = Object.freeze({
+  timelineValues: Array.from({ length: CONSULTOR_TIMELINE_DAYS }, () => 0),
+  stats: defaultConsultorStats,
+  inProgressItems: [],
+  suggestionItems: [],
+  recentActivities: [],
+});
 
 export const dashboardModel = {
   async getTalentManagerDashboardData(accountId) {
@@ -515,54 +549,56 @@ export const dashboardModel = {
   async getConsultorDashboardData(accountId) {
     const parsedAccountId = Number(accountId);
     if (!Number.isInteger(parsedAccountId) || parsedAccountId <= 0) {
-      return clone(dashboardData.consultor);
+      return clone(defaultConsultorDashboard);
     }
 
     const profileData = await consultorModel.getProfileData(parsedAccountId);
 
-    const timelineRows = await sequelize.query(
-      `
-        SELECT
-          DATE(p.data_submissao) AS activity_date,
-          COUNT(DISTINCT p.npedido) AS activity_count
-        FROM pedidos AS p
-        LEFT JOIN estado AS e
-          ON e.nestado = p.estado
-        WHERE p.nutilizador = :accountId
-          AND LOWER(COALESCE(e.estado, '')) = 'aprovado'
-        GROUP BY DATE(p.data_submissao)
-        ORDER BY activity_date ASC
-      `,
-      {
-        replacements: { accountId: parsedAccountId },
-        type: QueryTypes.SELECT,
-      },
-    );
+    const [timelineRows, inProgressRows, suggestionItems] = await Promise.all([
+      sequelize.query(
+        `
+          SELECT
+            DATE(p.data_submissao) AS activity_date,
+            COUNT(DISTINCT p.npedido) AS activity_count
+          FROM pedidos AS p
+          LEFT JOIN estado AS e
+            ON e.nestado = p.estado
+          WHERE p.nutilizador = :accountId
+            AND LOWER(COALESCE(e.estado, '')) = 'aprovado'
+          GROUP BY DATE(p.data_submissao)
+          ORDER BY activity_date ASC
+        `,
+        {
+          replacements: { accountId: parsedAccountId },
+          type: QueryTypes.SELECT,
+        },
+      ),
+      sequelize.query(
+        `
+          SELECT
+            p.npedido,
+            b.b_nome,
+            p.data_submissao,
+            COALESCE(e.estado, 'pendente') AS estado
+          FROM pedidos AS p
+          INNER JOIN badge AS b
+            ON b.nbadge = p.nbadge
+          LEFT JOIN estado AS e
+            ON e.nestado = p.estado
+          WHERE p.nutilizador = :accountId
+            AND LOWER(COALESCE(e.estado, '')) <> 'aprovado'
+          ORDER BY p.data_submissao DESC, p.npedido DESC
+          LIMIT 3
+        `,
+        {
+          replacements: { accountId: parsedAccountId },
+          type: QueryTypes.SELECT,
+        },
+      ),
+      consultorModel.getBadgeSuggestions(parsedAccountId, 3).catch(() => []),
+    ]);
 
-    const inProgressRows = await sequelize.query(
-      `
-        SELECT
-          p.npedido,
-          b.b_nome,
-          p.data_submissao,
-          COALESCE(e.estado, 'pendente') AS estado
-        FROM pedidos AS p
-        INNER JOIN badge AS b
-          ON b.nbadge = p.nbadge
-        LEFT JOIN estado AS e
-          ON e.nestado = p.estado
-        WHERE p.nutilizador = :accountId
-          AND LOWER(COALESCE(e.estado, '')) <> 'aprovado'
-        ORDER BY p.data_submissao DESC, p.npedido DESC
-        LIMIT 3
-      `,
-      {
-        replacements: { accountId: parsedAccountId },
-        type: QueryTypes.SELECT,
-      },
-    );
-
-    const timelineValues = buildDailySeries(timelineRows, 12);
+    const timelineValues = buildDailySeries(timelineRows, CONSULTOR_TIMELINE_DAYS);
 
     const inProgressItems = (inProgressRows || []).map((row) => {
       const estado = normalizeRequestState(row.estado);
@@ -574,19 +610,24 @@ export const dashboardModel = {
       };
     });
 
+    const stats = Array.isArray(profileData?.stats) && profileData.stats.length > 0
+      ? profileData.stats
+      : clone(defaultConsultorDashboard.stats);
+
     return {
       timelineValues,
-      stats: profileData.stats,
-      inProgressItems: inProgressItems.length > 0 ? inProgressItems : clone(dashboardData.consultor.inProgressItems),
-      suggestionItems: clone(dashboardData.consultor.suggestionItems),
+      stats,
+      inProgressItems,
+      suggestionItems: Array.isArray(suggestionItems) ? suggestionItems : [],
       recentActivities: Array.isArray(profileData.activityItems)
+        && profileData.activityItems.length > 0
         ? profileData.activityItems.slice(0, 4).map((item, index) => ({
           id: item.id || index + 1,
           title: item.description,
           timeframe: item.date,
           iconKey: item.icon === 'award' ? 'award' : 'fileText',
         }))
-        : clone(dashboardData.consultor.recentActivities || []),
+        : [],
     };
   },
 };

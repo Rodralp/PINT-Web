@@ -28,19 +28,33 @@ const mapWorkflowStatusToUi = (statusValue) => {
   return normalized || 'pendente';
 };
 
+const getUtilizadorIdByAccountId = async (accountId) => {
+  const [row] = await sequelize.query(
+    `SELECT nutilizador FROM utilizador WHERE nutilizador = :accountId LIMIT 1`,
+    {
+      replacements: { accountId: Number(accountId) },
+      type: QueryTypes.SELECT,
+    }
+  );
+  return row ? Number(row.nutilizador) : null;
+};
+
 const getServiceLineForLeader = async (accountId) => {
+  const utilizadorId = await getUtilizadorIdByAccountId(accountId);
+  if (!utilizadorId) return null;
+
   const [row] = await sequelize.query(
     `
       SELECT sl.nsline, sl.sline
       FROM sll_leader_sl sll
       INNER JOIN service_line sl
         ON sl.nsline = sll.nsline
-      WHERE sll.nutilizador = :accountId
+      WHERE sll.nutilizador = :utilizadorId
       ORDER BY sl.nsline ASC
       LIMIT 1
     `,
     {
-      replacements: { accountId },
+      replacements: { utilizadorId },
       type: QueryTypes.SELECT,
     },
   );
@@ -234,8 +248,8 @@ export const getHistoricoBadgesSLL = async (req, res) => {
       { replacements: { serviceLineId }, type: QueryTypes.SELECT }
     );
 
-    console.log(`Badges query for service line ${serviceLineId}:`, rows.length, 'badges found');
-    console.log('Badges data:', rows);
+
+
 
     res.status(200).json(rows);
   } catch (error) {
@@ -663,9 +677,9 @@ export const getHistoricoPorEstado = async (req, res) => {
                req.path.includes('area') ? 'area' : 
                req.path.includes('badge') ? 'badge' : 'consultor';
 
-  console.log(`getHistoricoPorEstado called: accountId=${accountId}, estado=${estado}, type=${type}`);
-  console.log('Request query params:', req.query);
-  console.log('Request path:', req.path);
+
+
+
 
   // Map frontend estados to database estados (using numeric IDs like request management)
   const estadoMap = {
@@ -675,10 +689,10 @@ export const getHistoricoPorEstado = async (req, res) => {
   };
   
   const dbEstadoId = estadoMap[estado] || estado;
-  console.log(`Mapped frontend estado '${estado}' to database estado ID '${dbEstadoId}'`);
+
 
   if (!accountId || !estado) {
-    console.log('Missing required parameters');
+
     res.status(400).json({ message: 'Account id and estado are required.' });
     return;
   }
@@ -687,13 +701,13 @@ export const getHistoricoPorEstado = async (req, res) => {
     const serviceLine = await getServiceLineForLeader(accountId);
 
     if (!serviceLine) {
-      console.log('Service Line Leader not found');
+
       res.status(404).json({ message: 'Service Line Leader not found.' });
       return;
     }
 
     const serviceLineId = Number(serviceLine.nsline);
-    console.log(`Service Line found: ${serviceLine.sline} (ID: ${serviceLineId})`);
+
     
     let data = [];
 
@@ -724,12 +738,12 @@ export const getHistoricoPorEstado = async (req, res) => {
         ...row,
         estado: mapWorkflowStatusToUi(row.estado)
       }));
-      console.log(`Service line query returned ${rows.length} rows for dbEstadoId=${dbEstadoId}`);
+
     } else if (type === 'area') {
       const areaId = parseAccountId(req.query?.areaId);
-      console.log(`Processing area query: areaId=${areaId}`);
+
       if (!areaId) {
-        console.log('Area id missing');
+
         res.status(400).json({ message: 'Area id is required.' });
         return;
       }
@@ -762,12 +776,12 @@ export const getHistoricoPorEstado = async (req, res) => {
         ...row,
         estado: mapWorkflowStatusToUi(row.estado)
       }));
-      console.log(`Area query returned ${rows.length} rows for areaId=${areaId}, dbEstadoId=${dbEstadoId}`);
+
     } else if (type === 'badge') {
       const badgeId = parseAccountId(req.query?.badgeId);
-      console.log(`Processing badge query: badgeId=${badgeId}`);
+
       if (!badgeId) {
-        console.log('Badge id missing');
+
         res.status(400).json({ message: 'Badge id is required.' });
         return;
       }
@@ -798,12 +812,12 @@ export const getHistoricoPorEstado = async (req, res) => {
         ...row,
         estado: mapWorkflowStatusToUi(row.estado)
       }));
-      console.log(`Badge query returned ${rows.length} rows for badgeId=${badgeId}, dbEstadoId=${dbEstadoId}`);
+
     } else if (type === 'consultor') {
       const consultorId = parseAccountId(req.query?.consultorId);
-      console.log(`Processing consultor query: consultorId=${consultorId}`);
+
       if (!consultorId) {
-        console.log('Consultor id missing');
+
         res.status(400).json({ message: 'Consultor id is required.' });
         return;
       }
@@ -834,11 +848,11 @@ export const getHistoricoPorEstado = async (req, res) => {
         ...row,
         estado: mapWorkflowStatusToUi(row.estado)
       }));
-      console.log(`Consultor query returned ${rows.length} rows for consultorId=${consultorId}, dbEstadoId=${dbEstadoId}`);
+
     }
 
-    console.log(`Final data to return: ${data.length} items`);
-    console.log('Data sample:', data.slice(0, 3));
+
+
     res.status(200).json(data);
   } catch (error) {
     res.status(500).json({ message: error?.message || 'Failed to fetch historico por estado.' });

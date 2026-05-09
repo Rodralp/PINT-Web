@@ -5,8 +5,10 @@ import { fetchServiceLineLeaderDashboard } from '../../services/dashboardService
 import '../../css/TalentManager/Dashboard_TM.css';
 import '../../css/ServiceLineLeader/Dashboard_SLL.css';
 
-const defaultBadgesTimelineValues = [3, 4, 3, 6, 4, 8, 6, 7, 5, 8, 8, 10];
-const defaultNovosConsultoresValues = [2, 5, 4, 6, 3, 7, 5, 8, 4, 6];
+const BADGES_TIMELINE_DAYS = 12;
+const NOVOS_CONSULTORES_DAYS = 10;
+const defaultBadgesTimelineValues = Array.from({ length: BADGES_TIMELINE_DAYS }, () => 0);
+const defaultNovosConsultoresValues = Array.from({ length: NOVOS_CONSULTORES_DAYS }, () => 0);
 
 const iconByKey = {
   trophy: Trophy,
@@ -56,8 +58,8 @@ function DashboardSLL() {
   const novosConsultoresChartRef = useRef(null);
   const [badgesTimelineValues, setBadgesTimelineValues] = useState(defaultBadgesTimelineValues);
   const [novosConsultoresValues, setNovosConsultoresValues] = useState(defaultNovosConsultoresValues);
-  const [onlineUsers, setOnlineUsers] = useState(1302);
-  const [pendingRequests, setPendingRequests] = useState(25);
+  const [onlineUsers, setOnlineUsers] = useState(0);
+  const [pendingRequests, setPendingRequests] = useState(0);
   const [topConsultores, setTopConsultores] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
   const [dashboardStatusMessage, setDashboardStatusMessage] = useState('');
@@ -77,51 +79,28 @@ function DashboardSLL() {
 
     const loadDashboardData = async () => {
       try {
-        console.log('🔄 Loading ServiceLineLeader Dashboard data...');
         const data = await fetchServiceLineLeaderDashboard();
-        console.log('✅ Dashboard data received:', data);
         
         if (!isMounted) {
           return;
         }
 
-        if (Array.isArray(data.badgesTimelineValues) && data.badgesTimelineValues.length > 0) {
-          console.log('📊 Setting badges timeline:', data.badgesTimelineValues);
-          setBadgesTimelineValues(data.badgesTimelineValues);
-        } else {
-          console.log('⚠️ No badges timeline data, using defaults');
-        }
+        setBadgesTimelineValues(
+          Array.isArray(data.badgesTimelineValues) && data.badgesTimelineValues.length > 0
+            ? data.badgesTimelineValues.map((value) => Number(value) || 0)
+            : defaultBadgesTimelineValues,
+        );
 
-        if (Array.isArray(data.novosConsultoresValues) && data.novosConsultoresValues.length > 0) {
-          console.log('📊 Setting novos consultores:', data.novosConsultoresValues);
-          setNovosConsultoresValues(data.novosConsultoresValues);
-        } else {
-          console.log('⚠️ No novos consultores data, using defaults');
-        }
+        setNovosConsultoresValues(
+          Array.isArray(data.novosConsultoresValues) && data.novosConsultoresValues.length > 0
+            ? data.novosConsultoresValues.map((value) => Number(value) || 0)
+            : defaultNovosConsultoresValues,
+        );
 
-        if (Number.isFinite(data.onlineUsers)) {
-          console.log('👥 Setting online users:', data.onlineUsers);
-          setOnlineUsers(data.onlineUsers);
-        }
-
-        if (Number.isFinite(data.pendingRequests)) {
-          console.log('📋 Setting pending requests:', data.pendingRequests);
-          setPendingRequests(data.pendingRequests);
-        }
-
-        if (Array.isArray(data.topConsultores) && data.topConsultores.length > 0) {
-          console.log('🏆 Setting top consultores:', data.topConsultores);
-          setTopConsultores(data.topConsultores);
-        } else {
-          console.log('⚠️ No top consultores data');
-        }
-
-        if (Array.isArray(data.recentActivities) && data.recentActivities.length > 0) {
-          console.log('📋 Setting recent activities:', data.recentActivities);
-          setRecentActivities(data.recentActivities);
-        } else {
-          console.log('⚠️ No recent activities data');
-        }
+        setOnlineUsers(Number(data.onlineUsers) || 0);
+        setPendingRequests(Number(data.pendingRequests) || 0);
+        setTopConsultores(Array.isArray(data.topConsultores) ? data.topConsultores : []);
+        setRecentActivities(Array.isArray(data.recentActivities) ? data.recentActivities : []);
 
         setDashboardStatusMessage('');
       } catch (error) {

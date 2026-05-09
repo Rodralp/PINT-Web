@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 import '../../css/Consultor/Dashboard_C.css';
 
-const defaultTimelineValues = [3, 2, 5, 4, 6, 3, 7, 5, 8, 4, 6, 9];
+const TIMELINE_DAYS = 12;
+const defaultTimelineValues = Array.from({ length: TIMELINE_DAYS }, () => 0);
 
 const statIconMap = {
   award: Award,
@@ -55,23 +56,11 @@ const calculateVisibleTimelinePoints = (containerWidth, totalPoints) => {
   return Math.max(4, Math.min(totalPoints, maxPointsByWidth));
 };
 
-const defaultInProgressItems = [
-  { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_specialist', accent: 'warning', icon: AlertTriangle },
-  { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_senior', accent: 'yellow', icon: SearchCheck },
-  { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_intermediate', accent: 'info', icon: Clock3 },
-];
-
-const defaultSuggestionItems = [
-  { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_knowledge_lead', accent: 'success' },
-  { title: 'Cloud Architecture', subtitleKey: 'badge_level_specialist', accent: 'violet' },
-  { title: 'C++ Mastery', subtitleKey: 'badge_level_senior', accent: 'amber' },
-];
-
 const defaultDashboardStats = [
-  { titleKey: 'dashboard_stat_badges_title', value: '-', noteKey: 'dashboard_stat_badges_note', icon: Award, tone: 'gold' },
-  { titleKey: 'dashboard_stat_streak_title', value: '-', noteKey: 'dashboard_stat_streak_note', icon: Flame, tone: 'fire' },
-  { titleKey: 'dashboard_stat_requests_title', value: '-', noteKey: 'dashboard_stat_requests_note', icon: Clock3, tone: 'blue' },
-  { titleKey: 'dashboard_stat_ranking_title', value: '-', noteKey: 'dashboard_stat_ranking_note', icon: Crown, tone: 'rank' },
+  { titleKey: 'dashboard_stat_badges_title', value: '0', noteKey: 'dashboard_stat_badges_note', icon: Award, tone: 'gold' },
+  { titleKey: 'dashboard_stat_streak_title', value: '0', noteKey: 'dashboard_stat_streak_note', icon: Flame, tone: 'fire' },
+  { titleKey: 'dashboard_stat_requests_title', value: '0', noteKey: 'dashboard_stat_requests_note', icon: Clock3, tone: 'blue' },
+  { titleKey: 'dashboard_stat_ranking_title', value: '#0', noteKey: 'dashboard_stat_ranking_note', icon: Crown, tone: 'rank' },
 ];
 
 function DashboardC() {
@@ -80,8 +69,8 @@ function DashboardC() {
   const locale = i18n.language?.startsWith('es') ? 'es-ES' : i18n.language?.startsWith('en') ? 'en-GB' : 'pt-PT';
   const [timelineValues, setTimelineValues] = useState(defaultTimelineValues);
   const [dashboardStats, setDashboardStats] = useState(defaultDashboardStats);
-  const [inProgressItems, setInProgressItems] = useState(defaultInProgressItems);
-  const [suggestionItems, setSuggestionItems] = useState(defaultSuggestionItems);
+  const [inProgressItems, setInProgressItems] = useState([]);
+  const [suggestionItems, setSuggestionItems] = useState([]);
   const [dashboardStatusMessage, setDashboardStatusMessage] = useState('');
   const timelineData = useMemo(() => buildTimelineData(timelineValues, locale), [timelineValues, locale]);
   const [visibleTimelinePoints, setVisibleTimelinePoints] = useState(timelineData.length);
@@ -107,30 +96,34 @@ function DashboardC() {
           return;
         }
 
-        if (Array.isArray(data.timelineValues) && data.timelineValues.length > 0) {
-          setTimelineValues(data.timelineValues);
-        }
+        setTimelineValues(
+          Array.isArray(data.timelineValues) && data.timelineValues.length > 0
+            ? data.timelineValues.map((value) => Number(value) || 0)
+            : defaultTimelineValues,
+        );
 
-        if (Array.isArray(data.stats) && data.stats.length > 0) {
-          const mappedStats = data.stats.map((item) => ({
+        const mappedStats = Array.isArray(data.stats) && data.stats.length > 0
+          ? data.stats.map((item) => ({
             ...item,
             icon: statIconMap[item.iconKey] || Award,
-          }));
-          setDashboardStats(mappedStats);
-        }
+          }))
+          : defaultDashboardStats;
+        setDashboardStats(mappedStats);
 
-        if (Array.isArray(data.inProgressItems) && data.inProgressItems.length > 0) {
-          const mappedInProgress = data.inProgressItems.map((item) => ({
+        const mappedInProgress = Array.isArray(data.inProgressItems)
+          ? data.inProgressItems.map((item) => ({
             ...item,
             icon: progressIconMap[item.iconKey] || AlertTriangle,
-          }));
-          setInProgressItems(mappedInProgress);
-        }
+          }))
+          : [];
+        setInProgressItems(mappedInProgress);
 
         if (Array.isArray(suggestionsData) && suggestionsData.length > 0) {
           setSuggestionItems(suggestionsData);
-        } else if (Array.isArray(data.suggestionItems) && data.suggestionItems.length > 0) {
+        } else if (Array.isArray(data.suggestionItems)) {
           setSuggestionItems(data.suggestionItems);
+        } else {
+          setSuggestionItems([]);
         }
 
         setDashboardStatusMessage('');
