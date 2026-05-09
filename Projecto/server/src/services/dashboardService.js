@@ -1,16 +1,16 @@
 import { dashboardModel } from '../models/dashboardModel.js';
 
 export const dashboardService = {
-  getTalentManagerDashboard() {
-    return dashboardModel.getTalentManagerDashboardData();
+  async getTalentManagerDashboard(accountId) {
+    return dashboardModel.getTalentManagerDashboardData(accountId);
   },
 
-  getServiceLineLeaderDashboard() {
-    return dashboardModel.getServiceLineLeaderDashboardData();
+  async getServiceLineLeaderDashboard(accountId) {
+    return dashboardModel.getServiceLineLeaderDashboardData(accountId);
   },
 
-  getAdminGestorDashboard() {
-    return dashboardModel.getAdminGestorDashboardData();
+  async getAdminGestorDashboard(accountId) {
+    return dashboardModel.getAdminGestorDashboardData(accountId);
   },
 
   async getConsultorDashboard(accountId) {

@@ -22,18 +22,36 @@ const getStoredLoginData = () => {
   }
 };
 
+const getLoggedAccountId = () => {
+  const loginData = getStoredLoginData();
+  const accountId = Number(loginData?.id);
+  return Number.isInteger(accountId) && accountId > 0 ? accountId : null;
+};
+
 export async function fetchTalentManagerDashboard() {
-  const response = await apiClient.get('/dashboard/talent-manager');
+  const accountId = getLoggedAccountId();
+  const path = accountId
+    ? `/dashboard/talent-manager?accountId=${accountId}`
+    : '/dashboard/talent-manager';
+  const response = await apiClient.get(path);
   return response.data;
 }
 
 export async function fetchServiceLineLeaderDashboard() {
-  const response = await apiClient.get('/dashboard/service-line-leader');
+  const accountId = getLoggedAccountId();
+  const path = accountId
+    ? `/dashboard/service-line-leader?accountId=${accountId}`
+    : '/dashboard/service-line-leader';
+  const response = await apiClient.get(path);
   return response.data;
 }
 
 export async function fetchAdminGestorDashboard() {
-  const response = await apiClient.get('/dashboard/admin-gestor');
+  const accountId = getLoggedAccountId();
+  const path = accountId
+    ? `/dashboard/admin-gestor?accountId=${accountId}`
+    : '/dashboard/admin-gestor';
+  const response = await apiClient.get(path);
   return response.data;
 }
 

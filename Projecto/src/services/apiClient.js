@@ -33,6 +33,11 @@ const request = async (path, options = {}) => {
     const errorCode = error?.response?.data?.code;
     const statusCode = error?.response?.status;
 
+    // Attach full server response data for debugging
+    if (error?.response?.data) {
+      requestError.response = error.response;
+    }
+
     if (errorDetails) {
       requestError.details = errorDetails;
     }

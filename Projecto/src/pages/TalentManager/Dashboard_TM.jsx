@@ -7,67 +7,13 @@ import '../../css/TalentManager/Dashboard_TM.css';
 const defaultBadgesTimelineValues = [3, 4, 3, 6, 4, 8, 6, 7, 5, 8, 8, 10];
 const defaultNovosConsultoresValues = [2, 5, 4, 6, 3, 7, 5, 8, 4, 6];
 
-const topConsultores = [
-  {
-    id: 1,
-    name: 'João Gomes',
-    email: 'joaogomes1234@softinsa.pt',
-    icon: Trophy,
-    points: 2450,
-    badges: 17,
-  },
-  {
-    id: 2,
-    name: 'Maria Santos',
-    email: 'maria.santos@softinsa.pt',
-    icon: Award,
-    points: 2200,
-    badges: 14,
-  },
-  {
-    id: 3,
-    name: 'Pedro Mendes',
-    email: 'pedro.mendes@softinsa.pt',
-    icon: Users,
-    points: 1950,
-    badges: 9,
-  },
-  {
-    id: 4,
-    name: 'João Gomes',
-    email: 'joaogomes1234@softinsa.pt',
-    icon: Trophy,
-    points: 1900,
-    badges: 11,
-  },
-];
-
-const recentActivities = [
-  {
-    id: 1,
-    title: 'Gerado relatório de badges da área Hybrid Cloud',
-    timeframe: 'Ontem',
-    icon: FileText,
-  },
-  {
-    id: 2,
-    title: 'Aprovado pedido de badge',
-    timeframe: 'Há 2 horas',
-    icon: CheckCircle2,
-  },
-  {
-    id: 3,
-    title: 'Consultado ranking de consultores da Service Line',
-    timeframe: 'Há 2 dias',
-    icon: Trophy,
-  },
-  {
-    id: 4,
-    title: 'Revisado progresso de 8 consultores da Service Line',
-    timeframe: 'Ontem',
-    icon: Users,
-  },
-];
+const iconByKey = {
+  trophy: Trophy,
+  award: Award,
+  users: Users,
+  fileText: FileText,
+  checkCircle: CheckCircle2,
+};
 
 const buildDailyTimelineData = (values, labelFormat = 'day') => {
   const today = new Date();
@@ -111,6 +57,8 @@ function DashboardTM() {
   const [novosConsultoresValues, setNovosConsultoresValues] = useState(defaultNovosConsultoresValues);
   const [onlineUsers, setOnlineUsers] = useState(1302);
   const [pendingRequests, setPendingRequests] = useState(25);
+  const [topConsultores, setTopConsultores] = useState([]);
+  const [recentActivities, setRecentActivities] = useState([]);
   const [dashboardStatusMessage, setDashboardStatusMessage] = useState('');
   const badgesTimelineData = useMemo(
     () => buildDailyTimelineData(badgesTimelineValues, 'day-month'),
@@ -128,29 +76,58 @@ function DashboardTM() {
 
     const loadDashboardData = async () => {
       try {
+        console.log('🔄 Loading TalentManager Dashboard data...');
         const data = await fetchTalentManagerDashboard();
+        console.log('✅ Dashboard data received:', data);
+        
         if (!isMounted) {
           return;
         }
 
         if (Array.isArray(data.badgesTimelineValues) && data.badgesTimelineValues.length > 0) {
+          console.log('📊 Setting badges timeline:', data.badgesTimelineValues);
           setBadgesTimelineValues(data.badgesTimelineValues);
+        } else {
+          console.log('⚠️ No badges timeline data, using defaults');
         }
 
         if (Array.isArray(data.novosConsultoresValues) && data.novosConsultoresValues.length > 0) {
+          console.log('📊 Setting novos consultores:', data.novosConsultoresValues);
           setNovosConsultoresValues(data.novosConsultoresValues);
+        } else {
+          console.log('⚠️ No novos consultores data, using defaults');
         }
 
         if (Number.isFinite(data.onlineUsers)) {
+          console.log('👥 Setting online users:', data.onlineUsers);
           setOnlineUsers(data.onlineUsers);
         }
 
         if (Number.isFinite(data.pendingRequests)) {
+          console.log('📋 Setting pending requests:', data.pendingRequests);
           setPendingRequests(data.pendingRequests);
         }
 
+        if (Array.isArray(data.topConsultores) && data.topConsultores.length > 0) {
+          console.log('🏆 Setting top consultores:', data.topConsultores);
+          setTopConsultores(data.topConsultores);
+        } else {
+          console.log('⚠️ No top consultores data');
+        }
+
+        if (Array.isArray(data.recentActivities) && data.recentActivities.length > 0) {
+          console.log('📋 Setting recent activities:', data.recentActivities);
+          setRecentActivities(data.recentActivities);
+        } else {
+          console.log('⚠️ No recent activities data');
+        }
+
         setDashboardStatusMessage('');
-      } catch {
+      } catch (error) {
+        console.error('❌ Error loading dashboard data:', error);
+        console.error('❌ Full server response:', error.response?.data);
+        console.error('❌ Server error message:', error.response?.data?.error);
+        console.error('❌ Server error stack:', error.response?.data?.stack);
         if (isMounted) {
           setDashboardStatusMessage('');
         }
@@ -233,12 +210,10 @@ function DashboardTM() {
             </div>
           )}
 
-          {/* Metrics Grid */}
           <div className="row g-3 align-items-stretch metrics-container">
             <div className="col-12 col-lg-6 col-xl-5 d-flex tm-top-chart-col">
-              {/* Badges Timeline Card */}
               <section className="metric-card metric-card-large h-100 w-100">
-                <div className="metric-card-title">Número de Pedidos de Badges</div>
+                <div className="metric-card-title">Numero de Pedidos de Badges</div>
                 <div className="tm-chart-shell">
                   <div className="tm-chart-axis" aria-hidden="true">
                     {badgesScale.yAxisTicks.slice().reverse().map((tick) => (
@@ -315,7 +290,6 @@ function DashboardTM() {
             </div>
 
             <div className="col-12 col-lg-12 col-xl-5 d-flex tm-top-chart-col">
-              {/* New Consultores Card */}
               <section className="metric-card metric-card-large h-100 w-100">
                 <div className="metric-card-title">Novos Consultores</div>
                 <div className="tm-chart-shell">
@@ -359,7 +333,6 @@ function DashboardTM() {
 
           <div className="row g-3 align-items-stretch tm-lower-grid">
             <div className="col-12 col-lg-6 d-flex">
-              {/* Top Consultores Section */}
               <section className="consultores-section h-100 w-100">
                 <div className="section-header">
                   <h2>Top Consultores</h2>
@@ -367,7 +340,7 @@ function DashboardTM() {
                 </div>
                 <div className="consultores-grid">
                   {topConsultores.map((consultor) => {
-                    const IconComponent = consultor.icon;
+                    const IconComponent = iconByKey[consultor.iconKey] || Users;
                     return (
                       <div key={consultor.id} className="consultor-card">
                         <div className="consultor-header">
@@ -392,12 +365,14 @@ function DashboardTM() {
                       </div>
                     );
                   })}
+                  {topConsultores.length === 0 && (
+                    <div className="text-muted">Sem dados de consultores para apresentar.</div>
+                  )}
                 </div>
               </section>
             </div>
 
             <div className="col-12 col-lg-6 d-flex">
-              {/* Recent Activities Section */}
               <section className="activities-section h-100 w-100">
                 <div className="section-header">
                   <h2>Atividades Recentes (Talent Manager)</h2>
@@ -405,7 +380,7 @@ function DashboardTM() {
                 </div>
                 <div className="activities-list">
                   {recentActivities.map((activity) => {
-                    const IconComponent = activity.icon;
+                    const IconComponent = iconByKey[activity.iconKey] || FileText;
                     return (
                       <div key={activity.id} className="activity-item">
                         <div className="activity-icon">
@@ -419,6 +394,9 @@ function DashboardTM() {
                       </div>
                     );
                   })}
+                  {recentActivities.length === 0 && (
+                    <div className="text-muted">Sem atividades recentes para apresentar.</div>
+                  )}
                 </div>
               </section>
             </div>
