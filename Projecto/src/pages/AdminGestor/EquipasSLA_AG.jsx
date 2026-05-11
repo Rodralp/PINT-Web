@@ -201,6 +201,18 @@ function EquipasSLAAG() {
       return;
     }
 
+    // Validar data de expiração SLA (mínimo 1 semana após data atual)
+    if (newSlaDate) {
+      const selectedDate = new Date(newSlaDate);
+      const minDate = new Date();
+      minDate.setDate(minDate.getDate() + 7); // Adicionar 7 dias
+      
+      if (selectedDate < minDate) {
+        alert('A data de expiração do SLA deve ser no mínimo 1 semana após a data atual.');
+        return;
+      }
+    }
+
     try {
       const teamData = {
         name: newTeamName.trim(),
@@ -398,12 +410,17 @@ function EquipasSLAAG() {
                     rows={6}
                   />
 
-                  <label htmlFor="team-expiry">Data de expiracao do SLA</label>
+                  <label htmlFor="team-expiry">Data de expiracao do SLA (mínimo 1 semana)</label>
                   <input
                     id="team-expiry"
                     type="date"
                     value={newSlaDate}
                     onChange={(event) => setNewSlaDate(event.target.value)}
+                    min={(() => {
+                      const minDate = new Date();
+                      minDate.setDate(minDate.getDate() + 7);
+                      return minDate.toISOString().split('T')[0];
+                    })()}
                   />
                 </div>
 
