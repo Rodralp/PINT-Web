@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   AlertTriangle,
   Bell,
@@ -12,78 +12,7 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/AdminGestor/EquipasSLA_AG.css';
-
-const initialTeamPool = [
-  {
-    id: 'team-1',
-    name: 'Equipa 1',
-    membersCount: 15,
-    slaDescription: 'Implementacao completa do novo sistema de autenticacao com suporte a OAuth2 e SSO',
-    fullDescription: 'Equipa de desenvolvimento frontend responsavel por interfaces e experiencia do usuario',
-    expiryDate: '13/01/2026',
-    daysLabel: 'Expira em breve',
-    priority: 'warning',
-    members: [
-      { id: 'lr', name: 'Lara Rocha' },
-      { id: 'js', name: 'Joao Silva' },
-      { id: 'ms', name: 'Maria Santos' },
-      { id: 'pc', name: 'Pedro Costa' },
-      { id: 'am', name: 'Ana Martins' },
-      { id: 'cf', name: 'Carlos Ferreira' },
-      { id: 'sl', name: 'Sofia Lima' },
-      { id: 'rs', name: 'Ricardo Soares' },
-      { id: 'ba', name: 'Beatriz Alves' },
-      { id: 'mp', name: 'Miguel Pereira' },
-      { id: 'cd', name: 'Catarina Dias' },
-      { id: 'rc', name: 'Rita Carvalho' },
-      { id: 'ng', name: 'Nuno Gomes' },
-      { id: 'tf', name: 'Tiago Fernandes' },
-      { id: 'lm', name: 'Luisa Monteiro' },
-    ],
-  },
-  {
-    id: 'team-2',
-    name: 'Equipa 2',
-    membersCount: 7,
-    slaDescription: 'Migracao da base de dados para PostgreSQL e otimizacao de queries criticas',
-    fullDescription: 'Equipa de backend e infraestrutura focada em APIs e bases de dados',
-    expiryDate: '14/01/2026',
-    daysLabel: 'Expira em breve',
-    priority: 'critical',
-    members: [
-      { id: 'ap', name: 'Andre Pinto' },
-      { id: 'jl', name: 'Joana Lopes' },
-      { id: 'mr', name: 'Miguel Reis' },
-      { id: 'dv', name: 'Daniela Vieira' },
-      { id: 'pm', name: 'Paulo Matos' },
-      { id: 'es', name: 'Eduardo Sousa' },
-      { id: 'im', name: 'Ines Moreira' },
-    ],
-  },
-];
-
-const selectableMembers = [
-  { id: 'm-1', name: 'Lara Rocha' },
-  { id: 'm-2', name: 'Joao Silva' },
-  { id: 'm-3', name: 'Maria Santos' },
-  { id: 'm-4', name: 'Pedro Costa' },
-  { id: 'm-5', name: 'Ana Martins' },
-  { id: 'm-6', name: 'Carlos Ferreira' },
-  { id: 'm-7', name: 'Sofia Lima' },
-  { id: 'm-8', name: 'Ricardo Soares' },
-  { id: 'm-9', name: 'Beatriz Alves' },
-  { id: 'm-10', name: 'Miguel Pereira' },
-  { id: 'm-11', name: 'Catarina Dias' },
-  { id: 'm-12', name: 'Rita Carvalho' },
-  { id: 'm-13', name: 'Nuno Gomes' },
-  { id: 'm-14', name: 'Tiago Fernandes' },
-  { id: 'm-15', name: 'Luisa Monteiro' },
-  { id: 'm-16', name: 'Andre Pinto' },
-  { id: 'm-17', name: 'Joana Lopes' },
-  { id: 'm-18', name: 'Miguel Reis' },
-  { id: 'm-19', name: 'Daniela Vieira' },
-  { id: 'm-20', name: 'Paulo Matos' },
-];
+import { teamService } from '../../services/teamService';
 
 const getInitials = (name) =>
   name
@@ -119,13 +48,17 @@ const getIsoDateFromDisplay = (dateValue) => {
   return `${year}-${month}-${day}`;
 };
 
-const getMemberIdsFromTeam = (members) =>
-  members
-    .map((member) => selectableMembers.find((candidate) => candidate.name === member.name)?.id)
-    .filter(Boolean);
+  const getMemberIdsFromTeam = (members) =>
+    members
+      .map((member) => selectableMembers.find((candidate) => candidate.id === member.id)?.id)
+      .filter(Boolean);
 
 function EquipasSLAAG() {
-  const [teams, setTeams] = useState(initialTeamPool);
+  const [teams, setTeams] = useState([]);
+  const [alertTeams, setAlertTeams] = useState([]);
+  const [selectableMembers, setSelectableMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTeamId, setEditingTeamId] = useState(null);
   const [newTeamName, setNewTeamName] = useState('');
@@ -135,16 +68,46 @@ function EquipasSLAAG() {
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
   const [showAddMemberList, setShowAddMemberList] = useState(false);
 
-  const alertTeams = useMemo(() => teams.slice(0, 2), [teams]);
   const isEditing = Boolean(editingTeamId);
 
+  // Load data on component mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [teamsData, alertTeamsData, usersData] = await Promise.all([
+        teamService.getAllTeams(),
+        teamService.getTeamsWithExpiringSLA(),
+        teamService.getAllUsers()
+      ]);
+      
+      setTeams(teamsData);
+      setAlertTeams(alertTeamsData);
+      setSelectableMembers(usersData);
+    } catch (err) {
+      console.error('Error loading data:', err);
+      setError('Failed to load teams data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const selectedMemberObjects = useMemo(
-    () => selectableMembers.filter((member) => selectedMembers.includes(member.id)),
-    [selectedMembers],
+    () => selectableMembers && Array.isArray(selectableMembers) 
+      ? selectableMembers.filter((member) => selectedMembers.includes(member.id))
+      : [],
+    [selectedMembers, selectableMembers],
   );
 
   const availableMembers = useMemo(
-    () => selectableMembers.filter((member) => !selectedMembers.includes(member.id)),
+    () => selectableMembers && Array.isArray(selectableMembers)
+      ? selectableMembers.filter((member) => !selectedMembers.includes(member.id))
+      : [],
     [selectedMembers],
   );
 
@@ -172,8 +135,8 @@ function EquipasSLAAG() {
   const openEditModal = (team) => {
     setEditingTeamId(team.id);
     setNewTeamName(team.name);
-    setNewSlaText(team.slaDescription);
-    setNewSlaDate(getIsoDateFromDisplay(team.expiryDate));
+    setNewSlaText(team.slaDescription || '');
+    setNewSlaDate(team.expiryDate ? getIsoDateFromDisplay(team.expiryDate) : '');
     setSelectedMembers(getMemberIdsFromTeam(team.members || []));
     setMemberSearchTerm('');
     setShowAddMemberList(false);
@@ -218,58 +181,47 @@ function EquipasSLAAG() {
     return `${day}/${month}/${year}`;
   };
 
-  const handleDeleteTeam = (team) => {
+  const handleDeleteTeam = async (team) => {
     const confirmed = window.confirm(`Tem a certeza que pretende remover a equipa ${team.name}?`);
     if (!confirmed) {
       return;
     }
 
-    setTeams((current) => current.filter((candidate) => candidate.id !== team.id));
+    try {
+      await teamService.deleteTeam(team.id);
+      await loadData(); // Reload data
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      alert('Failed to delete team');
+    }
   };
 
-  const handleSaveTeam = () => {
+  const handleSaveTeam = async () => {
     if (!newTeamName.trim() || !newSlaText.trim()) {
       return;
     }
 
-    const selectedPool = selectableMembers.filter((member) => selectedMembers.includes(member.id));
+    try {
+      const teamData = {
+        name: newTeamName.trim(),
+        description: `Equipa ${newTeamName.trim()}`,
+        slaDescription: newSlaText.trim(),
+        expiryDate: newSlaDate,
+        memberIds: selectedMembers,
+      };
 
-    if (isEditing) {
-      setTeams((current) =>
-        current.map((team) => {
-          if (team.id !== editingTeamId) {
-            return team;
-          }
-
-          return {
-            ...team,
-            name: newTeamName.trim(),
-            membersCount: selectedPool.length,
-            slaDescription: newSlaText.trim(),
-            expiryDate: formatInputDate(newSlaDate),
-            members: selectedPool,
-          };
-        }),
-      );
+      if (isEditing) {
+        await teamService.updateTeam(editingTeamId, teamData);
+      } else {
+        await teamService.createTeam(teamData);
+      }
 
       closeModal();
-      return;
+      await loadData(); // Reload data
+    } catch (error) {
+      console.error('Error saving team:', error);
+      alert('Failed to save team');
     }
-
-    const createdTeam = {
-      id: `team-${Date.now()}`,
-      name: newTeamName.trim(),
-      membersCount: selectedPool.length,
-      slaDescription: newSlaText.trim(),
-      fullDescription: 'Equipa criada para acompanhamento de SLA e entregas prioritarias.',
-      expiryDate: formatInputDate(newSlaDate),
-      daysLabel: 'Recem criado',
-      priority: 'warning',
-      members: selectedPool,
-    };
-
-    setTeams((current) => [createdTeam, ...current]);
-    closeModal();
   };
 
   return (
@@ -279,113 +231,140 @@ function EquipasSLAAG() {
           <h1>Equipas e SLA</h1>
         </header>
 
-        <section className="ag-sla-alerts-card">
-          <h2>
-            <AlertTriangle size={20} />
-            SLAs prestes a expirar/expirados
-          </h2>
-
-          <div className="ag-sla-cards-grid">
-            {alertTeams.map((team) => (
-              <article key={`${team.id}-alert`} className="ag-sla-team-card">
-                <div className="ag-sla-team-card-head">
-                  <h3>{team.name}</h3>
-                  <button
-                    type="button"
-                    aria-label={`Editar ${team.name}`}
-                    className="ag-inline-icon-btn"
-                    onClick={() => openEditModal(team)}
-                  >
-                    <Pencil size={15} />
-                  </button>
-                </div>
-
-                <span className={`ag-sla-status-pill ${team.priority}`}>{team.daysLabel}</span>
-                <p>{team.slaDescription}</p>
-
-                <div className="ag-sla-date">
-                  <CalendarDays size={15} />
-                  <span>{team.expiryDate}</span>
-                </div>
-
-                <button type="button" className="ag-notify-btn">
-                  <Bell size={14} />
-                  Notificar equipa
-                </button>
-              </article>
-            ))}
+        {loading && (
+          <div className="ag-loading">
+            <p>A carregar dados...</p>
           </div>
-        </section>
+        )}
 
-        <section className="ag-teams-list-card">
-          <div className="ag-teams-list-header">
-            <h2>
-              <UserRoundPlus size={20} />
-              Equipas
-            </h2>
-
-            <button type="button" className="ag-add-team-btn" onClick={openCreateModal}>
-              <Plus size={16} />
-              Adicionar equipa
-            </button>
+        {error && (
+          <div className="ag-error">
+            <p>{error}</p>
+            <button onClick={loadData}>Tentar novamente</button>
           </div>
+        )}
 
-          <div className="ag-team-list">
-            {teams.map((team) => {
-              const visibleMembers = team.members.slice(0, 11);
-              const hiddenMembers = Math.max(0, team.members.length - visibleMembers.length);
+        {!loading && !error && (
+          <>
+            <section className="ag-sla-alerts-card">
+              <h2>
+                <AlertTriangle size={20} />
+                SLAs prestes a expirar/expirados
+              </h2>
 
-              return (
-                <article key={team.id} className="ag-team-row-card">
-                  <div className="ag-team-row-top">
-                    <div>
-                      <h3>
-                        {team.name}{' '}
-                        <span className="ag-members-count-pill">{team.membersCount} membros</span>
-                      </h3>
-                      <p>{team.fullDescription}</p>
-                    </div>
-
-                    <div className="ag-team-actions">
-                      <button
-                        type="button"
-                        aria-label={`Editar ${team.name}`}
-                        className="ag-inline-icon-btn"
-                        onClick={() => openEditModal(team)}
-                      >
-                        <Pencil size={15} />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Eliminar ${team.name}`}
-                        className="ag-inline-icon-btn danger"
-                        onClick={() => handleDeleteTeam(team)}
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="ag-member-badges-row" role="list" aria-label={`Membros da ${team.name}`}>
-                    {visibleMembers.map((member) => (
-                      <div key={member.id} className="ag-member-pill" role="listitem" title={member.name}>
-                        <img
-                          src={getMemberAvatarUrl(member.name)}
-                          alt={member.name}
-                          className="ag-member-avatar ag-member-avatar-pill"
-                          onError={(event) => onMemberAvatarError(event, member.name)}
-                        />
-                        <small>{member.name}</small>
+              <div className="ag-sla-cards-grid">
+                {alertTeams.length === 0 ? (
+                  <p>Nenhuns SLAs prestes a expirar</p>
+                ) : (
+                  alertTeams.map((team) => (
+                    <article key={`${team.id}-alert`} className="ag-sla-team-card">
+                      <div className="ag-sla-team-card-head">
+                        <h3>{team.name}</h3>
+                        <button
+                          type="button"
+                          aria-label={`Editar ${team.name}`}
+                          className="ag-inline-icon-btn"
+                          onClick={() => openEditModal(team)}
+                        >
+                          <Pencil size={15} />
+                        </button>
                       </div>
-                    ))}
 
-                    {hiddenMembers > 0 && <div className="ag-member-pill ag-more-pill">+{hiddenMembers}</div>}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
+                      <span className={`ag-sla-status-pill ${team.priority || 'warning'}`}>{team.daysLabel || 'Sem SLA'}</span>
+                      <p>{team.slaDescription || 'Sem descrição de SLA'}</p>
+
+                      {team.expiryDate && (
+                        <div className="ag-sla-date">
+                          <CalendarDays size={15} />
+                          <span>{team.expiryDate}</span>
+                        </div>
+                      )}
+
+                      <button type="button" className="ag-notify-btn">
+                        <Bell size={14} />
+                        Notificar equipa
+                      </button>
+                    </article>
+                  ))
+                )}
+              </div>
+            </section>
+
+            <section className="ag-teams-list-card">
+              <div className="ag-teams-list-header">
+                <h2>
+                  <UserRoundPlus size={20} />
+                  Equipas
+                </h2>
+
+                <button type="button" className="ag-add-team-btn" onClick={openCreateModal}>
+                  <Plus size={16} />
+                  Adicionar equipa
+                </button>
+              </div>
+
+              <div className="ag-team-list">
+                {teams.length === 0 ? (
+                  <p>Nenhuma equipa encontrada</p>
+                ) : (
+                  teams.map((team) => {
+                    const visibleMembers = (team.members || []).slice(0, 11);
+                    const hiddenMembers = Math.max(0, (team.members || []).length - visibleMembers.length);
+
+                    return (
+                      <article key={team.id} className="ag-team-row-card">
+                        <div className="ag-team-row-top">
+                          <div>
+                            <h3>
+                              {team.name}{' '}
+                              <span className="ag-members-count-pill">{team.membersCount || 0} membros</span>
+                            </h3>
+                            <p>{team.description || 'Sem descrição'}</p>
+                          </div>
+
+                          <div className="ag-team-actions">
+                            <button
+                              type="button"
+                              aria-label={`Editar ${team.name}`}
+                              className="ag-inline-icon-btn"
+                              onClick={() => openEditModal(team)}
+                            >
+                              <Pencil size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={`Eliminar ${team.name}`}
+                              className="ag-inline-icon-btn danger"
+                              onClick={() => handleDeleteTeam(team)}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="ag-member-badges-row" role="list" aria-label={`Membros da ${team.name}`}>
+                          {visibleMembers.map((member) => (
+                            <div key={member.id} className="ag-member-pill" role="listitem" title={member.name}>
+                              <img
+                                src={getMemberAvatarUrl(member.name)}
+                                alt={member.name}
+                                className="ag-member-avatar ag-member-avatar-pill"
+                                onError={(event) => onMemberAvatarError(event, member.name)}
+                              />
+                              <small>{member.name}</small>
+                            </div>
+                          ))}
+
+                          {hiddenMembers > 0 && <div className="ag-member-pill ag-more-pill">+{hiddenMembers}</div>}
+                        </div>
+                      </article>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+          </>
+        )}
 
         {modalOpen && (
           <div className="ag-team-modal-overlay" role="presentation" onClick={closeModal}>

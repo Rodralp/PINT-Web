@@ -6,6 +6,7 @@ import dashboardRoutes from './routes/dashboardRoutes.js';
 import requestManagementRoutes from './routes/requestManagementRoutes.js';
 import serviceLineLeaderRoutes from './routes/serviceLineLeaderRoutes.js';
 import talentManagerRoutes from './routes/talentManagerRoutes.js';
+import teamRoutes from './routes/teamRoutes.js';
 
 const app = express();
 
@@ -22,5 +23,6 @@ app.use('/api/consultor', consultorRoutes);
 app.use('/api/service-line-leader', serviceLineLeaderRoutes);
 app.use('/api/talent-manager', talentManagerRoutes);
 app.use('/api/request-management', requestManagementRoutes);
+app.use('/api/teams', teamRoutes);
 
 export default app;
