@@ -14,25 +14,17 @@ import Layout from '../../components/Layout';
 import '../../css/AdminGestor/EquipasSLA_AG.css';
 import { teamService } from '../../services/teamService';
 
-const getInitials = (name) =>
-  name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || '')
-    .join('');
+const getAvatarSeed = (member) =>
+  String(member?.email || member?.name || member || 'user')
+    .toLowerCase()
+    .replace('@', '.');
 
-const getMemberAvatarUrl = (name) => `https://i.pravatar.cc/120?u=${encodeURIComponent(name)}`;
+const getMemberAvatarUrl = (member) =>
+  `https://i.pravatar.cc/120?u=${encodeURIComponent(getAvatarSeed(member))}`;
 
-const getMemberAvatarFallback = (name) => {
-  const initials = getInitials(name) || 'U';
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><circle cx='60' cy='60' r='60' fill='#ede9fe'/><text x='50%' y='55%' text-anchor='middle' font-size='40' font-family='Arial, sans-serif' fill='#6d28d9' font-weight='700'>${initials}</text></svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-};
-
-const onMemberAvatarError = (event, name) => {
+const onMemberAvatarError = (event, member) => {
   event.currentTarget.onerror = null;
-  event.currentTarget.src = getMemberAvatarFallback(name);
+  event.currentTarget.src = getMemberAvatarUrl(member);
 };
 
 const getIsoDateFromDisplay = (dateValue) => {
@@ -48,11 +40,6 @@ const getIsoDateFromDisplay = (dateValue) => {
   return `${year}-${month}-${day}`;
 };
 
-  const getMemberIdsFromTeam = (members) =>
-    members
-      .map((member) => selectableMembers.find((candidate) => candidate.id === member.id)?.id)
-      .filter(Boolean);
-
 function EquipasSLAAG() {
   const [teams, setTeams] = useState([]);
   const [alertTeams, setAlertTeams] = useState([]);
@@ -64,6 +51,9 @@ function EquipasSLAAG() {
   const [newTeamName, setNewTeamName] = useState('');
   const [newSlaText, setNewSlaText] = useState('');
   const [newSlaDate, setNewSlaDate] = useState('');
+  const [originalTeamName, setOriginalTeamName] = useState('');
+  const [originalSlaText, setOriginalSlaText] = useState('');
+  const [originalSlaDate, setOriginalSlaDate] = useState('');
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
   const [showAddMemberList, setShowAddMemberList] = useState(false);
@@ -74,6 +64,12 @@ function EquipasSLAAG() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const normalizeUser = (user) => ({
+    id: Number(user?.id),
+    name: String(user?.name || user?.nome || user?.email || 'Utilizador'),
+    email: String(user?.email || ''),
+  });
 
   const loadData = async () => {
     try {
@@ -88,7 +84,8 @@ function EquipasSLAAG() {
       
       setTeams(teamsData);
       setAlertTeams(alertTeamsData);
-      setSelectableMembers(usersData);
+      const normalizedUsers = Array.isArray(usersData) ? usersData.map(normalizeUser) : [];
+      setSelectableMembers(normalizedUsers);
     } catch (err) {
       console.error('Error loading data:', err);
       setError('Failed to load teams data');
@@ -98,7 +95,7 @@ function EquipasSLAAG() {
   };
 
   const selectedMemberObjects = useMemo(
-    () => selectableMembers && Array.isArray(selectableMembers) 
+    () => selectableMembers && Array.isArray(selectableMembers)
       ? selectableMembers.filter((member) => selectedMembers.includes(member.id))
       : [],
     [selectedMembers, selectableMembers],
@@ -108,8 +105,19 @@ function EquipasSLAAG() {
     () => selectableMembers && Array.isArray(selectableMembers)
       ? selectableMembers.filter((member) => !selectedMembers.includes(member.id))
       : [],
-    [selectedMembers],
+    [selectedMembers, selectableMembers],
   );
+
+  const getMemberIdsFromTeam = (members) => {
+    if (!Array.isArray(members)) {
+      return [];
+    }
+
+    const selectableIds = new Set(selectableMembers.map((member) => member.id));
+    return members
+      .map((member) => member?.id)
+      .filter((memberId) => selectableIds.has(memberId));
+  };
 
   const filteredMembers = useMemo(() => {
     const normalizedTerm = memberSearchTerm.trim().toLowerCase();
@@ -118,7 +126,9 @@ function EquipasSLAAG() {
       return availableMembers;
     }
 
-    return availableMembers.filter((member) => member.name.toLowerCase().includes(normalizedTerm));
+    return availableMembers.filter((member) =>
+      (member?.name || '').toLowerCase().includes(normalizedTerm)
+    );
   }, [availableMembers, memberSearchTerm]);
 
   const openCreateModal = () => {
@@ -126,6 +136,9 @@ function EquipasSLAAG() {
     setNewTeamName('');
     setNewSlaText('');
     setNewSlaDate('');
+    setOriginalTeamName('');
+    setOriginalSlaText('');
+    setOriginalSlaDate('');
     setSelectedMembers([]);
     setMemberSearchTerm('');
     setShowAddMemberList(false);
@@ -133,10 +146,14 @@ function EquipasSLAAG() {
   };
 
   const openEditModal = (team) => {
+    const isoExpiryDate = team.expiryDate ? getIsoDateFromDisplay(team.expiryDate) : '';
     setEditingTeamId(team.id);
-    setNewTeamName(team.name);
+    setNewTeamName(team.name || '');
     setNewSlaText(team.slaDescription || '');
-    setNewSlaDate(team.expiryDate ? getIsoDateFromDisplay(team.expiryDate) : '');
+    setNewSlaDate(isoExpiryDate);
+    setOriginalTeamName(team.name || '');
+    setOriginalSlaText(team.slaDescription || '');
+    setOriginalSlaDate(isoExpiryDate);
     setSelectedMembers(getMemberIdsFromTeam(team.members || []));
     setMemberSearchTerm('');
     setShowAddMemberList(false);
@@ -149,6 +166,9 @@ function EquipasSLAAG() {
     setNewTeamName('');
     setNewSlaText('');
     setNewSlaDate('');
+    setOriginalTeamName('');
+    setOriginalSlaText('');
+    setOriginalSlaDate('');
     setSelectedMembers([]);
     setMemberSearchTerm('');
     setShowAddMemberList(false);
@@ -197,12 +217,18 @@ function EquipasSLAAG() {
   };
 
   const handleSaveTeam = async () => {
-    if (!newTeamName.trim() || !newSlaText.trim()) {
+    const effectiveTeamName = isEditing ? originalTeamName : newTeamName;
+    const effectiveSlaText = isEditing ? originalSlaText : newSlaText;
+
+    if (!effectiveTeamName.trim() || !effectiveSlaText.trim()) {
       return;
     }
 
+    const hasDateChange = newSlaDate && newSlaDate !== originalSlaDate;
+    const shouldValidateDate = !isEditing || hasDateChange;
+
     // Validar data de expiração SLA (mínimo 1 semana após data atual)
-    if (newSlaDate) {
+    if (shouldValidateDate && newSlaDate) {
       const selectedDate = new Date(newSlaDate);
       const minDate = new Date();
       minDate.setDate(minDate.getDate() + 7); // Adicionar 7 dias
@@ -214,10 +240,12 @@ function EquipasSLAAG() {
     }
 
     try {
+      const trimmedTeamName = effectiveTeamName.trim();
+      const trimmedSlaText = effectiveSlaText.trim();
       const teamData = {
-        name: newTeamName.trim(),
-        description: `Equipa ${newTeamName.trim()}`,
-        slaDescription: newSlaText.trim(),
+        name: trimmedTeamName,
+        description: `Equipa ${trimmedTeamName}`,
+        slaDescription: trimmedSlaText,
         expiryDate: newSlaDate,
         memberIds: selectedMembers,
       };
@@ -331,7 +359,7 @@ function EquipasSLAAG() {
                               {team.name}{' '}
                               <span className="ag-members-count-pill">{team.membersCount || 0} membros</span>
                             </h3>
-                            <p>{team.description || 'Sem descrição'}</p>
+                            <p>{team.slaDescription || 'Sem SLA'}</p>
                           </div>
 
                           <div className="ag-team-actions">
@@ -358,10 +386,10 @@ function EquipasSLAAG() {
                           {visibleMembers.map((member) => (
                             <div key={member.id} className="ag-member-pill" role="listitem" title={member.name}>
                               <img
-                                src={getMemberAvatarUrl(member.name)}
+                                src={getMemberAvatarUrl(member)}
                                 alt={member.name}
                                 className="ag-member-avatar ag-member-avatar-pill"
-                                onError={(event) => onMemberAvatarError(event, member.name)}
+                                onError={(event) => onMemberAvatarError(event, member)}
                               />
                               <small>{member.name}</small>
                             </div>
@@ -399,6 +427,7 @@ function EquipasSLAAG() {
                     value={newTeamName}
                     onChange={(event) => setNewTeamName(event.target.value)}
                     placeholder="Insira nome da equipa"
+                    disabled={isEditing}
                   />
 
                   <label htmlFor="team-sla">Service Level Agreement</label>
@@ -408,6 +437,7 @@ function EquipasSLAAG() {
                     onChange={(event) => setNewSlaText(event.target.value)}
                     placeholder="Insira os detalhes do SLA"
                     rows={6}
+                    disabled={isEditing}
                   />
 
                   <label htmlFor="team-expiry">Data de expiracao do SLA (mínimo 1 semana)</label>
@@ -460,10 +490,10 @@ function EquipasSLAAG() {
                             onClick={() => addMemberToSelection(member.id)}
                           >
                             <img
-                              src={getMemberAvatarUrl(member.name)}
+                              src={getMemberAvatarUrl(member)}
                               alt={member.name}
                               className="ag-member-avatar ag-member-avatar-card"
-                              onError={(event) => onMemberAvatarError(event, member.name)}
+                              onError={(event) => onMemberAvatarError(event, member)}
                             />
                             <span>{member.name}</span>
                           </button>
@@ -479,10 +509,10 @@ function EquipasSLAAG() {
                       {selectedMemberObjects.map((member) => (
                         <article key={member.id} className="ag-member-selected-card" role="listitem">
                           <img
-                            src={getMemberAvatarUrl(member.name)}
+                            src={getMemberAvatarUrl(member)}
                             alt={member.name}
                             className="ag-member-avatar ag-member-avatar-card"
-                            onError={(event) => onMemberAvatarError(event, member.name)}
+                            onError={(event) => onMemberAvatarError(event, member)}
                           />
                           <span>{member.name}</span>
                           <button
