@@ -447,6 +447,10 @@ function BadgeDetalhe() {
           </div>
         </section>
 
+        <p className="badge-breadcrumb">
+          {badge.area} {'>'} {badge.serviceLineName} {'>'} {badge.learningPathName} {'>'} {t(badge.levelKey)}
+        </p>
+
         <section className="badge-requirements-card">
           <h3>Requisitos</h3>
 

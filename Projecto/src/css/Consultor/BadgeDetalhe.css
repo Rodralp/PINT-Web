@@ -1,21 +1,22 @@
 .badge-details-page {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
+  max-width: 1120px;
 }
 
 .badge-details-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .badge-details-header h1 {
   margin: 0;
   font-size: 28px;
   font-weight: 700;
-  color: #202938;
-  line-height: 1.12;
+  color: #2f3747;
+  line-height: 1.15;
 }
 
 .badge-details-back-btn {
@@ -39,17 +40,17 @@
   border: 1px solid rgba(148, 163, 184, 0.12);
   border-radius: 16px;
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02), 0 10px 30px rgba(15, 23, 42, 0.04);
-  padding: 20px 24px;
-  display: flex;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 18px;
   align-items: center;
-  gap: 22px;
-  min-height: 172px;
 }
 
 .badge-hero-media {
-  width: 220px;
+  width: 190px;
   height: 160px;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
 }
@@ -72,12 +73,12 @@
   font-size: 24px;
   line-height: 1.1;
   font-weight: 700;
-  color: #212939;
+  color: #1f2937;
 }
 
 .badge-hero-content p {
   margin: 0;
-  color: #3c4454;
+  color: #374151;
   font-size: 18px;
   line-height: 1.15;
   font-weight: 400;
@@ -86,8 +87,10 @@
 .badge-hero-meta {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 14px;
   flex-wrap: wrap;
+  color: #6b7280;
+  font-size: 13px;
 }
 
 .badge-hero-meta span {
@@ -104,16 +107,16 @@
 }
 
 .badge-status-banner {
-  margin-top: 10px;
+  margin-top: 12px;
   width: 100%;
-  min-height: 38px;
+  min-height: 32px;
   border-radius: 8px;
-  border: 2px solid transparent;
-  display: flex;
+  border: 1px solid transparent;
+  display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 10px;
-  padding: 0 16px;
+  gap: 8px;
+  padding: 0 14px;
   font-size: 14px;
   font-weight: 600;
 }
@@ -153,13 +156,13 @@
   border: 1px solid rgba(148, 163, 184, 0.12);
   border-radius: 16px;
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02), 0 10px 30px rgba(15, 23, 42, 0.04);
-  padding: 22px 24px;
+  padding: 18px;
 }
 
 .badge-requirements-card h3 {
   margin: 0 0 14px;
-  color: #212939;
-  font-size: 30px;
+  color: #1f2937;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.1;
 }
@@ -171,8 +174,7 @@
 }
 
 .badge-requirement-item {
-  min-height: 76px;
-  border: 1px solid #e5eaf1;
+  border: 1px solid #e6ebf2;
   border-radius: 12px;
   padding: 14px 16px;
   background: #ffffff;
@@ -192,15 +194,15 @@
 .badge-requirement-head p {
   margin: 0;
   color: #2f3747;
-  font-size: 16px;
-  line-height: 1.2;
+  font-size: 15px;
+  line-height: 1.3;
 }
 
 .badge-requirement-head span {
   display: block;
-  margin-top: 8px;
+  margin-top: 6px;
   color: #9aa3b2;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .badge-requirement-view-btn {
@@ -223,8 +225,8 @@
   display: flex;
   align-items: flex-start;
   gap: 18px;
-  border-top: 1px solid #eef2f7;
-  margin-top: 12px;
+  border-top: 1px solid #e8edf4;
+  margin-top: 10px;
   padding: 12px 6px 0;
 }
 
@@ -390,7 +392,7 @@
 
 .badge-requirement-detail p {
   margin: 0;
-  color: #7a8393;
+  color: #637085;
   font-size: 14px;
   line-height: 1.45;
 }
@@ -400,7 +402,7 @@
   border: 1px solid rgba(148, 163, 184, 0.12);
   border-radius: 16px;
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02), 0 10px 30px rgba(15, 23, 42, 0.04);
-  padding: 20px 24px;
+  padding: 18px;
 }
 
 .badge-review-head {
@@ -412,8 +414,8 @@
 
 .badge-review-head h3 {
   margin: 0;
-  color: #111827;
-  font-size: 22px;
+  color: #1f2937;
+  font-size: 18px;
   font-weight: 700;
 }
 
@@ -428,7 +430,7 @@
   border-radius: 12px;
   background: #f8fafc;
   color: #4b5563;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.45;
 }
 
@@ -442,13 +444,13 @@
 }
 
 .badge-submit-btn {
-  height: 58px;
+  height: 48px;
   min-width: 280px;
   border: none;
   border-radius: 10px;
   background: #1b84f4;
   color: #ffffff;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
@@ -467,8 +469,8 @@
 }
 
 .badge-share-icon-btn {
-  width: 72px;
-  height: 72px;
+  width: 48px;
+  height: 48px;
   border: none;
   border-radius: 10px;
   background: #f3f4f6;
@@ -479,13 +481,13 @@
 }
 
 .badge-share-primary-btn {
-  height: 72px;
+  height: 48px;
   border: none;
   border-radius: 10px;
   background: #1b84f4;
   color: #ffffff;
-  min-width: 240px;
-  font-size: 18px;
+  min-width: 220px;
+  font-size: 16px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
@@ -518,7 +520,7 @@
   }
 
   .badge-requirements-card h3 {
-    font-size: 26px;
+    font-size: 18px;
   }
 
   .badge-requirement-head p {
@@ -537,10 +539,10 @@
 
 @media (max-width: 991.98px) {
   .badge-hero-card {
-    flex-direction: column;
-    align-items: flex-start;
+    grid-template-columns: 1fr;
+    align-items: start;
     gap: 14px;
-    padding: 16px;
+    padding: 14px;
   }
 
   .badge-hero-media {
@@ -567,11 +569,10 @@
   }
 
   .badge-requirements-card h3 {
-    font-size: 24px;
+    font-size: 18px;
   }
 
   .badge-requirement-item {
-    min-height: 52px;
     padding: 10px 12px;
   }
 
@@ -606,7 +607,7 @@
     width: 100%;
     min-width: 0;
     height: 48px;
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .badge-share-icon-btn {
@@ -642,7 +643,7 @@
   }
 
   .badge-requirements-card h3 {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .badge-requirement-head p {
