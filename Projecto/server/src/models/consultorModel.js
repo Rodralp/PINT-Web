@@ -5,8 +5,10 @@ import { sequelize } from '../config/database.js';
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const pedidoEstados = Object.freeze({
   candidaturaEmProgresso: 'candidatura_em_progresso',
-  emValidacaoTm: 'em_validacao',
-  emValidacaoSll: 'em_validacao_sll',
+  emValidacaoTm: 'pendente-tm',
+  emValidacaoTmLegacy: 'em_validacao',
+  emValidacaoSll: 'pendente-sll',
+  emValidacaoSllLegacy: 'em_validacao_sll',
   evidenciasInsuficientes: 'evidencias_insuficientes',
   rejeitado: 'rejeitado',
   aprovado: 'aprovado',
@@ -66,6 +68,13 @@ const normalizeLevelTitle = (value) => {
 };
 
 const normalizePedidoEstado = (estado) => String(estado || '').trim().toLowerCase();
+const isEstadoEmValidacaoTm = (estado) => (
+  estado === pedidoEstados.emValidacaoTm || estado === pedidoEstados.emValidacaoTmLegacy
+);
+const isEstadoEmValidacaoSll = (estado) => (
+  estado === pedidoEstados.emValidacaoSll || estado === pedidoEstados.emValidacaoSllLegacy
+);
+const isEstadoEmValidacao = (estado) => isEstadoEmValidacaoTm(estado) || isEstadoEmValidacaoSll(estado);
 
 const mapPedidoEstadoToLearningPathStatus = (estado) => {
   const normalized = normalizePedidoEstado(estado);
@@ -74,7 +83,7 @@ const mapPedidoEstadoToLearningPathStatus = (estado) => {
     return 'candidatura_em_progresso';
   }
 
-  if (normalized === pedidoEstados.emValidacaoTm || normalized === pedidoEstados.emValidacaoSll) {
+  if (isEstadoEmValidacao(normalized)) {
     return 'em_validacao';
   }
 
@@ -96,7 +105,7 @@ const mapPedidoEstadoToMyBadgeState = (estado) => {
     return 'candidatura_em_progresso';
   }
 
-  if (normalized === pedidoEstados.emValidacaoTm || normalized === pedidoEstados.emValidacaoSll) {
+  if (isEstadoEmValidacao(normalized)) {
     return 'em_validacao';
   }
 
@@ -663,7 +672,7 @@ const buildProfileData = async (accountId) => {
         p.npedido AS id,
         CASE 
           WHEN e.estado = 'candidatura_em_progresso' THEN 'Candidatura submetida para ' || b.b_nome
-          WHEN e.estado = 'em_validacao' THEN 'Candidatura em validação: ' || b.b_nome
+          WHEN e.estado IN ('em_validacao', 'pendente-tm', 'pendente-sll', 'em_validacao_sll') THEN 'Candidatura em validação: ' || b.b_nome
           WHEN e.estado = 'aprovado' THEN 'Badge aprovada: ' || b.b_nome
           WHEN e.estado = 'rejeitado' THEN 'Candidatura rejeitada: ' || b.b_nome
           WHEN e.estado = 'evidencias_insuficientes' THEN 'Evidências insuficientes: ' || b.b_nome
@@ -1604,7 +1613,7 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
       return { status: 'obtido', requestId: existingRequestId };
     }
 
-    if (existingEstado === pedidoEstados.emValidacaoTm || existingEstado === pedidoEstados.emValidacaoSll) {
+    if (isEstadoEmValidacao(existingEstado)) {
       return { status: 'em_validacao', requestId: existingRequestId };
     }
 

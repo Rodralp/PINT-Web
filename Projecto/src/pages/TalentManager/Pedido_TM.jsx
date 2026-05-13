@@ -45,6 +45,7 @@ const statusMeta = {
 const verdictOptions = [
   { id: 'aprovar', label: 'Enviar para SLL' },
   { id: 'rejeitar', label: 'Rejeitar' },
+  { id: 'devolver_consultor', label: 'Devolver ao consultor' },
 ];
 
 function PedidoTM() {
@@ -55,6 +56,7 @@ function PedidoTM() {
   const [isLoading, setIsLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState('');
   const [selectedVerdict, setSelectedVerdict] = useState(null);
+  const [comment, setComment] = useState('');
   const [isSubmittingVerdict, setIsSubmittingVerdict] = useState(false);
 
   useEffect(() => {
@@ -136,8 +138,11 @@ function PedidoTM() {
 
   const currentStatus = statusMeta[request.status] || statusMeta.validacao;
   const StatusIcon = currentStatus.icon;
-  const reviewedBy = request.reviewer;
+  const reviewedBy = request.reviewer || 'Sem avaliador';
+  const reviewedRole = request.reviewerRole || '';
   const reviewedAt = request.reviewerDate;
+  const requestMotives = Array.isArray(request.motives) ? request.motives : [];
+  const showVerdictForm = Boolean(request.canReview);
 
   const toggleRequirement = (requirementId) => {
     setOpenRequirementId((current) => (current === requirementId ? null : requirementId));
@@ -166,12 +171,14 @@ function PedidoTM() {
       setIsSubmittingVerdict(true);
       const updated = await submitManagedRequestDecision('talent-manager', pedidoId, {
         decision: selectedVerdict,
+        comment,
       });
       setRequest(updated || request);
-      setStatusMessage('Decisão submetida com sucesso.');
+      setStatusMessage('Decisao submetida com sucesso.');
       setSelectedVerdict(null);
+      setComment('');
     } catch (error) {
-      setStatusMessage(error?.message || 'Nao foi possivel submeter a decisão.');
+      setStatusMessage(error?.message || 'Nao foi possivel submeter a decisao.');
     } finally {
       setIsSubmittingVerdict(false);
     }
@@ -318,7 +325,7 @@ function PedidoTM() {
               </div>
             </div>
 
-            {request.status === 'validacao' ? (
+            {showVerdictForm ? (
               <div className="tm-order-verdict-card">
                 <h3>Veredito da Candidatura:</h3>
 
@@ -334,6 +341,13 @@ function PedidoTM() {
                   </button>
                 ))}
 
+                <textarea
+                  className="tm-order-comment"
+                  placeholder="Adicionar motivo para esta decisao..."
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                />
+
                 <button
                   type="button"
                   className="tm-order-submit-btn"
@@ -347,6 +361,21 @@ function PedidoTM() {
                 {statusMessage && (
                   <p className="tm-order-feedback-note">{statusMessage}</p>
                 )}
+
+                {requestMotives.length > 0 && (
+                  <div className="tm-order-motives">
+                    <h4>Motivos registados</h4>
+                    <ul className="tm-order-motives-list">
+                      {requestMotives.map((item, index) => (
+                        <li key={`${item.authorName}-${index}`}>
+                          <strong>{item.authorName}</strong>
+                          <span>{item.authorRole}</span>
+                          <p>{item.reason}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="tm-order-evaluated-card">
@@ -355,6 +384,7 @@ function PedidoTM() {
                   <div className="tm-order-person-avatar evaluated">{reviewedBy.slice(0, 1)}</div>
                   <div>
                     <strong>{reviewedBy}</strong>
+                    {reviewedRole && <span>{reviewedRole}</span>}
                     <span>
                       <CalendarDays size={14} />
                       {reviewedAt}
@@ -362,6 +392,20 @@ function PedidoTM() {
                   </div>
                 </div>
                 <p>{statusMessage || request.notes}</p>
+                {requestMotives.length > 0 && (
+                  <div className="tm-order-motives">
+                    <h4>Motivos registados</h4>
+                    <ul className="tm-order-motives-list">
+                      {requestMotives.map((item, index) => (
+                        <li key={`${item.authorName}-${index}`}>
+                          <strong>{item.authorName}</strong>
+                          <span>{item.authorRole}</span>
+                          <p>{item.reason}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
           </aside>

@@ -46,6 +46,7 @@ const statusMeta = {
 const verdictOptions = [
   { id: 'aprovar', label: 'Aprovar' },
   { id: 'rejeitar', label: 'Rejeitar' },
+  { id: 'devolver_consultor', label: 'Devolver ao consultor' },
 ];
 
 function PedidoSLL() {
@@ -53,6 +54,7 @@ function PedidoSLL() {
   const navigate = useNavigate();
   const [openRequirementId, setOpenRequirementId] = useState(null);
   const [selectedVerdict, setSelectedVerdict] = useState(null);
+  const [comment, setComment] = useState('');
   const [request, setRequest] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmittingVerdict, setIsSubmittingVerdict] = useState(false);
@@ -137,6 +139,7 @@ function PedidoSLL() {
 
   const currentStatus = statusMeta[request.status] || statusMeta.validacao;
   const StatusIcon = currentStatus.icon;
+  const requestMotives = Array.isArray(request.motives) ? request.motives : [];
 
   const toggleRequirement = (requirementId) => {
     setOpenRequirementId((current) => (current === requirementId ? null : requirementId));
@@ -156,7 +159,7 @@ function PedidoSLL() {
     return 'XX arquivos carregados';
   };
 
-  const showVerdict = request.status === 'validacao';
+  const showVerdict = Boolean(request.canReview);
 
   const handleSubmitVerdict = async () => {
     if (!selectedVerdict || isSubmittingVerdict) {
@@ -167,12 +170,14 @@ function PedidoSLL() {
       setIsSubmittingVerdict(true);
       const updated = await submitManagedRequestDecision('service-line-leader', pedidoId, {
         decision: selectedVerdict,
+        comment,
       });
       setRequest(updated || request);
-      setStatusMessage('Decisão submetida com sucesso.');
+      setStatusMessage('Decisao submetida com sucesso.');
       setSelectedVerdict(null);
+      setComment('');
     } catch (error) {
-      setStatusMessage(error?.message || 'Nao foi possivel submeter a decisão.');
+      setStatusMessage(error?.message || 'Nao foi possivel submeter a decisao.');
     } finally {
       setIsSubmittingVerdict(false);
     }
@@ -337,6 +342,7 @@ function PedidoSLL() {
                 />
                 <div>
                   <strong>{request.reviewer}</strong>
+                  {request.reviewerRole && <span>{request.reviewerRole}</span>}
                   <span>
                     <CalendarDays size={14} />
                     {request.reviewerDate}
@@ -345,6 +351,20 @@ function PedidoSLL() {
               </div>
 
               <p className="sll-order-note">{request.notes}</p>
+              {requestMotives.length > 0 && (
+                <div className="sll-order-motives">
+                  <h4>Motivos registados</h4>
+                  <ul className="sll-order-motives-list">
+                    {requestMotives.map((item, index) => (
+                      <li key={`${item.authorName}-${index}`}>
+                        <strong>{item.authorName}</strong>
+                        <span>{item.authorRole}</span>
+                        <p>{item.reason}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {request.finalReviewer && (
                 <div className="sll-order-person-card compact final">
@@ -379,6 +399,13 @@ function PedidoSLL() {
                   </button>
                 ))}
 
+                <textarea
+                  className="sll-order-comment"
+                  placeholder="Adicionar motivo para esta decisao..."
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                />
+
                 <button
                   type="button"
                   className="sll-order-submit-btn"
@@ -391,6 +418,21 @@ function PedidoSLL() {
 
                 {statusMessage && (
                   <p className="sll-order-feedback-note">{statusMessage}</p>
+                )}
+
+                {requestMotives.length > 0 && (
+                  <div className="sll-order-motives">
+                    <h4>Motivos registados</h4>
+                    <ul className="sll-order-motives-list">
+                      {requestMotives.map((item, index) => (
+                        <li key={`${item.authorName}-${index}`}>
+                          <strong>{item.authorName}</strong>
+                          <span>{item.authorRole}</span>
+                          <p>{item.reason}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
             )}
