@@ -138,7 +138,8 @@ function PedidoAG() {
 
   const currentStatus = statusMeta[request.status] || statusMeta.validacao;
   const StatusIcon = currentStatus.icon;
-  const showVerdictForm = request.status === 'validacao';
+  const requestMotives = Array.isArray(request.motives) ? request.motives : [];
+  const showVerdictForm = Boolean(request.canReview);
 
   const toggleRequirement = (requirementId) => {
     setOpenRequirementId((current) => (current === requirementId ? null : requirementId));
@@ -347,7 +348,7 @@ function PedidoAG() {
 
                 <textarea
                   className="ag-order-comment"
-                  placeholder="Adicionar comentário..."
+                  placeholder="Adicionar motivo para esta decisao..."
                   value={comment}
                   onChange={(event) => setComment(event.target.value)}
                 />
@@ -365,6 +366,21 @@ function PedidoAG() {
                 {statusMessage && (
                   <p className="ag-order-feedback-note">{statusMessage}</p>
                 )}
+
+                {requestMotives.length > 0 && (
+                  <div className="ag-order-motives">
+                    <h4>Motivos registados</h4>
+                    <ul className="ag-order-motives-list">
+                      {requestMotives.map((item, index) => (
+                        <li key={`${item.authorName}-${index}`}>
+                          <strong>{item.authorName}</strong>
+                          <span>{item.authorRole}</span>
+                          <p>{item.reason}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="ag-order-reviewed-card">
@@ -377,6 +393,7 @@ function PedidoAG() {
                   />
                   <div>
                     <strong>{request.reviewer}</strong>
+                    {request.reviewerRole && <span>{request.reviewerRole}</span>}
                     <span>
                       <CalendarDays size={14} />
                       {request.reviewerDate}
@@ -388,6 +405,21 @@ function PedidoAG() {
                   <p className="ag-order-review-note">
                     {statusMessage || request.notes}
                   </p>
+                )}
+
+                {requestMotives.length > 0 && (
+                  <div className="ag-order-motives">
+                    <h4>Motivos registados</h4>
+                    <ul className="ag-order-motives-list">
+                      {requestMotives.map((item, index) => (
+                        <li key={`${item.authorName}-${index}`}>
+                          <strong>{item.authorName}</strong>
+                          <span>{item.authorRole}</span>
+                          <p>{item.reason}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
             )}

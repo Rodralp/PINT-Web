@@ -679,6 +679,24 @@
   background: #f8fafc;
 }
 
+.sll-order-comment {
+  width: 100%;
+  min-height: 72px;
+  border: 1px solid #e6ebf2;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #374151;
+  font-size: 14px;
+  resize: vertical;
+  padding: 12px;
+  outline: none;
+}
+
+.sll-order-comment:focus {
+  border-color: #1b84f4;
+  background: #ffffff;
+}
+
 .sll-order-submit-btn {
   margin-top: 8px;
   width: 100%;
@@ -708,6 +726,55 @@
   margin: 10px 0 0;
   color: #4b5563;
   font-size: 13px;
+}
+
+.sll-order-motives {
+  margin-top: 14px;
+  border-top: 1px solid #e8edf4;
+  padding-top: 12px;
+}
+
+.sll-order-motives h4 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.sll-order-motives-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sll-order-motives-list li {
+  border: 1px solid #e6ebf2;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #f8fafc;
+}
+
+.sll-order-motives-list strong {
+  display: block;
+  color: #1f2937;
+  font-size: 13px;
+}
+
+.sll-order-motives-list span {
+  display: inline-block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.sll-order-motives-list p {
+  margin: 8px 0 0;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 @media (max-width: 1200px) {
