@@ -45,6 +45,7 @@ const statusMeta = {
 const verdictOptions = [
   { id: 'aprovar', label: 'Enviar para SLL' },
   { id: 'rejeitar', label: 'Rejeitar' },
+  { id: 'devolver_consultor', label: 'Devolver ao consultor' },
 ];
 
 function PedidoTM() {

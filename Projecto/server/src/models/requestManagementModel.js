@@ -1,8 +1,10 @@
 import { QueryTypes } from 'sequelize';
+import fs from 'node:fs';
 import path from 'node:path';
 import { sequelize } from '../config/database.js';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
+const uploadsDir = path.resolve(globalThis.process?.cwd?.() || '.', 'server', 'uploads');
 
 const roleSet = new Set(['talent-manager', 'service-line-leader', 'admin-gestor']);
 // Estados canónicos e aliases legados suportados no fluxo de gestão.
@@ -119,6 +121,34 @@ const formatLongDate = (value) => {
 };
 
 const buildAvatar = (seed) => `https://i.pravatar.cc/120?u=${encodeURIComponent(String(seed || 'user').toLowerCase())}`;
+
+const deleteEvidenceFiles = async (fileNames) => {
+  const uniqueNames = [...new Set((Array.isArray(fileNames) ? fileNames : [])
+    .map((name) => path.basename(String(name || '').trim()))
+    .filter(Boolean))];
+
+  if (uniqueNames.length === 0) {
+    return;
+  }
+
+  await Promise.all(uniqueNames.map(async (safeName) => {
+    const resolvedPath = path.resolve(uploadsDir, safeName);
+    const isInsideUploadsDir = resolvedPath === uploadsDir
+      || resolvedPath.startsWith(`${uploadsDir}${path.sep}`);
+
+    if (!isInsideUploadsDir) {
+      return;
+    }
+
+    try {
+      await fs.promises.unlink(resolvedPath);
+    } catch (error) {
+      if (error?.code !== 'ENOENT') {
+        // Ignore missing files and keep best-effort cleanup.
+      }
+    }
+  }));
+};
 
 // Helpers de estado e permissões para o fluxo de aprovação de pedidos.
 const roleLabels = Object.freeze({
@@ -793,9 +823,9 @@ const applyDecision = async ({ role, actorUtilizadorId, request, decision, comme
   const decisionKey = String(decision || '').trim().toLowerCase().replace(/-/g, '_');
   const currentEstado = normalizeEstadoName(request.estado_nome);
   const allowedDecisionsByRole = {
-    'talent-manager': new Set(['aprovar', 'rejeitar']),
-    'service-line-leader': new Set(['aprovar', 'rejeitar', 'devolver_tm']),
-    'admin-gestor': new Set(['aprovar', 'rejeitar']),
+    'talent-manager': new Set(['aprovar', 'rejeitar', 'devolver_consultor']),
+    'service-line-leader': new Set(['aprovar', 'rejeitar', 'devolver_consultor']),
+    'admin-gestor': new Set(['aprovar', 'rejeitar', 'devolver_consultor']),
   };
   const roleAllowedDecisions = allowedDecisionsByRole[role] || new Set();
 
@@ -826,19 +856,27 @@ const applyDecision = async ({ role, actorUtilizadorId, request, decision, comme
   let targetEstadoNome = null;
   let shouldObtainBadge = false;
   let shouldRemoveBadge = false;
+  let shouldRemoveEvidence = false;
   let defaultDescription = '';
+  const evidenceFilesToDelete = [];
 
   if (decisionKey === 'rejeitar') {
     targetEstadoNome = workflowState.rejeitado;
     shouldRemoveBadge = isApprovedRequest(currentEstado, request.obtido);
+    shouldRemoveEvidence = true;
     defaultDescription = role === 'talent-manager'
       ? 'Candidatura rejeitada pelo Talent Manager.'
       : role === 'service-line-leader'
         ? 'Candidatura rejeitada pelo Service Line Leader.'
         : 'Candidatura rejeitada pelo Administrador/Gestor.';
-  } else if (decisionKey === 'devolver_tm') {
-    targetEstadoNome = workflowState.pendenteTm;
-    defaultDescription = 'Candidatura devolvida pelo Service Line Leader para nova analise do Talent Manager.';
+  } else if (decisionKey === 'devolver_consultor') {
+    targetEstadoNome = workflowState.rejeitado;
+    shouldRemoveBadge = isApprovedRequest(currentEstado, request.obtido);
+    defaultDescription = role === 'talent-manager'
+      ? 'Candidatura devolvida ao consultor pelo Talent Manager.'
+      : role === 'service-line-leader'
+        ? 'Candidatura devolvida ao consultor pelo Service Line Leader.'
+        : 'Candidatura devolvida ao consultor pelo Administrador/Gestor.';
   } else if (decisionKey === 'aprovar' && role === 'talent-manager') {
     targetEstadoNome = workflowState.pendenteSll;
     defaultDescription = 'Candidatura validada pelo Talent Manager e enviada para SLL.';
@@ -892,6 +930,37 @@ const applyDecision = async ({ role, actorUtilizadorId, request, decision, comme
       description: finalDescription,
       transaction,
     });
+
+    if (shouldRemoveEvidence) {
+      const evidenceRows = await sequelize.query(
+        `
+          SELECT nevidencia
+          FROM evidencias
+          WHERE npedido = :requestId
+        `,
+        {
+          replacements: { requestId: Number(request.npedido) },
+          type: QueryTypes.SELECT,
+          transaction,
+        },
+      );
+
+      evidenceFilesToDelete.push(
+        ...evidenceRows.map((row) => row?.nevidencia).filter(Boolean),
+      );
+
+      await sequelize.query(
+        `
+          DELETE FROM evidencias
+          WHERE npedido = :requestId
+        `,
+        {
+          replacements: { requestId: Number(request.npedido) },
+          type: QueryTypes.DELETE,
+          transaction,
+        },
+      );
+    }
 
     if (shouldRemoveBadge) {
       await sequelize.query(
@@ -952,6 +1021,10 @@ const applyDecision = async ({ role, actorUtilizadorId, request, decision, comme
   } catch (error) {
     await transaction.rollback();
     throw error;
+  }
+
+  if (shouldRemoveEvidence && evidenceFilesToDelete.length > 0) {
+    await deleteEvidenceFiles(evidenceFilesToDelete);
   }
 };
 
