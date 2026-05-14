@@ -42,10 +42,16 @@
   padding: 16px 16px 14px;
 }
 
+.exports-page:has(.exports-tabs .exports-tab:first-of-type.active) .exports-shell { /* para um melhor visual da página*/
+  border-top-left-radius: 0;
+}
+
 .exports-tabs {
   display: inline-flex;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: -17px;
+  position: relative;
+  z-index: 1;
 }
 
 .exports-tab {
@@ -55,11 +61,11 @@
   color: #8892a4;
   font-size: 13px;
   font-weight: 600;
-  padding: 10px 14px;
+  padding: 12px 20px;
 }
 
 .exports-tab.active {
-  background: #f8fafc;
+  background: #ffffff;
   color: #2f3747;
 }
 

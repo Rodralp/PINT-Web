@@ -829,27 +829,28 @@ function Exportacoes() {
           <h1>{t('exports_title')}</h1>
         </header>
 
+        <div className="exports-tabs" role="tablist" aria-label={t('exports_title')}>
+          <button
+            type="button"
+            className={`exports-tab ${activeTab === 'badges' ? 'active' : ''}`}
+            onClick={() => setActiveTab('badges')}
+            role="tab"
+            aria-selected={activeTab === 'badges'}
+          >
+            {t('exports_tab_badges')}
+          </button>
+          <button
+            type="button"
+            className={`exports-tab ${activeTab === 'certificado' ? 'active' : ''}`}
+            onClick={() => setActiveTab('certificado')}
+            role="tab"
+            aria-selected={activeTab === 'certificado'}
+          >
+            {t('exports_tab_certificate')}
+          </button>
+        </div>
+
         <section className="exports-shell">
-          <div className="exports-tabs" role="tablist" aria-label={t('exports_title')}>
-            <button
-              type="button"
-              className={`exports-tab ${activeTab === 'badges' ? 'active' : ''}`}
-              onClick={() => setActiveTab('badges')}
-              role="tab"
-              aria-selected={activeTab === 'badges'}
-            >
-              {t('exports_tab_badges')}
-            </button>
-            <button
-              type="button"
-              className={`exports-tab ${activeTab === 'certificado' ? 'active' : ''}`}
-              onClick={() => setActiveTab('certificado')}
-              role="tab"
-              aria-selected={activeTab === 'certificado'}
-            >
-              {t('exports_tab_certificate')}
-            </button>
-          </div>
 
           <div className="exports-toolbar">
             <label className="exports-search-wrap" htmlFor="exports-search-input">
