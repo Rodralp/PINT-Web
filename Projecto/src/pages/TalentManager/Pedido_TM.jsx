@@ -17,7 +17,7 @@ import {
   SquareCheckBig,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
-import '../../css/TalentManager/GestaoPedidos_TM.css';
+import '../../css/Shared/GestaoPedidosDetalhe.css';
 import {
   fetchManagedRequestById,
   getManagedEvidenceDownloadUrl,

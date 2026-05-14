@@ -18,7 +18,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
-import '../../css/AdminGestor/GestaoPedidos_AG.css';
+import '../../css/Shared/GestaoPedidosDetalhe.css';
 import {
   fetchManagedRequestById,
   getManagedEvidenceDownloadUrl,

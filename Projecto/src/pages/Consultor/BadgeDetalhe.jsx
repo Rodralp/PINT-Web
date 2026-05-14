@@ -19,7 +19,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
 import { requestBadgeAcquisition, uploadEvidence } from '../../services/consultorService';
-import '../../css/Consultor/BadgeDetalhe.css';
+import '../../css/Shared/GestaoPedidosDetalhe.css';
 
 const defaultBadgeDetails = {
   id: 'badge-default',
