@@ -42,10 +42,16 @@
   padding: 16px 16px 14px;
 }
 
+.tm-export-page:has(.tm-export-tabs .tm-export-tab:first-of-type.active) .tm-export-shell {
+  border-top-left-radius: 0;
+}
+
 .tm-export-tabs {
   display: inline-flex;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: -17px;
+  position: relative;
+  z-index: 1;
 }
 
 .tm-export-tab {
@@ -59,7 +65,7 @@
 }
 
 .tm-export-tab.active {
-  background: #f8fafc;
+  background: #ffffff;
   color: #2f3747;
 }
 

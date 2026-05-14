@@ -1108,21 +1108,22 @@ function ExportacoesSLL() {
           <h1>Exportações Service Line</h1>
         </header>
 
+        <div className="tm-export-tabs" role="tablist" aria-label="Separadores de exportação">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              className={`tm-export-tab ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => handleTabChange(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         <section className="tm-export-shell">
-          <div className="tm-export-tabs" role="tablist" aria-label="Separadores de exportação">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                className={`tm-export-tab ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => handleTabChange(tab.id)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
 
           <div className="tm-export-toolbar">
             <label className="tm-export-search" htmlFor="tm-export-search-input">
