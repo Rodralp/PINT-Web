@@ -343,6 +343,45 @@
   line-height: 1.5;
 }
 
+.announcement-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.announcement-attachments h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #2f3747;
+}
+
+.announcement-attachments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.announcement-attachment-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 10px;
+  border: 1px solid #e5eaf1;
+  background: #f8fafc;
+  padding: 10px 12px;
+  color: #344054;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.announcement-attachment-item:hover {
+  border-color: #1b84f4;
+  color: #1b84f4;
+  background: #edf5ff;
+}
+
 .announcement-detail-footer {
   margin-top: auto;
   display: inline-flex;

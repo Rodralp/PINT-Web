@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Filter, Search, SlidersHorizontal } from 'lu
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
+import { fetchUserNotifications, markNotificationRead } from '../../services/communicationService';
 import '../../css/Consultor/Notificacoes.css';
 
 const notificationTypes = [
@@ -24,68 +25,6 @@ const notificationTypeLabels = {
   sucesso: 'notifications_filter_success',
 };
 
-const defaultNotifications = [
-  {
-    id: 'notif-1',
-    typeId: 'alerta',
-    isRead: false,
-    title: 'LowCode (Outsystems) sera removido',
-    date: '2025-04-20',
-    summary: 'A badge LowCode (Outsystems) foi marcada para remocao no proximo ciclo.',
-    accent: '#f4c20d',
-    actionPath: '/consultor/catalogo-badges',
-  },
-  {
-    id: 'notif-2',
-    typeId: 'info',
-    isRead: true,
-    title: 'Novo nivel adicionado a LowCode (Outsystems)',
-    date: '2025-04-15',
-    summary: 'Foi adicionado um novo nivel ao percurso de badges.',
-    accent: '#1f8fe5',
-    actionPath: '/consultor/catalogo-badges',
-  },
-  {
-    id: 'notif-3',
-    typeId: 'sucesso',
-    isRead: true,
-    title: 'Pedido aprovado',
-    date: '2025-03-30',
-    summary: 'A tua candidatura foi aprovada com sucesso.',
-    accent: '#4cd07d',
-    actionPath: '/consultor/meus-badges',
-  },
-  {
-    id: 'notif-4',
-    typeId: 'info',
-    isRead: false,
-    title: 'Ranking mensal atualizado',
-    date: '2025-03-22',
-    summary: 'A lista de ranking recebeu novos pontos e badges.',
-    accent: '#9851e8',
-    actionPath: '/consultor/ranking',
-  },
-  {
-    id: 'notif-5',
-    typeId: 'alerta',
-    isRead: false,
-    title: 'Badge expirando em breve',
-    date: '2025-03-18',
-    summary: 'Existe uma badge com expiracao iminente.',
-    accent: '#ef4444',
-    actionPath: '/consultor/meus-badges',
-  },
-  {
-    id: 'notif-6',
-    typeId: 'info',
-    isRead: true,
-    title: 'Manutencao programada',
-    date: '2025-03-12',
-    summary: 'Havera uma janela de manutencao com indisponibilidade temporaria.',
-    accent: '#3b82f6',
-  },
-];
-
 const ITEMS_PER_PAGE = 10;
 
 const formatNotificationDate = (value, locale = 'pt-PT') => {
@@ -101,10 +40,64 @@ const formatNotificationDate = (value, locale = 'pt-PT') => {
   }).format(date);
 };
 
+const notificationTypeStyles = {
+  alerta: {
+    accent: '#ef4444',
+  },
+  info: {
+    accent: '#3b82f6',
+  },
+  sucesso: {
+    accent: '#4cd07d',
+  },
+};
+
+const mapLogTypeToNotificationType = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+
+  if (normalized === 'importante') {
+    return 'alerta';
+  }
+
+  if (normalized === 'aviso') {
+    return 'alerta';
+  }
+
+  if (normalized === 'mensagem') {
+    return 'info';
+  }
+
+  return 'info';
+};
+
+const mapNotificationItem = (item) => {
+  const normalizedLogType = String(item?.type || '').trim().toLowerCase();
+  const typeId = mapLogTypeToNotificationType(normalizedLogType);
+  const style = notificationTypeStyles[typeId] || notificationTypeStyles.info;
+  const accent = normalizedLogType === 'aviso'
+    ? '#f4c20d'
+    : normalizedLogType === 'importante'
+      ? '#ef4444'
+      : style.accent;
+  const logId = item?.logId ? String(item.logId) : null;
+
+  return {
+    id: String(item?.id || ''),
+    typeId,
+    isRead: Boolean(item?.isRead),
+    title: item?.title || 'Notificacao',
+    date: item?.date || '',
+    summary: item?.summary || '',
+    accent,
+    actionPath: logId ? '/consultor/mensagens-avisos' : null,
+    messageId: logId,
+  };
+};
+
 function Notificacoes() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const [notifications, setNotifications] = useState(defaultNotifications);
+  const [notifications, setNotifications] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('todos');
   const [sortBy, setSortBy] = useState('recentes');
@@ -113,6 +106,32 @@ function Notificacoes() {
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const filterDropdownRef = useRef(null);
   const sortDropdownRef = useRef(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadNotifications = async () => {
+      try {
+        const data = await fetchUserNotifications();
+        if (!isMounted) {
+          return;
+        }
+
+        const mapped = Array.isArray(data) ? data.map(mapNotificationItem) : [];
+        setNotifications(mapped);
+      } catch {
+        if (isMounted) {
+          setNotifications([]);
+        }
+      }
+    };
+
+    loadNotifications();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -192,8 +211,14 @@ function Notificacoes() {
     }
   }, [page, totalPages]);
 
-  const handleOpenNotification = (notification) => {
+  const handleOpenNotification = async (notification) => {
     if (!notification.isRead) {
+      try {
+        await markNotificationRead(notification.id);
+      } catch {
+        // Ignore read errors to keep UI responsive.
+      }
+
       setNotifications((current) => current.map((item) => (
         item.id === notification.id ? { ...item, isRead: true } : item
       )));
@@ -203,10 +228,18 @@ function Notificacoes() {
       return;
     }
 
-    navigate(notification.actionPath);
+    navigate(notification.actionPath, {
+      state: notification.messageId ? { selectedMessageId: notification.messageId } : undefined,
+    });
   };
 
-  const handleMarkAsRead = (notificationId) => {
+  const handleMarkAsRead = async (notificationId) => {
+    try {
+      await markNotificationRead(notificationId);
+    } catch {
+      // Ignore read errors to keep UI responsive.
+    }
+
     setNotifications((current) => current.map((item) => (
       item.id === notificationId ? { ...item, isRead: true } : item
     )));

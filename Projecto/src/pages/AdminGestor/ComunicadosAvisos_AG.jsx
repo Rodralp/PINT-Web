@@ -1,57 +1,16 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Paperclip, Search, SendHorizontal, UploadCloud, UserRoundPlus, X } from 'lucide-react';
 import Layout from '../../components/Layout';
+import { fetchAnnouncementRecipients, sendAnnouncement } from '../../services/communicationService';
 import '../../css/AdminGestor/ComunicadosAvisos_AG.css';
 
-const recipientsDirectory = [
-  { id: 'u-1', name: 'João Gomes', role: 'consultor', serviceLine: 'LowCode' },
-  { id: 'u-2', name: 'Maria Santos', role: 'consultor', serviceLine: 'Cloud' },
-  { id: 'u-3', name: 'Pedro Mendes', role: 'consultor', serviceLine: 'Cloud' },
-  { id: 'u-4', name: 'Ana Costa', role: 'consultor', serviceLine: 'Data & AI' },
-  { id: 'u-5', name: 'Carlos Ferreira', role: 'consultor', serviceLine: 'Cybersecurity' },
-  { id: 'u-6', name: 'Rita Oliveira', role: 'consultor', serviceLine: 'Data & AI' },
-  { id: 'u-7', name: 'Bruno Alves', role: 'consultor', serviceLine: 'LowCode' },
-  { id: 'u-8', name: 'Sofia Rodrigues', role: 'consultor', serviceLine: 'LowCode' },
-  { id: 'u-9', name: 'Tiago Martins', role: 'consultor', serviceLine: 'Cloud' },
-  { id: 'u-10', name: 'Inês Carvalho', role: 'consultor', serviceLine: 'Cybersecurity' },
-  { id: 'u-11', name: 'Raquel Ribeiro', role: 'service-line-leader', serviceLine: 'LowCode' },
-  { id: 'u-12', name: 'Joana Lopes', role: 'talent-manager', serviceLine: 'People' },
-];
-
-const recipientGroups = [
-  {
-    id: 'grp-consultores',
-    label: 'Todos os Consultores',
-    memberIds: recipientsDirectory.filter((item) => item.role === 'consultor').map((item) => item.id),
-  },
-  {
-    id: 'grp-cloud',
-    label: 'Service Line Cloud',
-    memberIds: recipientsDirectory.filter((item) => item.serviceLine === 'Cloud').map((item) => item.id),
-  },
-  {
-    id: 'grp-lowcode',
-    label: 'Service Line LowCode',
-    memberIds: recipientsDirectory.filter((item) => item.serviceLine === 'LowCode').map((item) => item.id),
-  },
-  {
-    id: 'grp-data-ai',
-    label: 'Service Line Data & AI',
-    memberIds: recipientsDirectory.filter((item) => item.serviceLine === 'Data & AI').map((item) => item.id),
-  },
-  {
-    id: 'grp-cyber',
-    label: 'Service Line Cybersecurity',
-    memberIds: recipientsDirectory.filter((item) => item.serviceLine === 'Cybersecurity').map((item) => item.id),
-  },
-  {
-    id: 'grp-sll',
-    label: 'Todos os S.L.L.',
-    memberIds: recipientsDirectory
-      .filter((item) => item.role === 'service-line-leader')
-      .map((item) => item.id),
-  },
-];
+const normalizeGroupId = (value) => (
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || 'grupo'
+);
 
 const MAX_FILE_MB = 10;
 const allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx'];
@@ -77,6 +36,8 @@ const validateFile = (file) => {
 };
 
 function ComunicadosAvisosAG() {
+  const [recipientsDirectory, setRecipientsDirectory] = useState([]);
+  const [serviceLines, setServiceLines] = useState([]);
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [selectedGroupIds, setSelectedGroupIds] = useState([]);
@@ -89,6 +50,99 @@ function ComunicadosAvisosAG() {
   const [sendStatus, setSendStatus] = useState('');
 
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRecipients = async () => {
+      try {
+        const data = await fetchAnnouncementRecipients();
+
+        if (!isMounted) {
+          return;
+        }
+
+        const normalizedRecipients = (data?.recipients || []).map((recipient) => {
+          const roles = Array.isArray(recipient.roles)
+            ? recipient.roles
+            : recipient.role
+              ? [recipient.role]
+              : [];
+          const serviceLineValues = Array.isArray(recipient.serviceLines)
+            ? recipient.serviceLines
+            : [];
+
+          return {
+            id: String(recipient.id),
+            name: recipient.nome || recipient.name || '',
+            role: roles[0] || 'consultor',
+            roles,
+            serviceLines: serviceLineValues,
+            serviceLine: serviceLineValues.join(', '),
+          };
+        });
+
+        const normalizedServiceLines = (data?.serviceLines || []).map((serviceLine) => ({
+          id: serviceLine.id,
+          name: serviceLine.name || '',
+        }));
+
+        setRecipientsDirectory(normalizedRecipients);
+        setServiceLines(normalizedServiceLines);
+      } catch {
+        if (isMounted) {
+          setRecipientsDirectory([]);
+          setServiceLines([]);
+        }
+      }
+    };
+
+    loadRecipients();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const recipientGroups = useMemo(() => {
+    const groups = [];
+
+    const consultorIds = recipientsDirectory
+      .filter((item) => item.roles.includes('consultor'))
+      .map((item) => item.id);
+
+    groups.push({
+      id: 'grp-consultores',
+      label: 'Todos os Consultores',
+      memberIds: consultorIds,
+    });
+
+    const sllIds = recipientsDirectory
+      .filter((item) => item.roles.includes('service-line-leader'))
+      .map((item) => item.id);
+
+    groups.push({
+      id: 'grp-sll',
+      label: 'Todos os S.L.L.',
+      memberIds: sllIds,
+    });
+
+    serviceLines.forEach((serviceLine) => {
+      const normalizedServiceLine = String(serviceLine.name || '').toLowerCase();
+      const memberIds = recipientsDirectory
+        .filter((item) => item.serviceLines
+          .some((entry) => entry.toLowerCase() === normalizedServiceLine))
+        .map((item) => item.id);
+
+      groups.push({
+        id: `grp-${normalizeGroupId(serviceLine.name)}`,
+        label: `Service Line ${serviceLine.name}`,
+        memberIds,
+      });
+    });
+
+    return groups;
+  }, [recipientsDirectory, serviceLines]);
 
   const filteredPeople = useMemo(() => {
     const normalizedTerm = recipientSearch.trim().toLowerCase();
@@ -103,7 +157,7 @@ function ComunicadosAvisosAG() {
         || item.role.toLowerCase().includes(normalizedTerm)
         || item.serviceLine.toLowerCase().includes(normalizedTerm),
     );
-  }, [recipientSearch]);
+  }, [recipientSearch, recipientsDirectory]);
 
   const filteredGroups = useMemo(() => {
     const normalizedTerm = recipientSearch.trim().toLowerCase();
@@ -113,7 +167,7 @@ function ComunicadosAvisosAG() {
     }
 
     return recipientGroups.filter((group) => group.label.toLowerCase().includes(normalizedTerm));
-  }, [recipientSearch]);
+  }, [recipientSearch, recipientGroups]);
 
   const recipientIdsFromGroups = useMemo(() => {
     const groupRecipients = selectedGroupIds
@@ -122,7 +176,7 @@ function ComunicadosAvisosAG() {
       .flatMap((group) => group.memberIds);
 
     return new Set(groupRecipients);
-  }, [selectedGroupIds]);
+  }, [selectedGroupIds, recipientGroups]);
 
   const allRecipientIds = useMemo(() => {
     const next = new Set(recipientIdsFromGroups);
@@ -132,7 +186,7 @@ function ComunicadosAvisosAG() {
 
   const selectedRecipients = useMemo(
     () => recipientsDirectory.filter((person) => allRecipientIds.has(person.id)),
-    [allRecipientIds],
+    [allRecipientIds, recipientsDirectory],
   );
 
   const canSend = title.trim().length > 0 && message.trim().length > 0 && selectedRecipients.length > 0;
@@ -210,16 +264,27 @@ function ComunicadosAvisosAG() {
     addFiles(files);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!canSend) {
       return;
     }
 
-    setSendStatus(`Mensagem enviada para ${selectedRecipients.length} destinatários.`);
-    setTitle('');
-    setMessage('');
-    setAttachments([]);
-    setUploadErrors([]);
+    try {
+      await sendAnnouncement({
+        title,
+        message,
+        recipientIds: Array.from(allRecipientIds),
+        attachments,
+      });
+
+      setSendStatus(`Mensagem enviada para ${selectedRecipients.length} destinatários.`);
+      setTitle('');
+      setMessage('');
+      setAttachments([]);
+      setUploadErrors([]);
+    } catch (error) {
+      setSendStatus(error?.message || 'Falha ao enviar a mensagem.');
+    }
   };
 
   return (
@@ -434,7 +499,7 @@ function ComunicadosAvisosAG() {
                         onClick={() => handleTogglePerson(person.id)}
                       >
                         <span>{person.name}</span>
-                        <small>{person.serviceLine} · {person.role}</small>
+                        <small>{person.serviceLine ? `${person.serviceLine} · ${person.role}` : person.role}</small>
                       </button>
                     ))}
 
