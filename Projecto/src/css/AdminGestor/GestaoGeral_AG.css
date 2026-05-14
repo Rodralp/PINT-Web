@@ -20,10 +20,16 @@
   padding: 14px 16px 16px;
 }
 
+.ag-general-page:has(.ag-general-tabs .ag-general-tab:first-of-type.active) .ag-general-shell {
+  border-top-left-radius: 0;
+}
+
 .ag-general-tabs {
   display: inline-flex;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 10px;
+  margin-bottom: -17px;
+  position: relative;
+  z-index: 1;
 }
 
 .ag-general-tab {
@@ -39,7 +45,7 @@
 
 .ag-general-tab.active {
   color: #273142;
-  background: #f8fafc;
+  background: #ffffff;
 }
 
 .ag-general-toolbar {

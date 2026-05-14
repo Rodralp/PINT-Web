@@ -225,24 +225,25 @@ function GestaoGeralAG() {
           <h1>Gestão Geral</h1>
         </header>
 
+        <div className="ag-general-tabs" role="tablist" aria-label="Separadores de gestão geral">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              className={`ag-general-tab ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setSearchTerm('');
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         <section className="ag-general-shell">
-          <div className="ag-general-tabs" role="tablist" aria-label="Separadores de gestão geral">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                className={`ag-general-tab ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  setSearchTerm('');
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
 
           <div className="ag-general-toolbar">
             <label className="ag-general-search" htmlFor="ag-general-search-input">
