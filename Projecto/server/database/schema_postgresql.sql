@@ -178,17 +178,49 @@ CREATE TABLE IF NOT EXISTS u_pertence_equipa (
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS logs (
-    nlog INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    nutilizador INTEGER NOT NULL REFERENCES utilizador(nutilizador),
-    data_log DATE NOT NULL,
-    tipo_log VARCHAR(100)
+        nlog INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        nutilizador INTEGER NOT NULL REFERENCES utilizador(nutilizador),
+        data_log DATE NOT NULL DEFAULT CURRENT_DATE,
+        tipo_log VARCHAR(100),
+        titulo VARCHAR(200),
+        mensagem TEXT,
+        resumo VARCHAR(255),
+        prioridade INTEGER DEFAULT 2
 );
 
+ALTER TABLE logs
+    ALTER COLUMN data_log SET DEFAULT CURRENT_DATE;
+
+ALTER TABLE logs
+    ADD COLUMN IF NOT EXISTS titulo VARCHAR(200);
+
+ALTER TABLE logs
+    ADD COLUMN IF NOT EXISTS mensagem TEXT;
+
+ALTER TABLE logs
+    ADD COLUMN IF NOT EXISTS resumo VARCHAR(255);
+
+ALTER TABLE logs
+    ADD COLUMN IF NOT EXISTS prioridade INTEGER DEFAULT 2;
+
+CREATE TABLE IF NOT EXISTS ficheiro_log (
+        nflog INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        nlog INTEGER NOT NULL REFERENCES logs(nlog) ON DELETE CASCADE,
+        nome_original VARCHAR(255) NOT NULL,
+        nome_armazenado VARCHAR(255) NOT NULL,
+        tipo VARCHAR(100),
+        tamanho INTEGER,
+        caminho VARCHAR(255),
+        data_upload TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ficheiro_log_nlog ON ficheiro_log(nlog);
+
 CREATE TABLE IF NOT EXISTS notificacao (
-    nnotificacao INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    nutilizador INTEGER NOT NULL REFERENCES utilizador(nutilizador),
-    nlog INTEGER REFERENCES logs(nlog),
-    lida BOOLEAN DEFAULT FALSE
+        nnotificacao INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        nutilizador INTEGER NOT NULL REFERENCES utilizador(nutilizador),
+        nlog INTEGER REFERENCES logs(nlog),
+        lida BOOLEAN DEFAULT FALSE
 );
 
 -- ============================================================

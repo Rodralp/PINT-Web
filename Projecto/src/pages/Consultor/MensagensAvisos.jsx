@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlertCircle,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
   Filter,
   Megaphone,
+  Paperclip,
   Search,
   SlidersHorizontal,
   UserRound,
 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
+import { fetchUserAnnouncements, getAnnouncementAttachmentDownloadUrl } from '../../services/communicationService';
 import '../../css/Consultor/MensagensAvisos.css';
 
 const messageTypes = [
@@ -25,250 +27,6 @@ const sortOptions = [
   { id: 'recentes', labelKey: 'announcements_sort_recent' },
   { id: 'antigas', labelKey: 'announcements_sort_oldest' },
   { id: 'prioridade', labelKey: 'announcements_sort_priority' },
-];
-
-const defaultMessages = [
-  {
-    id: 'msg-1',
-    typeId: 'aviso',
-    priority: 1,
-    title: 'Aviso Importante',
-    summary: 'Alteracao em curso na area de service line para badges relacionados com C++ Mastery.',
-    author: 'Talent Management',
-    date: '2026-04-16',
-    tag: 'Importante',
-    accent: '#3b82f6',
-    avatar: 'https://i.pravatar.cc/120?u=talent.management',
-    body: [
-      'Havera, num futuro proximo, um completo overhaul da area de service line “C++ Mastery”.',
-      'Recomendamos que, caso algum consultor queira candidatar-se para uma das suas badges, que espere as mudancas serem feitas.',
-      'Caso o consultor possua uma candidatura em progresso, recomenda-se que a conclua o mais brevemente possivel.',
-    ],
-  },
-  {
-    id: 'msg-2',
-    typeId: 'mensagem',
-    priority: 2,
-    title: 'Nova mensagen da equipa',
-    summary: 'Publicacao de uma nova trilha de aprendizagem para LowCode.',
-    author: 'Joao Gomes',
-    date: '2026-04-15',
-    tag: 'Mensagem',
-    accent: '#9851e8',
-    avatar: 'https://i.pravatar.cc/120?u=joao.gomes.messages',
-    body: [
-      'Foi publicada uma nova trilha de aprendizagem para LowCode (Outsystems).',
-      'A trilha inclui materiais atualizados e novos requisitos para o nivel seguinte.',
-    ],
-  },
-  {
-    id: 'msg-3',
-    typeId: 'aviso',
-    priority: 1,
-    title: 'Badge "C++ Mastery" expira em 30 dias',
-    summary: 'Renovar certificacao antes do prazo para nao perder o progresso.',
-    author: 'Sistema',
-    date: '2026-04-14',
-    tag: 'Aviso',
-    accent: '#f4c20d',
-    avatar: 'https://i.pravatar.cc/120?u=system.badge.expiry',
-    body: [
-      'O badge “C++ Mastery” aproxima-se do prazo de expiracao.',
-      'Sugerimos revisar as evidencias e renovar a candidatura com antecedencia.',
-    ],
-  },
-  {
-    id: 'msg-4',
-    typeId: 'mensagem',
-    priority: 3,
-    title: 'Atualizacao do ranking mensal',
-    summary: 'A lista de consultores foi atualizada com os resultados do mes.',
-    author: 'Ranking Team',
-    date: '2026-04-13',
-    tag: 'Mensagem',
-    accent: '#4cd07d',
-    avatar: 'https://i.pravatar.cc/120?u=ranking.team',
-    body: [
-      'O ranking mensal foi atualizado com os novos resultados de badges e pontos.',
-      'Consulta a tua posicao e valida as badges em progresso para melhorares o teu registo.',
-    ],
-  },
-  {
-    id: 'msg-5',
-    typeId: 'importante',
-    priority: 1,
-    title: 'Atenção a candidaturas em progresso',
-    summary: 'Conclui processos pendentes antes de submeter novos pedidos.',
-    author: 'Administração',
-    date: '2026-04-12',
-    tag: 'Importante',
-    accent: '#ef4444',
-    avatar: 'https://i.pravatar.cc/120?u=admin.notice',
-    body: [
-      'Se tiveres candidaturas em progresso, conclui-as antes de iniciar novas submissões.',
-      'Isso evita conflitos de estado e facilita a validação da tua evolução.',
-    ],
-  },
-  {
-    id: 'msg-6',
-    typeId: 'aviso',
-    priority: 2,
-    title: 'Manutencao programada esta sexta-feira',
-    summary: 'Pode haver indisponibilidade temporaria durante a janela de manutencao.',
-    author: 'IT Operations',
-    date: '2026-04-11',
-    tag: 'Aviso',
-    accent: '#1f8fe5',
-    avatar: 'https://i.pravatar.cc/120?u=it.operations',
-    body: [
-      'Havera manutencao programada na plataforma durante a janela habitual de operacoes.',
-      'Durante esse periodo, algumas acoes podem ficar temporariamente indisponiveis.',
-    ],
-  },
-  {
-    id: 'msg-7',
-    typeId: 'mensagem',
-    priority: 3,
-    title: 'Reconhecimento da equipa',
-    summary: 'Agradecimento pelo trabalho realizado nas ultimas semanas.',
-    author: 'Direcao',
-    date: '2026-04-10',
-    tag: 'Mensagem',
-    accent: '#8b5cf6',
-    avatar: 'https://i.pravatar.cc/120?u=direction.team',
-    body: [
-      'A direcao agradece o trabalho realizado nas ultimas semanas e o empenho em manter os objetivos alinhados.',
-      'Continuem a acompanhar os novos avisos e a atualizar o vosso progresso nas badges.',
-    ],
-  },
-  {
-    id: 'msg-8',
-    typeId: 'aviso',
-    priority: 2,
-    title: 'Nova ronda de badges disponivel',
-    summary: 'Foram carregadas novas badges para consulta e candidatura.',
-    author: 'Platform Team',
-    date: '2026-04-09',
-    tag: 'Aviso',
-    accent: '#22c55e',
-    avatar: 'https://i.pravatar.cc/120?u=platform.team',
-    body: [
-      'Foram carregadas novas badges para consulta no catalogo e para exportacao.',
-      'Explora os novos niveis e verifica os requisitos antes de iniciar candidatura.',
-    ],
-  },
-  {
-    id: 'msg-9',
-    typeId: 'mensagem',
-    priority: 3,
-    title: 'Feedback sobre aprendizagem',
-    summary: 'Sugestoes da equipa para melhorar o ritmo de estudos.',
-    author: 'Learning Team',
-    date: '2026-04-08',
-    tag: 'Mensagem',
-    accent: '#f97316',
-    avatar: 'https://i.pravatar.cc/120?u=learning.team',
-    body: [
-      'A equipa de aprendizagem partilhou recomendações para reduzir o tempo entre candidaturas.',
-      'Vale a pena rever os requisitos e consolidar o progresso antes de avançar para o nivel seguinte.',
-    ],
-  },
-  {
-    id: 'msg-10',
-    typeId: 'aviso',
-    priority: 1,
-    title: 'Atualizacao de politicas internas',
-    summary: 'O processo de notificação foi ajustado para melhor clareza.',
-    author: 'Compliance',
-    date: '2026-04-07',
-    tag: 'Importante',
-    accent: '#0ea5e9',
-    avatar: 'https://i.pravatar.cc/120?u=compliance.notice',
-    body: [
-      'As politicas internas de comunicacao foram atualizadas para melhorar a clareza das notificacoes.',
-      'Revê os avisos antes de submeter candidaturas ou concluir processos pendentes.',
-    ],
-  },
-  {
-    id: 'msg-11',
-    typeId: 'mensagem',
-    priority: 2,
-    title: 'Resumo da semana',
-    summary: 'Resumo rapido das mensagens e avisos mais relevantes.',
-    author: 'Sistema',
-    date: '2026-04-06',
-    tag: 'Mensagem',
-    accent: '#14b8a6',
-    avatar: 'https://i.pravatar.cc/120?u=system.summary',
-    body: [
-      'Esta semana destacam-se as alteracoes do service line e as manutencoes agendadas.',
-      'Mantem-te atento aos avisos importantes para nao perderes prazos ou atualizacoes.',
-    ],
-  },
-  {
-    id: 'msg-12',
-    typeId: 'aviso',
-    priority: 2,
-    title: 'Novo aviso de expiração',
-    summary: 'Algumas badges passaram a ter data de expiracao visivel.',
-    author: 'Product Team',
-    date: '2026-04-05',
-    tag: 'Aviso',
-    accent: '#a855f7',
-    avatar: 'https://i.pravatar.cc/120?u=product.team',
-    body: [
-      'As badges agora apresentam a data de expiracao de forma mais clara no detalhe.',
-      'Essa informacao ajuda a planear renovacoes e candidaturas futuras.',
-    ],
-  },
-  {
-    id: 'msg-13',
-    typeId: 'mensagem',
-    priority: 3,
-    title: 'Mensagem da comunidade',
-    summary: 'Partilha de experiencias entre consultores.',
-    author: 'Comunidade',
-    date: '2026-04-04',
-    tag: 'Mensagem',
-    accent: '#f59e0b',
-    avatar: 'https://i.pravatar.cc/120?u=community.team',
-    body: [
-      'A comunidade de consultores partilhou estrategias para acelerar o progresso em badges mais complexas.',
-      'Consulta as mensagens anteriores para recolheres dicas uteis.',
-    ],
-  },
-  {
-    id: 'msg-14',
-    typeId: 'aviso',
-    priority: 1,
-    title: 'Avaliacoes internas abertas',
-    summary: 'As avaliacoes do periodo atual estao disponiveis para consulta.',
-    author: 'RH',
-    date: '2026-04-03',
-    tag: 'Importante',
-    accent: '#db2777',
-    avatar: 'https://i.pravatar.cc/120?u=hr.team',
-    body: [
-      'As avaliacoes internas do periodo atual ja estao disponiveis para consulta na plataforma.',
-      'Analisa as observacoes e confirma os teus dados antes de seguir para a proxima fase.',
-    ],
-  },
-  {
-    id: 'msg-15',
-    typeId: 'mensagem',
-    priority: 3,
-    title: 'Mensagem final da semana',
-    summary: 'Encerramento da semana com os principais destaques.',
-    author: 'Gestao',
-    date: '2026-04-02',
-    tag: 'Mensagem',
-    accent: '#6366f1',
-    avatar: 'https://i.pravatar.cc/120?u=management.team',
-    body: [
-      'Boa semana a todos. Os novos avisos ja estao disponiveis e o catalogo foi atualizado.',
-      'Mantem os teus dados e o progresso das badges em dia para uma experiencia mais fluida.',
-    ],
-  },
 ];
 
 const ITEMS_PER_PAGE = 6;
@@ -286,18 +44,111 @@ const formatDate = (value, locale = 'pt-PT') => {
   }).format(date);
 };
 
+const messageTypeStyles = {
+  mensagem: {
+    accent: '#8b5cf6',
+    tag: 'Mensagem',
+    priority: 3,
+  },
+  aviso: {
+    accent: '#f4c20d',
+    tag: 'Aviso',
+    priority: 2,
+  },
+  importante: {
+    accent: '#ef4444',
+    tag: 'Importante',
+    priority: 1,
+  },
+};
+
+const resolveMessageType = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  return messageTypeStyles[normalized] ? normalized : 'mensagem';
+};
+
+const buildMessageBody = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return [];
+  }
+
+  const paragraphs = raw
+    .split(/\r?\n/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  return paragraphs.length > 0 ? paragraphs : [raw];
+};
+
+const buildMessageAvatar = (seed) => (
+  `https://i.pravatar.cc/120?u=${encodeURIComponent(String(seed || 'user').toLowerCase())}`
+);
+
+const mapAnnouncementToMessage = (item) => {
+  const resolvedType = resolveMessageType(item?.type);
+  const style = messageTypeStyles[resolvedType] || messageTypeStyles.mensagem;
+  const authorName = item?.author || 'Sistema';
+  const avatarSeed = item?.authorEmail || authorName;
+  const summary = item?.summary || String(item?.message || '').split(/\r?\n/)[0]?.trim() || '';
+  const attachments = Array.isArray(item?.attachments) ? item.attachments : [];
+
+  return {
+    id: String(item?.id ?? ''),
+    typeId: resolvedType,
+    priority: Number(item?.priority) || style.priority,
+    title: item?.title || '',
+    summary,
+    author: authorName,
+    date: item?.date || '',
+    tag: style.tag,
+    accent: style.accent,
+    avatar: buildMessageAvatar(avatarSeed),
+    body: buildMessageBody(item?.message || summary),
+    attachments,
+  };
+};
+
 function MensagensAvisos() {
   const { t, i18n } = useTranslation();
-  const [messages] = useState(defaultMessages);
+  const location = useLocation();
+  const [messages, setMessages] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('todos');
   const [sortBy, setSortBy] = useState('recentes');
   const [page, setPage] = useState(1);
-  const [selectedMessageId, setSelectedMessageId] = useState(defaultMessages[0].id);
+  const [selectedMessageId, setSelectedMessageId] = useState(null);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const filterDropdownRef = useRef(null);
   const sortDropdownRef = useRef(null);
+  const preferredMessageId = location.state?.selectedMessageId;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadMessages = async () => {
+      try {
+        const data = await fetchUserAnnouncements();
+        if (!isMounted) {
+          return;
+        }
+
+        const mapped = Array.isArray(data) ? data.map(mapAnnouncementToMessage) : [];
+        setMessages(mapped);
+      } catch {
+        if (isMounted) {
+          setMessages([]);
+        }
+      }
+    };
+
+    loadMessages();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -346,6 +197,23 @@ function MensagensAvisos() {
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
   }, [filteredMessages, sortBy]);
+
+  useEffect(() => {
+    if (!preferredMessageId) {
+      return;
+    }
+
+    const normalizedPreferredId = String(preferredMessageId);
+    const targetIndex = sortedMessages.findIndex((message) => message.id === normalizedPreferredId);
+
+    if (targetIndex < 0) {
+      return;
+    }
+
+    const nextPage = Math.floor(targetIndex / ITEMS_PER_PAGE) + 1;
+    setPage(nextPage);
+    setSelectedMessageId(normalizedPreferredId);
+  }, [preferredMessageId, sortedMessages]);
 
   const totalPages = Math.max(1, Math.ceil(sortedMessages.length / ITEMS_PER_PAGE));
 
@@ -539,6 +407,24 @@ function MensagensAvisos() {
                       <p key={`${selectedMessage.id}-${index}`}>{paragraph}</p>
                     ))}
                   </div>
+
+                  {selectedMessage.attachments?.length > 0 && (
+                    <div className="announcement-attachments">
+                      <h4>{t('announcements_attachments_title')}</h4>
+                      <div className="announcement-attachments-list">
+                        {selectedMessage.attachments.map((file) => (
+                          <a
+                            key={file.id}
+                            className="announcement-attachment-item"
+                            href={getAnnouncementAttachmentDownloadUrl(selectedMessage.id, file.id)}
+                          >
+                            <Paperclip size={14} />
+                            <span>{file.originalName || file.name || t('announcements_attachment_download')}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="announcement-detail-footer">
                     <Megaphone size={16} />
