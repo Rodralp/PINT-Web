@@ -233,10 +233,17 @@ function MensagensAvisos() {
       return;
     }
 
+    const normalizedPreferredId = preferredMessageId ? String(preferredMessageId) : null;
+    const hasPreferredInList = normalizedPreferredId
+      && sortedMessages.some((message) => message.id === normalizedPreferredId);
+    if (hasPreferredInList && !selectedMessageId) {
+      return;
+    }
+
     if (!selectedMessageId || !pagedMessages.some((message) => message.id === selectedMessageId)) {
       setSelectedMessageId(pagedMessages[0].id);
     }
-  }, [pagedMessages, selectedMessageId]);
+  }, [pagedMessages, selectedMessageId, preferredMessageId, sortedMessages]);
 
   const filters = useMemo(() => messageTypes, []);
   const activeFilterLabel = filters.find((item) => item.id === activeFilter)
