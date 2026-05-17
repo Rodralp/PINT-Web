@@ -1679,23 +1679,6 @@ const mapReminder = (reminder) => ({
   color: reminder.color,
 });
 
-const getNextReminderId = async () => {
-  const maxId = Number(await Reminder.max('id')) || 0;
-  return maxId + 1;
-};
-
-const syncReminderIdSequence = async (lastId) => {
-  const safeLastId = Number(lastId) > 0 ? Number(lastId) : 1;
-  const isCalled = Number(lastId) > 0;
-
-  await sequelize.query(
-    "SELECT setval(pg_get_serial_sequence('lembrete', 'nlembrete'), :safeLastId, :isCalled)",
-    {
-      replacements: { safeLastId, isCalled },
-    },
-  );
-};
-
 const saveEvidences = async (accountId, pedidoId, nreq, fileMeta) => {
   const parsedAccountId = Number(accountId);
   const parsedPedido = Number(pedidoId);
@@ -1888,18 +1871,13 @@ export const consultorModel = {
   },
 
   async createReminder(accountId, payload) {
-    const nextReminderId = await getNextReminderId();
-
     const reminder = await Reminder.create({
-      id: nextReminderId,
       accountId: Number(accountId),
       title: payload.title.trim(),
       description: payload.description.trim(),
       date: payload.date,
       color: payload.color,
     });
-
-    await syncReminderIdSequence(nextReminderId);
 
     return mapReminder(reminder);
   },
