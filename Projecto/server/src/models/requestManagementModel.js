@@ -14,6 +14,43 @@ const pedidoEstados = Object.freeze({
   aprovado: 4,
 });
 
+const REQUEST_EXPIRATION_MONTHS = 3;
+const AUTO_REJECTION_NOTE = 'Candidatura rejeitada automaticamente por expiracao de prazo.';
+
+const autoRejectExpiredRequests = async () => {
+  await sequelize.query(
+    `
+      UPDATE pedidos
+      SET data_limite = COALESCE(data_limite, data_submissao + INTERVAL '${REQUEST_EXPIRATION_MONTHS} months')
+      WHERE data_submissao IS NOT NULL
+        AND data_limite IS NULL
+    `,
+    {
+      type: QueryTypes.UPDATE,
+    },
+  );
+
+  await sequelize.query(
+    `
+      UPDATE pedidos
+      SET estado = :rejectedId,
+          descricao = COALESCE(NULLIF(descricao, ''), :defaultDescription)
+      WHERE data_limite IS NOT NULL
+        AND data_limite <= CURRENT_DATE
+        AND estado <> :rejectedId
+        AND estado <> :approvedId
+    `,
+    {
+      replacements: {
+        rejectedId: pedidoEstados.rejeitado,
+        approvedId: pedidoEstados.aprovado,
+        defaultDescription: AUTO_REJECTION_NOTE,
+      },
+      type: QueryTypes.UPDATE,
+    },
+  );
+};
+
 const badgeLevelTemplates = [
   {
     points: 100,
@@ -365,6 +402,7 @@ const buildRoleJoin = (role) => {
 };
 
 const fetchRequestRows = async ({ role, actorUtilizadorId, requestId = null }) => {
+  await autoRejectExpiredRequests();
   const roleJoin = buildRoleJoin(role);
   const roleStatusClause = buildRoleStatusClause(role);
   const whereClause = requestId
