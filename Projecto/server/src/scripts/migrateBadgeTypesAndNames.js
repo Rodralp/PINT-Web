@@ -37,6 +37,14 @@ const desiredTypes = [
   },
 ];
 
+const pointsByType = new Map([
+  [1, 100],
+  [2, 150],
+  [3, 200],
+  [4, 250],
+  [5, 300],
+]);
+
 const normalizeForCompare = (value) =>
   String(value || '')
     .normalize('NFD')
@@ -199,16 +207,18 @@ const migrateBadgeTypesAndNames = async () => {
       const badgeName = deriveSimpleBadgeName(row);
       const badgeDescription = buildSimpleDescription(badgeName);
       const ntipo = detectTypeId(row);
+      const pontos = pointsByType.get(ntipo) || 0;
 
       await client.query(
         `
           UPDATE badge
           SET b_nome = $1,
               b_descricao = $2,
-              ntipo = $3
-          WHERE nbadge = $4
+              ntipo = $3,
+              pontos = $4
+          WHERE nbadge = $5
         `,
-        [badgeName, badgeDescription, ntipo, Number(row.nbadge)],
+        [badgeName, badgeDescription, ntipo, pontos, Number(row.nbadge)],
       );
     }
 

@@ -18,7 +18,7 @@ import {
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
-import { requestBadgeAcquisition, uploadEvidence } from '../../services/consultorService';
+import { fetchMyBadges, requestBadgeAcquisition, uploadEvidence } from '../../services/consultorService';
 import '../../css/Consultor/BadgeDetalhe.css';
 
 const defaultBadgeDetails = {
@@ -182,7 +182,7 @@ function BadgeDetalhe() {
   const [filesByRequirement, setFilesByRequirement] = useState({});
   const [currentRequestId, setCurrentRequestId] = useState(() => Number(location.state?.badge?.requestId) || null);
 
-  const badge = useMemo(() => {
+  const [badge, setBadge] = useState(() => {
     if (location.state?.badge) {
       return location.state.badge;
     }
@@ -190,8 +190,60 @@ function BadgeDetalhe() {
     const decodedId = decodeURIComponent(badgeId || '');
     const matchedBadge = fallbackBadges.find((item) => item.id === decodedId);
     return matchedBadge || defaultBadgeDetails;
-  }, [location.state, badgeId]);
+  });
   const [badgeStatus, setBadgeStatus] = useState(() => normalizeBadgeStatus(badge));
+
+  useEffect(() => {
+    if (location.state?.badge) {
+      setBadge(location.state.badge);
+      return;
+    }
+
+    const decodedId = decodeURIComponent(badgeId || '');
+    const matchedBadge = fallbackBadges.find((item) => item.id === decodedId);
+    setBadge(matchedBadge || defaultBadgeDetails);
+  }, [location.state?.badge, badgeId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadFromDatabase = async () => {
+      try {
+        const data = await fetchMyBadges();
+        if (!isMounted || !Array.isArray(data) || data.length === 0) {
+          return;
+        }
+
+        const decodedId = decodeURIComponent(badgeId || '');
+        const numericId = Number(decodedId);
+        const locationBadgeId = Number(location.state?.badge?.badgeDbId);
+
+        const matched = data.find((item) => {
+          if (Number.isInteger(locationBadgeId) && Number(item.badgeDbId) === locationBadgeId) {
+            return true;
+          }
+
+          if (decodedId && String(item.id) === decodedId) {
+            return true;
+          }
+
+          return Number.isInteger(numericId) && Number(item.badgeDbId) === numericId;
+        });
+
+        if (matched) {
+          setBadge((current) => ({ ...current, ...matched }));
+        }
+      } catch {
+        // Ignore fetch errors and keep the current badge payload.
+      }
+    };
+
+    loadFromDatabase();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [badgeId, location.state?.badge?.badgeDbId]);
 
   useEffect(() => {
     // Initialize files state from badge payload when available (server may provide per-requirement files)
@@ -338,6 +390,31 @@ function BadgeDetalhe() {
         setCurrentRequestId(returnedRequestId);
       }
 
+      if (shouldUploadEvidence) {
+        setFilesByRequirement({});
+      }
+
+      try {
+        const data = await fetchMyBadges();
+        if (Array.isArray(data) && data.length > 0) {
+          const decodedId = decodeURIComponent(badgeId || '');
+          const numericId = Number(decodedId);
+          const matched = data.find((item) => {
+            if (decodedId && String(item.id) === decodedId) {
+              return true;
+            }
+
+            return Number.isInteger(numericId) && Number(item.badgeDbId) === numericId;
+          });
+
+          if (matched) {
+            setBadge((current) => ({ ...current, ...matched }));
+          }
+        }
+      } catch {
+        // Ignore refresh errors after submission.
+      }
+
       setBadgeStatus(nextStatus);
       if (nextStatus === 'obtido') {
         setStatusMessage('Este badge ja foi adquirido.');
@@ -353,15 +430,22 @@ function BadgeDetalhe() {
     }
   };
 
-  const getFilesLabel = (requirementId, filesProp) => {
-    const arr = Array.isArray(filesByRequirement[requirementId]) ? filesByRequirement[requirementId] : null;
-    const countFromState = arr ? arr.length : 0;
-    const countFromProp = Number.isInteger(Number(filesProp)) && Number(filesProp) > 0 ? Number(filesProp) : 0;
-    const total = countFromState > 0 ? countFromState : countFromProp;
+  const getFilesLabel = (requirementId, filesProp, attachments) => {
+    const pendingFiles = Array.isArray(filesByRequirement[requirementId])
+      ? filesByRequirement[requirementId].filter((file) => typeof File !== 'undefined' && file instanceof File)
+      : [];
+    const pendingCount = pendingFiles.length;
+    const submittedCount = Array.isArray(attachments) ? attachments.length : 0;
+    const countFromProp = Number.isInteger(Number(filesProp)) && Number(filesProp) >= 0 ? Number(filesProp) : 0;
+    const baseCount = submittedCount > 0 ? submittedCount : countFromProp;
+    const total = baseCount + pendingCount;
 
     if (total > 0) return `${String(total).padStart(2, '0')} Arquivos Submetidos`;
     return 'Nenhum Arquivo Submetido';
   };
+
+  const getAttachmentLabel = (attachment) =>
+    String(attachment?.label || attachment?.name || attachment?.fileName || attachment?.filename || 'Arquivo').trim();
 
   const handleFilesSelected = (requirementId, fileList) => {
     const files = Array.from(fileList || []);
@@ -375,30 +459,6 @@ function BadgeDetalhe() {
       return { ...current, [requirementId]: arr };
     });
   };
-
-  const filesStorageKey = useMemo(() => `consultor-badge-files:${decodeURIComponent(badgeId || 'default')}`, [badgeId]);
-
-  useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(filesStorageKey);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed && typeof parsed === 'object') {
-          setFilesByRequirement(parsed);
-        }
-      }
-    } catch {
-      // Ignore malformed storage and continue with empty state.
-    }
-  }, [badge, filesStorageKey]);
-
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(filesStorageKey, JSON.stringify(filesByRequirement));
-    } catch {
-      // Ignore storage failures.
-    }
-  }, [filesByRequirement, filesStorageKey]);
 
   return (
     <Layout>
@@ -464,7 +524,7 @@ function BadgeDetalhe() {
                     <div>
                       <p>{requirement.title}</p>
                       {badgeStatus !== 'visualizar' && (
-                        <span>{getFilesLabel(requirement.id, requirement.files)}</span>
+                        <span>{getFilesLabel(requirement.id, requirement.files, requirement.attachments)}</span>
                       )}
                     </div>
 
@@ -489,6 +549,22 @@ function BadgeDetalhe() {
                       />
                       <div className="badge-requirement-detail-content">
                         <p>{requirement.description}</p>
+                        {badgeStatus !== 'visualizar' && (
+                          <div className="badge-requirement-files">
+                            <label className="badge-file-input-label">Arquivos submetidos</label>
+                            <div className="badge-file-list">
+                              {Array.isArray(requirement.attachments) && requirement.attachments.length > 0 ? (
+                                requirement.attachments.map((attachment, index) => (
+                                  <div key={`${requirement.id}-attachment-${index}`} className="badge-file-item">
+                                    <span className="badge-file-name">{getAttachmentLabel(attachment)}</span>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="badge-file-none">Nenhum ficheiro submetido.</div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                         {(badgeStatus === 'candidatura_em_progresso' || badgeStatus === 'evidencias_insuficientes') && (
                           <div className="badge-requirement-files">
                             <label className="badge-file-input-label">Anexar arquivos</label>
@@ -502,19 +578,21 @@ function BadgeDetalhe() {
 
                             <div className="badge-file-list">
                               {Array.isArray(filesByRequirement[requirement.id]) && filesByRequirement[requirement.id].length > 0 ? (
-                                filesByRequirement[requirement.id].map((f, fi) => (
-                                  <div key={`${requirement.id}-file-${fi}`} className="badge-file-item">
-                                    <span className="badge-file-name">{f.name}</span>
-                                    <button
-                                      type="button"
-                                      className="badge-file-remove-btn"
-                                      onClick={() => handleRemoveFile(requirement.id, fi)}
-                                      aria-label={`Remover arquivo ${f.name}`}
-                                    >
-                                      Remover
-                                    </button>
-                                  </div>
-                                ))
+                                filesByRequirement[requirement.id]
+                                  .filter((file) => typeof File !== 'undefined' && file instanceof File)
+                                  .map((f, fi) => (
+                                    <div key={`${requirement.id}-file-${fi}`} className="badge-file-item">
+                                      <span className="badge-file-name">{f.name}</span>
+                                      <button
+                                        type="button"
+                                        className="badge-file-remove-btn"
+                                        onClick={() => handleRemoveFile(requirement.id, fi)}
+                                        aria-label={`Remover arquivo ${f.name}`}
+                                      >
+                                        Remover
+                                      </button>
+                                    </div>
+                                  ))
                               ) : (
                                 <div className="badge-file-none">Nenhum ficheiro anexado.</div>
                               )}
