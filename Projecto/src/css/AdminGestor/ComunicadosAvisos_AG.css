@@ -34,7 +34,8 @@
 }
 
 .ag-announcements-compose-card input,
-.ag-announcements-compose-card textarea {
+.ag-announcements-compose-card textarea,
+.ag-announcements-compose-card select {
   border: 1px solid #d6deea;
   border-radius: 10px;
   background: #ffffff;
@@ -45,7 +46,8 @@
 }
 
 .ag-announcements-compose-card input:focus,
-.ag-announcements-compose-card textarea:focus {
+.ag-announcements-compose-card textarea:focus,
+.ag-announcements-compose-card select:focus {
   border-color: #1b84f4;
   box-shadow: 0 0 0 2px rgba(27, 132, 244, 0.14);
 }

@@ -38,7 +38,6 @@ CREATE TABLE IF NOT EXISTS badge (
     b_descricao VARCHAR(255) NOT NULL,
     validade DATE,
     pontos INTEGER DEFAULT 0,
-    nlpath INTEGER REFERENCES learning_path(nlpath),
     ntipo INTEGER NOT NULL REFERENCES tipo(ntipo)
 );
 

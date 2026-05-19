@@ -15,6 +15,12 @@ const normalizeGroupId = (value) => (
 const MAX_FILE_MB = 10;
 const allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx'];
 
+const messageTypeOptions = [
+  { id: 'mensagem', label: 'Mensagem', priority: 3 },
+  { id: 'aviso', label: 'Aviso', priority: 2 },
+  { id: 'importante', label: 'Importante', priority: 1 },
+];
+
 const validateFile = (file) => {
   const fileExtension = String(file.name || '')
     .split('.')
@@ -39,6 +45,7 @@ function ComunicadosAvisosAG() {
   const [recipientsDirectory, setRecipientsDirectory] = useState([]);
   const [serviceLines, setServiceLines] = useState([]);
   const [title, setTitle] = useState('');
+  const [messageType, setMessageType] = useState('mensagem');
   const [message, setMessage] = useState('');
   const [selectedGroupIds, setSelectedGroupIds] = useState([]);
   const [selectedPersonIds, setSelectedPersonIds] = useState([]);
@@ -184,6 +191,11 @@ function ComunicadosAvisosAG() {
     return next;
   }, [recipientIdsFromGroups, selectedPersonIds]);
 
+  const messagePriority = useMemo(() => {
+    const selected = messageTypeOptions.find((option) => option.id === messageType);
+    return selected ? selected.priority : 2;
+  }, [messageType]);
+
   const selectedRecipients = useMemo(
     () => recipientsDirectory.filter((person) => allRecipientIds.has(person.id)),
     [allRecipientIds, recipientsDirectory],
@@ -275,6 +287,8 @@ function ComunicadosAvisosAG() {
         message,
         recipientIds: Array.from(allRecipientIds),
         attachments,
+        type: messageType,
+        priority: messagePriority,
       });
 
       setSendStatus(`Mensagem enviada para ${selectedRecipients.length} destinatários.`);
@@ -306,6 +320,22 @@ function ComunicadosAvisosAG() {
             }}
             placeholder="Digite o título do comunicado..."
           />
+
+          <label htmlFor="ag-announcement-type">Tipo de mensagem</label>
+          <select
+            id="ag-announcement-type"
+            value={messageType}
+            onChange={(event) => {
+              setMessageType(event.target.value);
+              setSendStatus('');
+            }}
+          >
+            {messageTypeOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
 
           <label htmlFor="ag-announcement-message">Mensagem</label>
           <textarea

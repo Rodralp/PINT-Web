@@ -166,6 +166,14 @@ const resolveBadgeTypeIdFromLevel = (rawLevelName, badgeTypeIdByIndex) => {
   return badgeTypeIdByIndex.get(1) ?? 1;
 };
 
+const buildBadgePointsByTypeId = (badgeTypeIdByIndex) => new Map([
+  [badgeTypeIdByIndex.get(1) ?? 1, 100],
+  [badgeTypeIdByIndex.get(2) ?? 2, 150],
+  [badgeTypeIdByIndex.get(3) ?? 3, 200],
+  [badgeTypeIdByIndex.get(4) ?? 4, 250],
+  [badgeTypeIdByIndex.get(5) ?? 5, 300],
+]);
+
 const normalizeRoles = (rolesValue) => {
   const rawRoles = Array.isArray(rolesValue)
     ? rolesValue
@@ -542,6 +550,7 @@ const ensureEstadosAndMockData = async (accounts, transaction) => {
   const estados = ['rejeitado', 'pendente-tm', 'pendente-sll', 'aprovado'];
   const estadoIds = {};
   const badgeTypeIdByIndex = await ensureBadgeTypes(transaction);
+  const badgePointsByTypeId = buildBadgePointsByTypeId(badgeTypeIdByIndex);
   
   for (const st of estados) {
     const [existing] = await sequelize.query(
@@ -578,12 +587,15 @@ const ensureEstadosAndMockData = async (accounts, transaction) => {
     const b_nome = buildSimpleBadgeName(n.area);
     const b_descricao = buildSimpleBadgeDescription(n.area);
     const ntipo = resolveBadgeTypeIdFromLevel(n.nivel, badgeTypeIdByIndex);
+    const pontos = badgePointsByTypeId.get(ntipo) ?? 0;
     let nbadge = null;
 
     if (!existingCb) {
       const [insertedB] = await sequelize.query(`
-          INSERT INTO badge (b_nome, b_descricao, ntipo) VALUES (:b_nome, :b_descricao, :ntipo) RETURNING nbadge
-        `, { replacements: { b_nome, b_descricao, ntipo }, type: QueryTypes.SELECT, transaction });
+          INSERT INTO badge (b_nome, b_descricao, ntipo, pontos)
+          VALUES (:b_nome, :b_descricao, :ntipo, :pontos)
+          RETURNING nbadge
+        `, { replacements: { b_nome, b_descricao, ntipo, pontos }, type: QueryTypes.SELECT, transaction });
       nbadge = Number(insertedB.nbadge);
 
       await sequelize.query(`INSERT INTO nivel_contem_b (nnivel, nbadge) VALUES (:nnivel, :nbadge)`,
@@ -601,17 +613,33 @@ const ensureEstadosAndMockData = async (accounts, transaction) => {
         UPDATE badge
         SET b_nome = :b_nome,
             b_descricao = :b_descricao,
-            ntipo = :ntipo
+            ntipo = :ntipo,
+            pontos = :pontos
         WHERE nbadge = :nbadge
       `,
       {
-        replacements: { nbadge, b_nome, b_descricao, ntipo },
+        replacements: { nbadge, b_nome, b_descricao, ntipo, pontos },
         type: QueryTypes.UPDATE,
         transaction,
       },
     );
 
     badgesByNivel[n.nnivel] = nbadge;
+  }
+
+  for (const [typeId, points] of badgePointsByTypeId.entries()) {
+    await sequelize.query(
+      `
+        UPDATE badge
+        SET pontos = :points
+        WHERE ntipo = :typeId
+      `,
+      {
+        replacements: { points, typeId },
+        type: QueryTypes.UPDATE,
+        transaction,
+      },
+    );
   }
 
   const consultorAccounts = accounts.filter((account) =>
@@ -678,8 +706,8 @@ const ensureEstadosAndMockData = async (accounts, transaction) => {
       if (seed === 1) {
         const [createdPedido] = await sequelize.query(
           `
-            INSERT INTO pedidos (nutilizador, nbadge, estado, data_submissao)
-            VALUES (:utilizadorId, :nbadge, :estadoId, CURRENT_DATE)
+            INSERT INTO pedidos (nutilizador, nbadge, estado, data_submissao, data_limite)
+            VALUES (:utilizadorId, :nbadge, :estadoId, CURRENT_DATE, CURRENT_DATE + INTERVAL '3 months')
             RETURNING npedido
           `,
           {
@@ -714,8 +742,8 @@ const ensureEstadosAndMockData = async (accounts, transaction) => {
 
       await sequelize.query(
         `
-          INSERT INTO pedidos (nutilizador, nbadge, estado, data_submissao)
-          VALUES (:utilizadorId, :nbadge, :estadoId, CURRENT_DATE)
+          INSERT INTO pedidos (nutilizador, nbadge, estado, data_submissao, data_limite)
+          VALUES (:utilizadorId, :nbadge, :estadoId, CURRENT_DATE, CURRENT_DATE + INTERVAL '3 months')
         `,
         {
           replacements: { utilizadorId, nbadge, estadoId },

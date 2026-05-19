@@ -207,7 +207,12 @@ function MeusBadges() {
   };
 
   const handleOpenBadgeDetails = (item) => {
-    navigate(`/consultor/badge/${encodeURIComponent(item.id)}`, {
+    const badgeDbId = Number(item?.badgeDbId);
+    const routeBadgeId = Number.isInteger(badgeDbId) && badgeDbId > 0
+      ? String(badgeDbId)
+      : String(item.id);
+
+    navigate(`/consultor/badge/${encodeURIComponent(routeBadgeId)}`, {
       state: {
         badge: item,
         backTo: '/consultor/meus-badges',

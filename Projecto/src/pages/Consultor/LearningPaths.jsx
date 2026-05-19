@@ -158,13 +158,17 @@ function LearningPaths() {
 
   const openBadgeDetails = (area, level) => {
     const badgeId = `${area.id}-${level.id}`;
+    const badgeDbId = Number(level?.badgeDbId);
+    const routeBadgeId = Number.isInteger(badgeDbId) && badgeDbId > 0
+      ? String(badgeDbId)
+      : badgeId;
     const backToState = {
       selectedPathId,
       selectedServiceLineId,
       expandedAreaIds: Array.from(new Set([...expandedAreaIds, area.id])),
     };
 
-    navigate(`/consultor/badge/${encodeURIComponent(badgeId)}`, {
+    navigate(`/consultor/badge/${encodeURIComponent(routeBadgeId)}`, {
       state: {
         badge: {
           id: badgeId,

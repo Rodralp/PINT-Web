@@ -288,6 +288,50 @@ const ensureEstadoId = async (estadoNome) => {
   return Number(inserted.nestado);
 };
 
+const REQUEST_EXPIRATION_MONTHS = 3;
+const AUTO_REJECTION_NOTE = 'Candidatura rejeitada automaticamente por expiracao de prazo.';
+
+const syncRequestDeadlines = async () => {
+  await sequelize.query(
+    `
+      UPDATE pedidos
+      SET data_limite = COALESCE(data_limite, data_submissao + INTERVAL '${REQUEST_EXPIRATION_MONTHS} months')
+      WHERE data_submissao IS NOT NULL
+        AND data_limite IS NULL
+    `,
+    {
+      type: QueryTypes.UPDATE,
+    },
+  );
+};
+
+const autoRejectExpiredRequests = async () => {
+  const rejectedId = await ensureEstadoId('rejeitado');
+  const approvedId = await ensureEstadoId('aprovado');
+
+  await syncRequestDeadlines();
+
+  await sequelize.query(
+    `
+      UPDATE pedidos
+      SET estado = :rejectedId,
+          descricao = COALESCE(NULLIF(descricao, ''), :defaultDescription)
+      WHERE data_limite IS NOT NULL
+        AND data_limite <= CURRENT_DATE
+        AND estado <> :rejectedId
+        AND estado <> :approvedId
+    `,
+    {
+      replacements: {
+        rejectedId,
+        approvedId,
+        defaultDescription: AUTO_REJECTION_NOTE,
+      },
+      type: QueryTypes.UPDATE,
+    },
+  );
+};
+
 const normalizeBadgeIds = (badgeIds) => [...new Set(
   (Array.isArray(badgeIds) ? badgeIds : [])
     .map((value) => Number(value))
@@ -548,6 +592,8 @@ const buildProfileData = async (accountId) => {
     return clone(profileData);
   }
 
+  await autoRejectExpiredRequests();
+
   const [row] = await sequelize.query(
     `
       WITH badge_scores AS (
@@ -778,6 +824,7 @@ const buildProfileData = async (accountId) => {
 };
 
 const buildLearningPaths = async (accountId) => {
+  await autoRejectExpiredRequests();
   const rows = await sequelize.query(
     `
       SELECT
@@ -954,6 +1001,7 @@ const buildLearningPaths = async (accountId) => {
 };
 
 const buildMyBadges = async (accountId) => {
+  await autoRejectExpiredRequests();
   const utilizadorId = await getUtilizadorIdByAccountId(accountId);
   if (!utilizadorId) {
     return [];
@@ -1160,6 +1208,7 @@ const buildMyBadges = async (accountId) => {
 };
 
 const buildMyRequests = async (accountId) => {
+  await autoRejectExpiredRequests();
   const utilizadorId = await getUtilizadorIdByAccountId(accountId);
   if (!utilizadorId) {
     return [];
@@ -1373,6 +1422,7 @@ const saveUserPreferences = async (accountId, areaIds) => {
 };
 
 const buildBadgeSuggestions = async (accountId, limit = 3) => {
+  await autoRejectExpiredRequests();
   const safeLimit = Number.isInteger(Number(limit)) && Number(limit) > 0 ? Number(limit) : 3;
   const utilizadorId = await getUtilizadorIdByAccountId(accountId);
   if (!utilizadorId) {
@@ -1535,6 +1585,7 @@ const buildBadgeSuggestions = async (accountId, limit = 3) => {
 };
 
 const requestBadgeAcquisition = async (accountId, badgeId) => {
+  await autoRejectExpiredRequests();
   const parsedBadgeId = Number(badgeId);
   if (!Number.isInteger(parsedBadgeId) || parsedBadgeId <= 0) {
     const error = new Error('Invalid badge id.');
@@ -1636,7 +1687,8 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
       `
         UPDATE pedidos
         SET estado = :estadoId,
-            data_submissao = CURRENT_DATE
+            data_submissao = CURRENT_DATE,
+            data_limite = CURRENT_DATE + INTERVAL '3 months'
         WHERE npedido = :pedidoId
       `,
       {
@@ -1653,8 +1705,8 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
 
   const [createdRequest] = await sequelize.query(
     `
-      INSERT INTO pedidos (nbadge, nutilizador, estado, data_submissao)
-      VALUES (:badgeId, :utilizadorId, :estadoId, CURRENT_DATE)
+      INSERT INTO pedidos (nbadge, nutilizador, estado, data_submissao, data_limite)
+      VALUES (:badgeId, :utilizadorId, :estadoId, CURRENT_DATE, CURRENT_DATE + INTERVAL '3 months')
       RETURNING npedido
     `,
     {
@@ -1678,23 +1730,6 @@ const mapReminder = (reminder) => ({
   date: reminder.date,
   color: reminder.color,
 });
-
-const getNextReminderId = async () => {
-  const maxId = Number(await Reminder.max('id')) || 0;
-  return maxId + 1;
-};
-
-const syncReminderIdSequence = async (lastId) => {
-  const safeLastId = Number(lastId) > 0 ? Number(lastId) : 1;
-  const isCalled = Number(lastId) > 0;
-
-  await sequelize.query(
-    "SELECT setval(pg_get_serial_sequence('lembrete', 'nlembrete'), :safeLastId, :isCalled)",
-    {
-      replacements: { safeLastId, isCalled },
-    },
-  );
-};
 
 const saveEvidences = async (accountId, pedidoId, nreq, fileMeta) => {
   const parsedAccountId = Number(accountId);
@@ -1888,19 +1923,13 @@ export const consultorModel = {
   },
 
   async createReminder(accountId, payload) {
-    const nextReminderId = await getNextReminderId();
-
     const reminder = await Reminder.create({
-      id: nextReminderId,
       accountId: Number(accountId),
       title: payload.title.trim(),
       description: payload.description.trim(),
       date: payload.date,
       color: payload.color,
     });
-
-    await syncReminderIdSequence(nextReminderId);
-
     return mapReminder(reminder);
   },
 
