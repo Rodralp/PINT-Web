@@ -17,7 +17,7 @@ import {
   ArrowRight,
   Crown
 } from 'lucide-react';
-import '../../css/Consultor/Dashboard_C.css';
+import '../../css/Shared/Dashboard.css';
 
 const TIMELINE_DAYS = 12;
 const defaultTimelineValues = Array.from({ length: TIMELINE_DAYS }, () => 0);
