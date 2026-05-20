@@ -37,6 +37,22 @@ export const adminLearningPathService = {
     return adminLearningPathModel.updateLevel(payload);
   },
 
+  updateLearningPathStatus(payload) {
+    return adminLearningPathModel.updateLearningPathStatus(payload);
+  },
+
+  updateServiceLineStatus(payload) {
+    return adminLearningPathModel.updateServiceLineStatus(payload);
+  },
+
+  updateAreaStatus(payload) {
+    return adminLearningPathModel.updateAreaStatus(payload);
+  },
+
+  updateLevelStatus(payload) {
+    return adminLearningPathModel.updateLevelStatus(payload);
+  },
+
   hasLearningPath(learningPathId) {
     return adminLearningPathModel.hasLearningPath(learningPathId);
   },
@@ -47,5 +63,9 @@ export const adminLearningPathService = {
 
   hasArea(areaId) {
     return adminLearningPathModel.hasArea(areaId);
+  },
+
+  hasLevel(levelId) {
+    return adminLearningPathModel.hasLevel(levelId);
   },
 };

@@ -19,6 +19,7 @@ const buildLearningPathTree = (rows) => {
         id: pathKey,
         name: row.lpath,
         description: row.lp_desc,
+        isActive: Boolean(row.lp_is_active),
         serviceLines: [],
       });
     }
@@ -39,6 +40,7 @@ const buildLearningPathTree = (rows) => {
         id: serviceLineKey,
         name: row.sline,
         description: row.sl_desc,
+        isActive: Boolean(row.sl_is_active),
         image: '/LP_BG.png',
         areas: [],
       };
@@ -61,6 +63,7 @@ const buildLearningPathTree = (rows) => {
         id: areaKey,
         name: row.area,
         description: row.a_desc,
+        isActive: Boolean(row.a_is_active),
         levels: [],
       };
 
@@ -77,6 +80,7 @@ const buildLearningPathTree = (rows) => {
     area.levels.push({
       id: `nivel-${levelId}`,
       title,
+      isActive: Boolean(row.n_is_active),
       subtitle: `Nivel ${area.levels.length + 1}`,
     });
   });
@@ -100,14 +104,18 @@ export const adminLearningPathModel = {
           lp.nlpath,
           lp.lpath,
           lp.lp_desc,
+          lp.is_active AS lp_is_active,
           sl.nsline,
           sl.sline,
           sl.sl_desc,
+          sl.is_active AS sl_is_active,
           a.narea,
           a.area,
           a.a_desc,
+          a.is_active AS a_is_active,
           n.nnivel,
-          n.nivel
+          n.nivel,
+          n.is_active AS n_is_active
         FROM learning_path AS lp
         LEFT JOIN service_line AS sl
           ON sl.nlpath = lp.nlpath
@@ -128,7 +136,7 @@ export const adminLearningPathModel = {
       `
         INSERT INTO learning_path (lpath, lp_desc)
         VALUES (:name, :description)
-        RETURNING nlpath, lpath, lp_desc
+        RETURNING nlpath, lpath, lp_desc, is_active
       `,
       {
         replacements: { name, description },
@@ -146,7 +154,7 @@ export const adminLearningPathModel = {
         SET lpath = :name,
             lp_desc = :description
         WHERE nlpath = :learningPathId
-        RETURNING nlpath, lpath, lp_desc
+        RETURNING nlpath, lpath, lp_desc, is_active
       `,
       {
         replacements: { learningPathId, name, description },
@@ -162,7 +170,7 @@ export const adminLearningPathModel = {
       `
         INSERT INTO service_line (sline, sl_desc, nlpath)
         VALUES (:name, :description, :learningPathId)
-        RETURNING nsline, sline, sl_desc, nlpath
+        RETURNING nsline, sline, sl_desc, nlpath, is_active
       `,
       {
         replacements: { name, description, learningPathId },
@@ -180,7 +188,7 @@ export const adminLearningPathModel = {
         SET sline = :name,
             sl_desc = :description
         WHERE nsline = :serviceLineId
-        RETURNING nsline, sline, sl_desc, nlpath
+        RETURNING nsline, sline, sl_desc, nlpath, is_active
       `,
       {
         replacements: { serviceLineId, name, description },
@@ -196,7 +204,7 @@ export const adminLearningPathModel = {
       `
         INSERT INTO area (area, a_desc, nsline)
         VALUES (:name, :description, :serviceLineId)
-        RETURNING narea, area, a_desc, nsline
+        RETURNING narea, area, a_desc, nsline, is_active
       `,
       {
         replacements: { name, description, serviceLineId },
@@ -214,7 +222,7 @@ export const adminLearningPathModel = {
         SET area = :name,
             a_desc = :description
         WHERE narea = :areaId
-        RETURNING narea, area, a_desc, nsline
+        RETURNING narea, area, a_desc, nsline, is_active
       `,
       {
         replacements: { areaId, name, description },
@@ -230,7 +238,7 @@ export const adminLearningPathModel = {
       `
         INSERT INTO nivel (nivel, narea)
         VALUES (:title, :areaId)
-        RETURNING nnivel, nivel, narea
+        RETURNING nnivel, nivel, narea, is_active
       `,
       {
         replacements: { title, areaId },
@@ -247,7 +255,7 @@ export const adminLearningPathModel = {
         UPDATE nivel
         SET nivel = :title
         WHERE nnivel = :levelId
-        RETURNING nnivel, nivel, narea
+        RETURNING nnivel, nivel, narea, is_active
       `,
       {
         replacements: { levelId, title },
@@ -256,6 +264,300 @@ export const adminLearningPathModel = {
     );
 
     return row || null;
+  },
+
+  async updateLearningPathStatus({ learningPathId, isActive }) {
+    const targetStatus = Boolean(isActive);
+
+    return sequelize.transaction(async (transaction) => {
+      const [row] = await sequelize.query(
+        `
+          UPDATE learning_path
+          SET is_active = :isActive
+          WHERE nlpath = :learningPathId
+          RETURNING nlpath, lpath, lp_desc, is_active
+        `,
+        {
+          replacements: { learningPathId, isActive: targetStatus },
+          type: QueryTypes.SELECT,
+          transaction,
+        },
+      );
+
+      if (!row) {
+        return null;
+      }
+
+      await sequelize.query(
+        `
+          UPDATE service_line
+          SET is_active = :targetStatus
+          WHERE nlpath = :learningPathId
+        `,
+        {
+          replacements: { learningPathId, targetStatus },
+          type: QueryTypes.UPDATE,
+          transaction,
+        },
+      );
+
+      await sequelize.query(
+        `
+          UPDATE area
+          SET is_active = :targetStatus
+          WHERE nsline IN (
+            SELECT nsline
+            FROM service_line
+            WHERE nlpath = :learningPathId
+          )
+        `,
+        {
+          replacements: { learningPathId, targetStatus },
+          type: QueryTypes.UPDATE,
+          transaction,
+        },
+      );
+
+      await sequelize.query(
+        `
+          UPDATE nivel
+          SET is_active = :targetStatus
+          WHERE narea IN (
+            SELECT a.narea
+            FROM area AS a
+            INNER JOIN service_line AS sl
+              ON sl.nsline = a.nsline
+            WHERE sl.nlpath = :learningPathId
+          )
+        `,
+        {
+          replacements: { learningPathId, targetStatus },
+          type: QueryTypes.UPDATE,
+          transaction,
+        },
+      );
+
+      return row;
+    });
+  },
+
+  async updateServiceLineStatus({ serviceLineId, isActive }) {
+    const targetStatus = Boolean(isActive);
+
+    return sequelize.transaction(async (transaction) => {
+      const [row] = await sequelize.query(
+        `
+          UPDATE service_line
+          SET is_active = :isActive
+          WHERE nsline = :serviceLineId
+          RETURNING nsline, sline, sl_desc, nlpath, is_active
+        `,
+        {
+          replacements: { serviceLineId, isActive: targetStatus },
+          type: QueryTypes.SELECT,
+          transaction,
+        },
+      );
+
+      if (!row) {
+        return null;
+      }
+
+      if (targetStatus) {
+        await sequelize.query(
+          `
+            UPDATE learning_path
+            SET is_active = TRUE
+            WHERE nlpath = :learningPathId
+          `,
+          {
+            replacements: { learningPathId: Number(row.nlpath) },
+            type: QueryTypes.UPDATE,
+            transaction,
+          },
+        );
+      }
+
+      await sequelize.query(
+        `
+          UPDATE area
+          SET is_active = :targetStatus
+          WHERE nsline = :serviceLineId
+        `,
+        {
+          replacements: { serviceLineId, targetStatus },
+          type: QueryTypes.UPDATE,
+          transaction,
+        },
+      );
+
+      await sequelize.query(
+        `
+          UPDATE nivel
+          SET is_active = :targetStatus
+          WHERE narea IN (
+            SELECT narea
+            FROM area
+            WHERE nsline = :serviceLineId
+          )
+        `,
+        {
+          replacements: { serviceLineId, targetStatus },
+          type: QueryTypes.UPDATE,
+          transaction,
+        },
+      );
+
+      return row;
+    });
+  },
+
+  async updateAreaStatus({ areaId, isActive }) {
+    const targetStatus = Boolean(isActive);
+
+    return sequelize.transaction(async (transaction) => {
+      const [row] = await sequelize.query(
+        `
+          UPDATE area
+          SET is_active = :isActive
+          WHERE narea = :areaId
+          RETURNING narea, area, a_desc, nsline, is_active
+        `,
+        {
+          replacements: { areaId, isActive: targetStatus },
+          type: QueryTypes.SELECT,
+          transaction,
+        },
+      );
+
+      if (!row) {
+        return null;
+      }
+
+      if (targetStatus) {
+        await sequelize.query(
+          `
+            UPDATE service_line
+            SET is_active = TRUE
+            WHERE nsline = :serviceLineId
+          `,
+          {
+            replacements: { serviceLineId: Number(row.nsline) },
+            type: QueryTypes.UPDATE,
+            transaction,
+          },
+        );
+
+        await sequelize.query(
+          `
+            UPDATE learning_path
+            SET is_active = TRUE
+            WHERE nlpath = (
+              SELECT nlpath
+              FROM service_line
+              WHERE nsline = :serviceLineId
+            )
+          `,
+          {
+            replacements: { serviceLineId: Number(row.nsline) },
+            type: QueryTypes.UPDATE,
+            transaction,
+          },
+        );
+      }
+
+      await sequelize.query(
+        `
+          UPDATE nivel
+          SET is_active = :targetStatus
+          WHERE narea = :areaId
+        `,
+        {
+          replacements: { areaId, targetStatus },
+          type: QueryTypes.UPDATE,
+          transaction,
+        },
+      );
+
+      return row;
+    });
+  },
+
+  async updateLevelStatus({ levelId, isActive }) {
+    const targetStatus = Boolean(isActive);
+
+    return sequelize.transaction(async (transaction) => {
+      const [row] = await sequelize.query(
+        `
+          UPDATE nivel
+          SET is_active = :isActive
+          WHERE nnivel = :levelId
+          RETURNING nnivel, nivel, narea, is_active
+        `,
+        {
+          replacements: { levelId, isActive: targetStatus },
+          type: QueryTypes.SELECT,
+          transaction,
+        },
+      );
+
+      if (!row) {
+        return null;
+      }
+
+      if (targetStatus) {
+        await sequelize.query(
+          `
+            UPDATE area
+            SET is_active = TRUE
+            WHERE narea = :areaId
+          `,
+          {
+            replacements: { areaId: Number(row.narea) },
+            type: QueryTypes.UPDATE,
+            transaction,
+          },
+        );
+
+        await sequelize.query(
+          `
+            UPDATE service_line
+            SET is_active = TRUE
+            WHERE nsline = (
+              SELECT nsline
+              FROM area
+              WHERE narea = :areaId
+            )
+          `,
+          {
+            replacements: { areaId: Number(row.narea) },
+            type: QueryTypes.UPDATE,
+            transaction,
+          },
+        );
+
+        await sequelize.query(
+          `
+            UPDATE learning_path
+            SET is_active = TRUE
+            WHERE nlpath = (
+              SELECT sl.nlpath
+              FROM service_line AS sl
+              INNER JOIN area AS a
+                ON a.nsline = sl.nsline
+              WHERE a.narea = :areaId
+            )
+          `,
+          {
+            replacements: { areaId: Number(row.narea) },
+            type: QueryTypes.UPDATE,
+            transaction,
+          },
+        );
+      }
+
+      return row;
+    });
   },
 
   async hasLearningPath(learningPathId) {
@@ -274,5 +576,9 @@ export const adminLearningPathModel = {
 
   async hasArea(areaId) {
     return recordExists('SELECT 1 FROM area WHERE narea = :id LIMIT 1', areaId);
+  },
+
+  async hasLevel(levelId) {
+    return recordExists('SELECT 1 FROM nivel WHERE nnivel = :id LIMIT 1', levelId);
   },
 };

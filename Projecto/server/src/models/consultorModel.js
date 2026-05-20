@@ -843,12 +843,16 @@ const buildLearningPaths = async (accountId) => {
       FROM learning_path AS lp
       INNER JOIN service_line AS sl
         ON sl.nlpath = lp.nlpath
+       AND sl.is_active = TRUE
       LEFT JOIN area AS a
         ON a.nsline = sl.nsline
+       AND a.is_active = TRUE
       LEFT JOIN nivel AS n
         ON n.narea = a.narea
+       AND n.is_active = TRUE
       LEFT JOIN nivel_contem_b AS nb
         ON nb.nnivel = n.nnivel
+      WHERE lp.is_active = TRUE
       ORDER BY lp.nlpath ASC, sl.nsline ASC, a.narea ASC, n.nnivel ASC
     `,
     { type: QueryTypes.SELECT },

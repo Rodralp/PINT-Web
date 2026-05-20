@@ -7,6 +7,22 @@ const parseEntityId = (value) => {
 
 const normalizeText = (value) => String(value || '').trim();
 
+const parseIsActive = (value) => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (value === 'true') {
+    return true;
+  }
+
+  if (value === 'false') {
+    return false;
+  }
+
+  return null;
+};
+
 const isUniqueViolation = (error) => {
   const code = error?.original?.code || error?.parent?.code;
   return code === '23505';
@@ -16,6 +32,7 @@ const toLearningPathResponse = (row) => ({
   id: Number(row?.nlpath),
   name: row?.lpath,
   description: row?.lp_desc,
+  isActive: Boolean(row?.is_active),
 });
 
 const toServiceLineResponse = (row) => ({
@@ -23,6 +40,7 @@ const toServiceLineResponse = (row) => ({
   name: row?.sline,
   description: row?.sl_desc,
   learningPathId: Number(row?.nlpath),
+  isActive: Boolean(row?.is_active),
 });
 
 const toAreaResponse = (row) => ({
@@ -30,12 +48,14 @@ const toAreaResponse = (row) => ({
   name: row?.area,
   description: row?.a_desc,
   serviceLineId: Number(row?.nsline),
+  isActive: Boolean(row?.is_active),
 });
 
 const toLevelResponse = (row) => ({
   id: Number(row?.nnivel),
   title: row?.nivel,
   areaId: Number(row?.narea),
+  isActive: Boolean(row?.is_active),
 });
 
 export const listLearningPaths = async (_req, res) => {
@@ -275,5 +295,117 @@ export const updateLevel = async (req, res) => {
     }
 
     res.status(500).json({ message: error?.message || 'Failed to update level.' });
+  }
+};
+
+export const updateLearningPathStatus = async (req, res) => {
+  const learningPathId = parseEntityId(req.params?.learningPathId);
+  const isActive = parseIsActive(req.body?.isActive);
+
+  if (!learningPathId) {
+    res.status(400).json({ message: 'Learning path id is required.' });
+    return;
+  }
+
+  if (isActive === null) {
+    res.status(400).json({ message: 'isActive boolean is required.' });
+    return;
+  }
+
+  try {
+    const row = await adminLearningPathService.updateLearningPathStatus({ learningPathId, isActive });
+
+    if (!row) {
+      res.status(404).json({ message: 'Learning path not found.' });
+      return;
+    }
+
+    res.status(200).json(toLearningPathResponse(row));
+  } catch (error) {
+    res.status(500).json({ message: error?.message || 'Failed to update learning path status.' });
+  }
+};
+
+export const updateServiceLineStatus = async (req, res) => {
+  const serviceLineId = parseEntityId(req.params?.serviceLineId);
+  const isActive = parseIsActive(req.body?.isActive);
+
+  if (!serviceLineId) {
+    res.status(400).json({ message: 'Service line id is required.' });
+    return;
+  }
+
+  if (isActive === null) {
+    res.status(400).json({ message: 'isActive boolean is required.' });
+    return;
+  }
+
+  try {
+    const row = await adminLearningPathService.updateServiceLineStatus({ serviceLineId, isActive });
+
+    if (!row) {
+      res.status(404).json({ message: 'Service line not found.' });
+      return;
+    }
+
+    res.status(200).json(toServiceLineResponse(row));
+  } catch (error) {
+    res.status(500).json({ message: error?.message || 'Failed to update service line status.' });
+  }
+};
+
+export const updateAreaStatus = async (req, res) => {
+  const areaId = parseEntityId(req.params?.areaId);
+  const isActive = parseIsActive(req.body?.isActive);
+
+  if (!areaId) {
+    res.status(400).json({ message: 'Area id is required.' });
+    return;
+  }
+
+  if (isActive === null) {
+    res.status(400).json({ message: 'isActive boolean is required.' });
+    return;
+  }
+
+  try {
+    const row = await adminLearningPathService.updateAreaStatus({ areaId, isActive });
+
+    if (!row) {
+      res.status(404).json({ message: 'Area not found.' });
+      return;
+    }
+
+    res.status(200).json(toAreaResponse(row));
+  } catch (error) {
+    res.status(500).json({ message: error?.message || 'Failed to update area status.' });
+  }
+};
+
+export const updateLevelStatus = async (req, res) => {
+  const levelId = parseEntityId(req.params?.levelId);
+  const isActive = parseIsActive(req.body?.isActive);
+
+  if (!levelId) {
+    res.status(400).json({ message: 'Level id is required.' });
+    return;
+  }
+
+  if (isActive === null) {
+    res.status(400).json({ message: 'isActive boolean is required.' });
+    return;
+  }
+
+  try {
+    const row = await adminLearningPathService.updateLevelStatus({ levelId, isActive });
+
+    if (!row) {
+      res.status(404).json({ message: 'Level not found.' });
+      return;
+    }
+
+    res.status(200).json(toLevelResponse(row));
+  } catch (error) {
+    res.status(500).json({ message: error?.message || 'Failed to update level status.' });
   }
 };

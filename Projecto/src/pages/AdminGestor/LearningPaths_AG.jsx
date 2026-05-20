@@ -1,16 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Plus, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, ChevronDown, ChevronRight, Eye, EyeOff, FileText, Folder, FolderOpen, Pencil, Plus, X } from 'lucide-react';
 import Layout from '../../components/Layout';
 import {
   fetchAdminLearningPaths,
   createAdminLearningPath,
   updateAdminLearningPath,
+  updateAdminLearningPathStatus,
   createAdminServiceLine,
   updateAdminServiceLine,
+  updateAdminServiceLineStatus,
   createAdminArea,
   updateAdminArea,
+  updateAdminAreaStatus,
   createAdminLevel,
   updateAdminLevel,
+  updateAdminLevelStatus,
 } from '../../services/adminLearningPathService';
 import '../../css/Consultor/LearningPaths_C.css';
 import '../../css/AdminGestor/LearningPaths_AG.css';
@@ -21,6 +25,13 @@ const entityLabels = {
   area: 'Area',
   level: 'Nivel',
 };
+
+const SIDEBAR_WIDTH_STORAGE_KEY = 'lp-admin-explorer-sidebar-width';
+const SIDEBAR_DEFAULT_WIDTH = 300;
+const SIDEBAR_MIN_WIDTH = 240;
+const SIDEBAR_MAX_WIDTH = 560;
+
+const clampSidebarWidth = (value) => Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, value));
 
 const buildAreaRowId = (serviceLineId, areaId) => `${serviceLineId}-${areaId}`;
 
@@ -33,6 +44,8 @@ const getNumericId = (value) => {
 };
 
 const buildEntityId = (prefix, numericId) => `${prefix}-${numericId}`;
+
+const getStatusLabel = (isActive) => (isActive ? 'Ativo' : 'Inativo');
 
 const buildEditorForm = (type, entity) => {
   switch (type) {
@@ -91,6 +104,15 @@ function LearningPathsAG() {
   const [learningPathsData, setLearningPathsData] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    if (typeof window === 'undefined') {
+      return SIDEBAR_DEFAULT_WIDTH;
+    }
+
+    const storedWidth = Number(window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY));
+    return Number.isFinite(storedWidth) ? clampSidebarWidth(storedWidth) : SIDEBAR_DEFAULT_WIDTH;
+  });
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const [selectedPathId, setSelectedPathId] = useState(null);
   const [selectedServiceLineId, setSelectedServiceLineId] = useState(null);
   const [expandedPathIds, setExpandedPathIds] = useState([]);
@@ -99,6 +121,12 @@ function LearningPathsAG() {
   const [editorForm, setEditorForm] = useState(null);
   const [editorError, setEditorError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [statusActionError, setStatusActionError] = useState('');
+  const resizeStateRef = useRef({
+    startX: 0,
+    startWidth: SIDEBAR_DEFAULT_WIDTH,
+  });
 
   const selectedPath = useMemo(
     () => learningPathsData.find((item) => item.id === selectedPathId) || learningPathsData[0],
@@ -124,6 +152,7 @@ function LearningPathsAG() {
       if (Array.isArray(data) && data.length > 0) {
         setLearningPathsData(data);
         setErrorMessage('');
+        setStatusActionError('');
 
         if (Object.prototype.hasOwnProperty.call(options, 'pathId')) {
           setSelectedPathId(options.pathId);
@@ -158,6 +187,42 @@ function LearningPathsAG() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(sidebarWidth));
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    if (!isResizingSidebar) {
+      return undefined;
+    }
+
+    const handleMouseMove = (event) => {
+      const { startX, startWidth } = resizeStateRef.current;
+      const delta = event.clientX - startX;
+      setSidebarWidth(clampSidebarWidth(startWidth + delta));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingSidebar(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+  }, [isResizingSidebar]);
+
+  useEffect(() => {
     if (!learningPathsData.length) {
       return;
     }
@@ -185,6 +250,12 @@ function LearningPathsAG() {
     setExpandedAreaIds([]);
   };
 
+  const selectPath = (pathId) => {
+    setSelectedPathId(pathId);
+    setSelectedServiceLineId(null);
+    setExpandedAreaIds([]);
+  };
+
   const selectServiceLine = (pathId, serviceLineId) => {
     setSelectedPathId(pathId);
     setSelectedServiceLineId(serviceLineId);
@@ -202,6 +273,87 @@ function LearningPathsAG() {
     setExpandedAreaIds((current) =>
       current.includes(areaId) ? current.filter((id) => id !== areaId) : [...current, areaId],
     );
+  };
+
+  const handleToggleEntityStatus = async (payload) => {
+    if (isUpdatingStatus) {
+      return;
+    }
+
+    setIsUpdatingStatus(true);
+    setStatusActionError('');
+
+    try {
+      const nextIsActive = !payload.isActive;
+      const nextServiceLineId =
+        payload.type === 'serviceLine'
+          ? (selectedServiceLine?.id === payload.serviceLineId ? payload.serviceLineId : null)
+          : (payload.serviceLineId || selectedServiceLine?.id || null);
+
+      if (payload.type === 'learningPath') {
+        const learningPathId = getNumericId(payload.pathId);
+        if (!learningPathId) {
+          throw new Error('Learning Path invalido.');
+        }
+
+        await updateAdminLearningPathStatus(learningPathId, nextIsActive);
+      } else if (payload.type === 'serviceLine') {
+        const serviceLineId = getNumericId(payload.serviceLineId);
+        if (!serviceLineId) {
+          throw new Error('Service Line invalida.');
+        }
+
+        await updateAdminServiceLineStatus(serviceLineId, nextIsActive);
+      } else if (payload.type === 'area') {
+        const areaId = getNumericId(payload.areaId);
+        if (!areaId) {
+          throw new Error('Area invalida.');
+        }
+
+        await updateAdminAreaStatus(areaId, nextIsActive);
+      } else if (payload.type === 'level') {
+        const levelId = getNumericId(payload.levelId);
+        if (!levelId) {
+          throw new Error('Nivel invalido.');
+        }
+
+        await updateAdminLevelStatus(levelId, nextIsActive);
+      }
+
+      await loadLearningPaths({
+        pathId: payload.pathId || selectedPath?.id || null,
+        serviceLineId: nextServiceLineId,
+        expandedPathIds,
+        expandedAreaIds,
+      });
+    } catch (error) {
+      setStatusActionError(error?.message || 'Nao foi possivel atualizar o estado.');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleSidebarResizeStart = (event) => {
+    if (event.button !== 0 || window.matchMedia('(max-width: 991.98px)').matches) {
+      return;
+    }
+
+    event.preventDefault();
+    resizeStateRef.current = {
+      startX: event.clientX,
+      startWidth: sidebarWidth,
+    };
+    setIsResizingSidebar(true);
+  };
+
+  const handleSidebarResizeKeyDown = (event) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
+      return;
+    }
+
+    event.preventDefault();
+    const delta = event.key === 'ArrowRight' ? 16 : -16;
+    setSidebarWidth((current) => clampSidebarWidth(current + delta));
   };
 
 
@@ -423,126 +575,254 @@ function LearningPathsAG() {
     }
   };
 
-  const renderLearningPathView = () => {
+  const renderExplorerTree = () => {
     if (!learningPathsData.length) {
       return null;
     }
 
     return (
-      <section className="lp-shell">
-        <div className="lp-area-list lp-learning-path-list">
+      <aside className="lp-admin-explorer-sidebar" aria-label="Estrutura de Learning Paths">
+        <header className="lp-admin-pane-head">
+          <p className="lp-admin-pane-title">Estrutura</p>
+          <span className="lp-admin-pane-hint">{learningPathsData.length} pastas</span>
+        </header>
+
+        <div className="lp-admin-tree-list">
           {learningPathsData.map((path) => {
             const isExpanded = expandedPathIds.includes(path.id);
+            const isSelectedPath = selectedPath?.id === path.id;
+            const pathServiceLines = path.serviceLines || [];
 
             return (
-              <article key={path.id} className={`lp-area-card lp-learning-path-card ${isExpanded ? 'is-expanded' : ''}`}>
-                <div
-                  role="button"
-                  tabIndex={0}
-                  className="lp-area-toggle"
-                  onClick={() => toggleLearningPath(path.id)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      toggleLearningPath(path.id);
-                    }
-                  }}
-                  aria-expanded={isExpanded}
-                  aria-controls={`learning-path-${path.id}`}
-                >
-                  <div className="lp-path-banner lp-learning-path-banner">
-                    <h2>{path.name}</h2>
-                    <div className="lp-learning-path-banner-actions">
-                      <button
-                        type="button"
-                        className="lp-admin-text-btn"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openEditor({ type: 'learningPath', mode: 'edit', pathId: path.id });
-                        }}
-                      >
-                        <Pencil size={16} />
-                        Editar
-                      </button>
-                      <ChevronDown
-                        size={20}
-                        className={`lp-area-chevron ${isExpanded ? 'is-open' : ''}`}
-                        aria-hidden="true"
-                      />
-                    </div>
-                  </div>
+              <article key={path.id} className={`lp-admin-tree-group ${isSelectedPath ? 'is-active' : ''}`}>
+                <div className="lp-admin-tree-row">
+                  <button
+                    type="button"
+                    className="lp-admin-expand-btn"
+                    onClick={() => toggleLearningPath(path.id)}
+                    aria-label={isExpanded ? 'Fechar pasta' : 'Abrir pasta'}
+                    aria-expanded={isExpanded}
+                    aria-controls={`learning-path-tree-${path.id}`}
+                  >
+                    <ChevronDown
+                      size={16}
+                      className={`lp-area-chevron ${isExpanded ? 'is-open' : ''}`}
+                      aria-hidden="true"
+                    />
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`lp-admin-tree-node ${isSelectedPath ? 'is-selected' : ''} ${!path.isActive ? 'is-inactive' : ''}`}
+                    onClick={() => {
+                      selectPath(path.id);
+                      if (!isExpanded) {
+                        toggleLearningPath(path.id);
+                      }
+                    }}
+                  >
+                    {isExpanded ? <FolderOpen size={16} aria-hidden="true" /> : <Folder size={16} aria-hidden="true" />}
+                    <span>{path.name}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="lp-admin-icon-btn lp-admin-tree-action"
+                    onClick={() => openEditor({ type: 'learningPath', mode: 'edit', pathId: path.id })}
+                    aria-label={`Editar ${path.name}`}
+                  >
+                    <Pencil size={14} />
+                  </button>
                 </div>
 
                 {isExpanded && (
-                  <div id={`learning-path-${path.id}`} className="lp-area-badges">
-                    <div className="lp-section-title-row lp-admin-section-row">
-                      <h3>Service Lines</h3>
-                      <div className="lp-admin-inline-actions">
-                        <button
-                          type="button"
-                          className="lp-admin-btn secondary"
-                          onClick={() => openEditor({ type: 'serviceLine', mode: 'create', pathId: path.id })}
-                        >
-                          <Plus size={16} />
-                          Nova Service Line
-                        </button>
-                      </div>
-                    </div>
+                  <div id={`learning-path-tree-${path.id}`} className="lp-admin-tree-children">
+                    {pathServiceLines.length === 0 && <p className="lp-admin-tree-empty">Sem Service Lines</p>}
 
-                    <div className="lp-service-line-list">
-                      {path.serviceLines.map((serviceLine) => (
-                        <article
-                          key={serviceLine.id}
-                          className="lp-service-line-card lp-admin-service-line-card"
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => selectServiceLine(path.id, serviceLine.id)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter' || event.key === ' ') {
-                              event.preventDefault();
-                              selectServiceLine(path.id, serviceLine.id);
+                    {pathServiceLines.map((serviceLine) => {
+                      const isSelectedServiceLine =
+                        selectedServiceLine?.id === serviceLine.id && selectedPath?.id === path.id;
+
+                      return (
+                        <div key={serviceLine.id} className="lp-admin-tree-child-row">
+                          <button
+                            type="button"
+                            className={`lp-admin-tree-child ${isSelectedServiceLine ? 'is-selected' : ''} ${!serviceLine.isActive ? 'is-inactive' : ''}`}
+                            onClick={() => selectServiceLine(path.id, serviceLine.id)}
+                          >
+                            <FileText size={14} aria-hidden="true" />
+                            <span>{serviceLine.name}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className="lp-admin-icon-btn lp-admin-tree-action"
+                            onClick={() =>
+                              openEditor({
+                                type: 'serviceLine',
+                                mode: 'edit',
+                                pathId: path.id,
+                                serviceLineId: serviceLine.id,
+                              })
                             }
-                          }}
-                        >
-                          <div className="lp-service-line-head">
-                            <strong>{serviceLine.name}</strong>
-                            <div className="lp-admin-service-line-actions">
-                              <button
-                                type="button"
-                                className="lp-admin-text-btn"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  openEditor({
-                                    type: 'serviceLine',
-                                    mode: 'edit',
-                                    pathId: path.id,
-                                    serviceLineId: serviceLine.id,
-                                  });
-                                }}
-                              >
-                                <Pencil size={16} />
-                                Editar
-                              </button>
-                              <ChevronRight size={24} className="lp-go-icon" aria-hidden="true" />
-                            </div>
-                          </div>
+                            aria-label={`Editar ${serviceLine.name}`}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                        </div>
+                      );
+                    })}
 
-                          <div className="lp-service-line-body">
-                            <img src={serviceLine.image} alt={serviceLine.name} className="lp-service-line-image" />
-
-                            <div className="lp-service-line-main">
-                              <p>{serviceLine.description}</p>
-                              <span className="lp-progress-label">{(serviceLine.areas || []).length} areas</span>
-                            </div>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
+                    <button
+                      type="button"
+                      className="lp-admin-tree-create"
+                      onClick={() => openEditor({ type: 'serviceLine', mode: 'create', pathId: path.id })}
+                    >
+                      <Plus size={14} />
+                      Nova Service Line
+                    </button>
                   </div>
                 )}
               </article>
             );
           })}
+        </div>
+      </aside>
+    );
+  };
+
+  const renderLearningPathView = () => {
+    if (!selectedPath) {
+      return null;
+    }
+
+    const serviceLines = selectedPath.serviceLines || [];
+
+    return (
+      <section className="lp-admin-explorer-content">
+        <header className="lp-admin-content-head">
+          <div>
+            <p className="lp-admin-breadcrumb">Diretorio Atual</p>
+            <h2>{selectedPath.name}</h2>
+            <p className="lp-admin-content-meta">{serviceLines.length} service lines</p>
+            <span className={`lp-admin-status-chip ${selectedPath.isActive ? 'is-active' : 'is-inactive'}`}>
+              {getStatusLabel(selectedPath.isActive)}
+            </span>
+          </div>
+
+          <div className="lp-admin-inline-actions">
+            <button
+              type="button"
+              className="lp-admin-text-btn"
+              onClick={() => openEditor({ type: 'learningPath', mode: 'edit', pathId: selectedPath.id })}
+            >
+              <Pencil size={16} />
+              Editar Learning Path
+            </button>
+            <button
+              type="button"
+              className="lp-admin-btn secondary"
+              onClick={() => openEditor({ type: 'serviceLine', mode: 'create', pathId: selectedPath.id })}
+            >
+              <Plus size={16} />
+              Nova Service Line
+            </button>
+            <button
+              type="button"
+              className={`lp-admin-btn lp-admin-btn-status ${selectedPath.isActive ? 'is-deactivate' : 'is-activate'}`}
+              onClick={() =>
+                handleToggleEntityStatus({
+                  type: 'learningPath',
+                  pathId: selectedPath.id,
+                  isActive: selectedPath.isActive,
+                })
+              }
+              disabled={isUpdatingStatus}
+            >
+              {selectedPath.isActive ? <EyeOff size={16} /> : <Eye size={16} />}
+              {selectedPath.isActive ? 'Desativar' : 'Ativar'}
+            </button>
+          </div>
+        </header>
+
+        <p className="lp-admin-content-description">{selectedPath.description || 'Sem descricao.'}</p>
+
+        <div className="lp-admin-file-table">
+          <div className="lp-admin-file-table-head">
+            <span>Nome</span>
+            <span>Areas</span>
+            <span>Acoes</span>
+          </div>
+
+          {serviceLines.length === 0 && (
+            <p className="lp-admin-empty-panel">Este Learning Path ainda nao tem Service Lines.</p>
+          )}
+
+          {serviceLines.map((serviceLine) => (
+            <article
+              key={serviceLine.id}
+              className={`lp-admin-file-row ${!serviceLine.isActive ? 'is-inactive' : ''}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => selectServiceLine(selectedPath.id, serviceLine.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  selectServiceLine(selectedPath.id, serviceLine.id);
+                }
+              }}
+            >
+              <div className="lp-admin-file-cell is-main">
+                <FileText size={16} aria-hidden="true" />
+                <div>
+                  <strong className="lp-admin-file-name">{serviceLine.name}</strong>
+                  <span className="lp-admin-file-subtitle">{serviceLine.description || 'Sem descricao.'}</span>
+                  <span className={`lp-admin-inline-status ${serviceLine.isActive ? 'is-active' : 'is-inactive'}`}>
+                    {getStatusLabel(serviceLine.isActive)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="lp-admin-file-cell">{(serviceLine.areas || []).length}</div>
+
+              <div className="lp-admin-file-cell lp-admin-file-actions">
+                <button
+                  type="button"
+                  className="lp-admin-text-btn"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleToggleEntityStatus({
+                      type: 'serviceLine',
+                      pathId: selectedPath.id,
+                      serviceLineId: serviceLine.id,
+                      isActive: serviceLine.isActive,
+                    });
+                  }}
+                  disabled={isUpdatingStatus}
+                >
+                  {serviceLine.isActive ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {serviceLine.isActive ? 'Desativar' : 'Ativar'}
+                </button>
+                <button
+                  type="button"
+                  className="lp-admin-text-btn"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openEditor({
+                      type: 'serviceLine',
+                      mode: 'edit',
+                      pathId: selectedPath.id,
+                      serviceLineId: serviceLine.id,
+                    });
+                  }}
+                >
+                  <Pencil size={16} />
+                  Editar
+                </button>
+                <ChevronRight size={18} className="lp-go-icon" aria-hidden="true" />
+              </div>
+            </article>
+          ))}
         </div>
       </section>
     );
@@ -554,57 +834,79 @@ function LearningPathsAG() {
     }
 
     return (
-      <section className="lp-shell lp-shell-surface">
-        <article className="lp-service-line-hero">
+      <section className="lp-admin-explorer-content">
+        <header className="lp-admin-content-head">
+          <div>
+            <p className="lp-admin-breadcrumb">{selectedPath.name} / Service Line</p>
+            <h2>{selectedServiceLine.name}</h2>
+            <p className="lp-admin-content-meta">{(selectedServiceLine.areas || []).length} areas</p>
+            <span className={`lp-admin-status-chip ${selectedServiceLine.isActive ? 'is-active' : 'is-inactive'}`}>
+              {getStatusLabel(selectedServiceLine.isActive)}
+            </span>
+          </div>
+
+          <div className="lp-admin-inline-actions">
+            <button
+              type="button"
+              className="lp-admin-text-btn"
+              onClick={() =>
+                openEditor({
+                  type: 'serviceLine',
+                  mode: 'edit',
+                  pathId: selectedPath.id,
+                  serviceLineId: selectedServiceLine.id,
+                })
+              }
+            >
+              <Pencil size={16} />
+              Editar
+            </button>
+            <button
+              type="button"
+              className="lp-admin-btn secondary"
+              onClick={() =>
+                openEditor({
+                  type: 'area',
+                  mode: 'create',
+                  pathId: selectedPath.id,
+                  serviceLineId: selectedServiceLine.id,
+                })
+              }
+            >
+              <Plus size={16} />
+              Nova Area
+            </button>
+            <button
+              type="button"
+              className={`lp-admin-btn lp-admin-btn-status ${selectedServiceLine.isActive ? 'is-deactivate' : 'is-activate'}`}
+              onClick={() =>
+                handleToggleEntityStatus({
+                  type: 'serviceLine',
+                  pathId: selectedPath.id,
+                  serviceLineId: selectedServiceLine.id,
+                  isActive: selectedServiceLine.isActive,
+                })
+              }
+              disabled={isUpdatingStatus}
+            >
+              {selectedServiceLine.isActive ? <EyeOff size={16} /> : <Eye size={16} />}
+              {selectedServiceLine.isActive ? 'Desativar' : 'Ativar'}
+            </button>
+          </div>
+        </header>
+
+        <article className="lp-admin-service-line-profile">
           <img
             src={selectedServiceLine.image}
             alt={selectedServiceLine.name}
             className="lp-service-line-hero-image"
           />
-
-          <div className="lp-service-line-hero-content">
-            <div className="lp-admin-hero-head">
-              <h2>{selectedServiceLine.name}</h2>
-              <button
-                type="button"
-                className="lp-admin-text-btn"
-                onClick={() =>
-                  openEditor({
-                    type: 'serviceLine',
-                    mode: 'edit',
-                    pathId: selectedPath.id,
-                    serviceLineId: selectedServiceLine.id,
-                  })
-                }
-              >
-                <Pencil size={16} />
-                Editar
-              </button>
-            </div>
-            <p>{selectedServiceLine.description}</p>
-          </div>
+          <p>{selectedServiceLine.description || 'Sem descricao.'}</p>
         </article>
 
-        <section className="lp-area-shell" aria-label={`Areas da service line ${selectedServiceLine.name}`}>
+        <section className="lp-area-shell lp-admin-area-shell" aria-label={`Areas da service line ${selectedServiceLine.name}`}>
           <div className="lp-admin-section-row">
             <h3 className="lp-admin-section-title">Areas</h3>
-            <div className="lp-admin-inline-actions">
-              <button
-                type="button"
-                className="lp-admin-btn secondary"
-                onClick={() =>
-                  openEditor({
-                    type: 'area',
-                    mode: 'create',
-                    pathId: selectedPath.id,
-                    serviceLineId: selectedServiceLine.id,
-                  })
-                }
-              >
-                <Plus size={16} />
-                Nova Area
-              </button>
-            </div>
           </div>
 
           <div className="lp-area-list">
@@ -613,18 +915,24 @@ function LearningPathsAG() {
               const isExpanded = expandedAreaIds.includes(areaRowId);
 
               return (
-                <article key={area.id} className={`lp-area-card ${isExpanded ? 'is-expanded' : ''}`}>
+                <article key={area.id} className={`lp-area-card lp-admin-area-card ${isExpanded ? 'is-expanded' : ''} ${!area.isActive ? 'is-inactive' : ''}`}>
                   <button
                     type="button"
-                    className="lp-area-toggle"
+                    className="lp-area-toggle lp-admin-area-toggle"
                     onClick={() => toggleArea(areaRowId)}
                     aria-expanded={isExpanded}
                     aria-controls={`area-badges-${areaRowId}`}
                   >
-                    <div className="lp-area-banner">
-                      <strong>{area.name}</strong>
+                    <div className="lp-area-banner lp-admin-area-banner">
+                      <div className="lp-admin-area-banner-main">
+                        <strong>{area.name}</strong>
+                        <span>{(area.levels || []).length} niveis</span>
+                      </div>
 
                       <div className="lp-area-banner-actions">
+                        <span className={`lp-admin-inline-status ${area.isActive ? 'is-active' : 'is-inactive'}`}>
+                          {getStatusLabel(area.isActive)}
+                        </span>
                         <ChevronDown
                           size={20}
                           className={`lp-area-chevron ${isExpanded ? 'is-open' : ''}`}
@@ -635,7 +943,7 @@ function LearningPathsAG() {
                   </button>
 
                   {isExpanded && (
-                    <div id={`area-badges-${areaRowId}`} className="lp-area-badges">
+                    <div id={`area-badges-${areaRowId}`} className="lp-area-badges lp-admin-area-body">
                       <div className="lp-area-content-head lp-admin-area-head">
                         <div className="lp-admin-area-head-copy">
                           <h3>Niveis</h3>
@@ -657,6 +965,23 @@ function LearningPathsAG() {
                           >
                             <Pencil size={16} />
                             Editar area
+                          </button>
+                          <button
+                            type="button"
+                            className="lp-admin-text-btn"
+                            onClick={() =>
+                              handleToggleEntityStatus({
+                                type: 'area',
+                                pathId: selectedPath.id,
+                                serviceLineId: selectedServiceLine.id,
+                                areaId: area.id,
+                                isActive: area.isActive,
+                              })
+                            }
+                            disabled={isUpdatingStatus}
+                          >
+                            {area.isActive ? <EyeOff size={16} /> : <Eye size={16} />}
+                            {area.isActive ? 'Desativar area' : 'Ativar area'}
                           </button>
                           <button
                             type="button"
@@ -682,12 +1007,33 @@ function LearningPathsAG() {
                           <p className="lp-admin-empty">Sem niveis registados.</p>
                         )}
                         {(area.levels || []).map((level) => (
-                          <div key={`${area.id}-${level.id}`} className="lp-level-row">
+                          <div key={`${area.id}-${level.id}`} className={`lp-level-row lp-admin-level-row ${!level.isActive ? 'is-inactive' : ''}`}>
                             <div className="lp-level-copy">
                               <strong>{level.title}</strong>
                               <span>{level.subtitle}</span>
+                              <span className={`lp-admin-inline-status ${level.isActive ? 'is-active' : 'is-inactive'}`}>
+                                {getStatusLabel(level.isActive)}
+                              </span>
                             </div>
                             <div className="lp-admin-row-actions">
+                              <button
+                                type="button"
+                                className="lp-admin-text-btn"
+                                onClick={() =>
+                                  handleToggleEntityStatus({
+                                    type: 'level',
+                                    pathId: selectedPath.id,
+                                    serviceLineId: selectedServiceLine.id,
+                                    areaId: area.id,
+                                    levelId: level.id,
+                                    isActive: level.isActive,
+                                  })
+                                }
+                                disabled={isUpdatingStatus}
+                              >
+                                {level.isActive ? <EyeOff size={16} /> : <Eye size={16} />}
+                                {level.isActive ? 'Desativar' : 'Ativar'}
+                              </button>
                               <button
                                 type="button"
                                 className="lp-admin-text-btn"
@@ -755,9 +1101,31 @@ function LearningPathsAG() {
 
         {isLoading && <p className="lp-progress-label">A carregar Learning Paths...</p>}
         {!isLoading && errorMessage && <p className="lp-progress-label">{errorMessage}</p>}
+        {!isLoading && !errorMessage && statusActionError && (
+          <p className="lp-progress-label lp-admin-status-error">{statusActionError}</p>
+        )}
 
-        {!isLoading && !errorMessage && !selectedServiceLine && renderLearningPathView()}
-        {!errorMessage && selectedServiceLine && renderServiceLineView()}
+        {!isLoading && !errorMessage && (
+          <section
+            className="lp-admin-explorer"
+            style={{ '--lp-admin-sidebar-width': `${sidebarWidth}px` }}
+          >
+            {renderExplorerTree()}
+            <div
+              className={`lp-admin-resizer ${isResizingSidebar ? 'is-active' : ''}`}
+              role="separator"
+              aria-label="Ajustar largura do explorador"
+              aria-orientation="vertical"
+              tabIndex={0}
+              onMouseDown={handleSidebarResizeStart}
+              onKeyDown={handleSidebarResizeKeyDown}
+            />
+            <div className="lp-admin-explorer-main">
+              {!selectedServiceLine && renderLearningPathView()}
+              {selectedServiceLine && renderServiceLineView()}
+            </div>
+          </section>
+        )}
 
         {editor && (
           <div className="lp-admin-modal-overlay" role="presentation" onClick={closeEditor}>
