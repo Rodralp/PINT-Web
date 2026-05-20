@@ -1,0 +1,245 @@
+.learning-paths-page.is-admin .lp-header {
+  align-items: center;
+}
+
+.learning-paths-page.is-admin .lp-path-banner {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lp-admin-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+
+.lp-learning-path-banner-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffffff;
+}
+
+.lp-learning-path-banner-actions .lp-admin-text-btn {
+  color: #ffffff;
+}
+
+.lp-admin-btn {
+  border: 1px solid #1b84f4;
+  background: #1b84f4;
+  color: #ffffff;
+  border-radius: 9px;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lp-admin-btn.secondary {
+  background: #ffffff;
+  color: #1b84f4;
+}
+
+.lp-admin-btn.ghost {
+  background: #f8fafc;
+  border-color: #d7dde7;
+  color: #334155;
+}
+
+.lp-admin-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.lp-admin-text-btn {
+  border: none;
+  background: transparent;
+  color: #1b84f4;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+}
+
+.lp-admin-icon-btn {
+  border: none;
+  background: transparent;
+  color: #4b5563;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-admin-icon-btn:hover {
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.lp-admin-section-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.lp-admin-section-title {
+  margin: 0;
+  color: #2f3747;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.lp-admin-inline-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lp-admin-service-line-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lp-admin-service-line-card {
+  cursor: pointer;
+}
+
+.lp-admin-service-line-card:focus-visible {
+  outline: 2px solid #1b84f4;
+  outline-offset: 2px;
+}
+
+.lp-admin-hero-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.lp-admin-area-head {
+  align-items: flex-start;
+}
+
+.lp-admin-area-head-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lp-admin-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lp-admin-empty {
+  margin: 0;
+  color: #7a869b;
+  font-size: 13px;
+}
+
+.lp-admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(15, 23, 42, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.lp-admin-modal {
+  width: min(520px, 100%);
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5eaf3;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+  padding: 16px 18px 18px;
+}
+
+.lp-admin-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.lp-admin-modal-head h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.lp-admin-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lp-admin-modal-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.lp-admin-modal-form input,
+.lp-admin-modal-form textarea {
+  border: 1px solid #d9e3f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: #1f2937;
+  outline: none;
+  font-family: inherit;
+}
+
+.lp-admin-modal-form input:focus,
+.lp-admin-modal-form textarea:focus {
+  border-color: #1b84f4;
+  box-shadow: 0 0 0 2px rgba(27, 132, 244, 0.12);
+}
+
+.lp-admin-modal-error {
+  margin: 10px 0 0;
+  color: #d92d20;
+  font-size: 13px;
+}
+
+.lp-admin-modal-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 767.98px) {
+  .lp-admin-actions,
+  .lp-admin-inline-actions,
+  .lp-admin-modal-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lp-admin-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

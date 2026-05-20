@@ -29,6 +29,7 @@ import ExportacoesAG from './pages/AdminGestor/Exportacoes_AG'
 import GestaoGeralAG from './pages/AdminGestor/GestaoGeral_AG'
 import ComunicadosAvisosAG from './pages/AdminGestor/ComunicadosAvisos_AG'
 import UtilizadoresAG from './pages/AdminGestor/Utilizadores_AG'
+import LearningPathsAG from './pages/AdminGestor/LearningPaths_AG'
 import MeusBadges from './pages/Consultor/MeusBadges'
 import BadgeDetalhe from './pages/Consultor/BadgeDetalhe'
 import PedidoDetalheC from './pages/Consultor/PedidoDetalhe_C'
@@ -108,6 +109,7 @@ function App() {
         <Route path='/admin-gestor/definicoes' element={<Definicoes />} />
         <Route path='/admin-gestor/utilizadores' element={<UtilizadoresAG />} />
         <Route path='/admin-gestor/catalogo-badges' element={<CatalogoBadges />} />
+        <Route path='/admin-gestor/learning-paths' element={<LearningPathsAG />} />
         <Route path='/admin-gestor/equipas-sla' element={<EquipasSLAAG />} />
         <Route path='/admin-gestor/comunicados-avisos' element={<ComunicadosAvisosAG />} />
         <Route path='/admin-gestor/pedidos' element={<GestaoPedidosAG />} />
@@ -133,6 +135,7 @@ function App() {
         <Route path='/dashboard/admin-gestor' element={<Navigate to='/admin-gestor/dashboard' replace />} />
         <Route path='/dashboard/admin-gestor/definicoes' element={<Navigate to='/admin-gestor/definicoes' replace />} />
         <Route path='/dashboard/admin-gestor/utilizadores' element={<Navigate to='/admin-gestor/utilizadores' replace />} />
+        <Route path='/dashboard/admin-gestor/learning-paths' element={<Navigate to='/admin-gestor/learning-paths' replace />} />
         <Route path='/dashboard/admin-gestor/equipas-sla' element={<Navigate to='/admin-gestor/equipas-sla' replace />} />
         <Route path='/dashboard/admin-gestor/comunicados-avisos' element={<Navigate to='/admin-gestor/comunicados-avisos' replace />} />
         <Route path='/dashboard/admin-gestor/pedidos' element={<Navigate to='/admin-gestor/pedidos' replace />} />
@@ -143,6 +146,7 @@ function App() {
         <Route path='/dashboard/admin/definicoes' element={<Navigate to='/admin-gestor/definicoes' replace />} />
         <Route path='/dashboard/admin/utilizadores' element={<Navigate to='/admin-gestor/utilizadores' replace />} />
         <Route path='/dashboard/admin/catalogo-badges' element={<Navigate to='/admin-gestor/catalogo-badges' replace />} />
+        <Route path='/dashboard/admin/learning-paths' element={<Navigate to='/admin-gestor/learning-paths' replace />} />
         <Route path='/dashboard/admin/equipas-sla' element={<Navigate to='/admin-gestor/equipas-sla' replace />} />
         <Route path='/dashboard/admin/comunicados-avisos' element={<Navigate to='/admin-gestor/comunicados-avisos' replace />} />
         <Route path='/dashboard/admin/exportacoes' element={<Navigate to='/admin-gestor/exportacoes' replace />} />

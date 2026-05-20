@@ -192,6 +192,7 @@ function BadgeDetalhe() {
     return matchedBadge || defaultBadgeDetails;
   });
   const [badgeStatus, setBadgeStatus] = useState(() => normalizeBadgeStatus(badge));
+  const hasBadgeId = Number.isInteger(Number(badge?.badgeDbId)) && Number(badge.badgeDbId) > 0;
 
   useEffect(() => {
     if (location.state?.badge) {
@@ -263,6 +264,9 @@ function BadgeDetalhe() {
   }, [badge]);
 
   const requirements = useMemo(() => {
+    if (!hasBadgeId) {
+      return [];
+    }
     const prefix = getRequirementPrefixByLevel(badge.levelKey);
     const showFileCounters = badgeStatus !== 'visualizar';
     const sourceRequirements = Array.isArray(badge.requirements) && badge.requirements.length > 0
@@ -286,7 +290,7 @@ function BadgeDetalhe() {
         image: badge.badgeImage,
       };
     });
-  }, [badge.requirements, badge.levelKey, badgeStatus, badge.badgeImage]);
+  }, [badge.requirements, badge.levelKey, badgeStatus, badge.badgeImage, hasBadgeId]);
 
   const fallbackBackRoute =
     typeof location.state?.backTo === 'string' && location.state.backTo.trim().length > 0
@@ -321,10 +325,11 @@ function BadgeDetalhe() {
     location.state?.activeSidebarRoute === '/consultor/catalogo-badges';
 
   const canRequestBadge =
+    hasBadgeId &&
     (badgeStatus === 'visualizar' || badgeStatus === 'evidencias_insuficientes') &&
     !(openedFromCatalog && badgeStatus === 'visualizar');
   const isProgressStatus = badgeStatus === 'candidatura_em_progresso';
-  const canSubmitProgress = canRequestBadge || isProgressStatus;
+  const canSubmitProgress = hasBadgeId && (canRequestBadge || isProgressStatus);
   const hasStatusBanner = badgeStatus !== 'visualizar';
   const statusMeta = statusConfig[badgeStatus] || null;
   const showReviewMessage = badgeStatus === 'evidencias_insuficientes';
@@ -513,98 +518,101 @@ function BadgeDetalhe() {
 
         <section className="badge-requirements-card">
           <h3>Requisitos</h3>
+          {!hasBadgeId && (
+            <p className="badge-requirements-empty">Este nivel ainda nao tem badge associado.</p>
+          )}
 
-            {requirements.map((requirement, index) => {
-              const isOpen = openRequirementId === requirement.id;
-              const ToggleIcon = isOpen ? EyeOff : Eye;
+          {hasBadgeId && requirements.map((requirement, index) => {
+            const isOpen = openRequirementId === requirement.id;
+            const ToggleIcon = isOpen ? EyeOff : Eye;
 
-              return (
-                <article key={`${badge.id}-${requirement.id}`} className={`badge-requirement-item ${isOpen ? 'is-open' : ''}`}>
-                  <div className="badge-requirement-head">
-                    <div>
-                      <p>{requirement.title}</p>
-                      {badgeStatus !== 'visualizar' && (
-                        <span>{getFilesLabel(requirement.id, requirement.files, requirement.attachments)}</span>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      className="badge-requirement-view-btn"
-                      aria-label={isOpen ? `Ocultar requisito ${index + 1}` : `Ver requisito ${index + 1}`}
-                      title={isOpen ? 'Ocultar requisito' : 'Ver requisito'}
-                      aria-expanded={isOpen}
-                      onClick={() => toggleRequirement(requirement.id)}
-                    >
-                      <ToggleIcon size={19} />
-                    </button>
+            return (
+              <article key={`${badge.id}-${requirement.id}`} className={`badge-requirement-item ${isOpen ? 'is-open' : ''}`}>
+                <div className="badge-requirement-head">
+                  <div>
+                    <p>{requirement.title}</p>
+                    {badgeStatus !== 'visualizar' && (
+                      <span>{getFilesLabel(requirement.id, requirement.files, requirement.attachments)}</span>
+                    )}
                   </div>
 
-                  {isOpen && (
-                    <div className="badge-requirement-detail">
-                      <img
-                        src={requirement.image || badge.badgeImage}
-                        alt={`Ilustracao do requisito ${index + 1}`}
-                        className="badge-requirement-detail-image"
-                      />
-                      <div className="badge-requirement-detail-content">
-                        <p>{requirement.description}</p>
-                        {badgeStatus !== 'visualizar' && (
-                          <div className="badge-requirement-files">
-                            <label className="badge-file-input-label">Arquivos submetidos</label>
-                            <div className="badge-file-list">
-                              {Array.isArray(requirement.attachments) && requirement.attachments.length > 0 ? (
-                                requirement.attachments.map((attachment, index) => (
-                                  <div key={`${requirement.id}-attachment-${index}`} className="badge-file-item">
-                                    <span className="badge-file-name">{getAttachmentLabel(attachment)}</span>
+                  <button
+                    type="button"
+                    className="badge-requirement-view-btn"
+                    aria-label={isOpen ? `Ocultar requisito ${index + 1}` : `Ver requisito ${index + 1}`}
+                    title={isOpen ? 'Ocultar requisito' : 'Ver requisito'}
+                    aria-expanded={isOpen}
+                    onClick={() => toggleRequirement(requirement.id)}
+                  >
+                    <ToggleIcon size={19} />
+                  </button>
+                </div>
+
+                {isOpen && (
+                  <div className="badge-requirement-detail">
+                    <img
+                      src={requirement.image || badge.badgeImage}
+                      alt={`Ilustracao do requisito ${index + 1}`}
+                      className="badge-requirement-detail-image"
+                    />
+                    <div className="badge-requirement-detail-content">
+                      <p>{requirement.description}</p>
+                      {badgeStatus !== 'visualizar' && (
+                        <div className="badge-requirement-files">
+                          <label className="badge-file-input-label">Arquivos submetidos</label>
+                          <div className="badge-file-list">
+                            {Array.isArray(requirement.attachments) && requirement.attachments.length > 0 ? (
+                              requirement.attachments.map((attachment, index) => (
+                                <div key={`${requirement.id}-attachment-${index}`} className="badge-file-item">
+                                  <span className="badge-file-name">{getAttachmentLabel(attachment)}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="badge-file-none">Nenhum ficheiro submetido.</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {(badgeStatus === 'candidatura_em_progresso' || badgeStatus === 'evidencias_insuficientes') && (
+                        <div className="badge-requirement-files">
+                          <label className="badge-file-input-label">Anexar arquivos</label>
+                          <input
+                            className="badge-file-input"
+                            type="file"
+                            multiple
+                            onChange={(e) => handleFilesSelected(requirement.id, e.target.files)}
+                            aria-label={`Anexar arquivos ao requisito ${index + 1}`}
+                          />
+
+                          <div className="badge-file-list">
+                            {Array.isArray(filesByRequirement[requirement.id]) && filesByRequirement[requirement.id].length > 0 ? (
+                              filesByRequirement[requirement.id]
+                                .filter((file) => typeof File !== 'undefined' && file instanceof File)
+                                .map((f, fi) => (
+                                  <div key={`${requirement.id}-file-${fi}`} className="badge-file-item">
+                                    <span className="badge-file-name">{f.name}</span>
+                                    <button
+                                      type="button"
+                                      className="badge-file-remove-btn"
+                                      onClick={() => handleRemoveFile(requirement.id, fi)}
+                                      aria-label={`Remover arquivo ${f.name}`}
+                                    >
+                                      Remover
+                                    </button>
                                   </div>
                                 ))
-                              ) : (
-                                <div className="badge-file-none">Nenhum ficheiro submetido.</div>
-                              )}
-                            </div>
+                            ) : (
+                              <div className="badge-file-none">Nenhum ficheiro anexado.</div>
+                            )}
                           </div>
-                        )}
-                        {(badgeStatus === 'candidatura_em_progresso' || badgeStatus === 'evidencias_insuficientes') && (
-                          <div className="badge-requirement-files">
-                            <label className="badge-file-input-label">Anexar arquivos</label>
-                            <input
-                              className="badge-file-input"
-                              type="file"
-                              multiple
-                              onChange={(e) => handleFilesSelected(requirement.id, e.target.files)}
-                              aria-label={`Anexar arquivos ao requisito ${index + 1}`}
-                            />
-
-                            <div className="badge-file-list">
-                              {Array.isArray(filesByRequirement[requirement.id]) && filesByRequirement[requirement.id].length > 0 ? (
-                                filesByRequirement[requirement.id]
-                                  .filter((file) => typeof File !== 'undefined' && file instanceof File)
-                                  .map((f, fi) => (
-                                    <div key={`${requirement.id}-file-${fi}`} className="badge-file-item">
-                                      <span className="badge-file-name">{f.name}</span>
-                                      <button
-                                        type="button"
-                                        className="badge-file-remove-btn"
-                                        onClick={() => handleRemoveFile(requirement.id, fi)}
-                                        aria-label={`Remover arquivo ${f.name}`}
-                                      >
-                                        Remover
-                                      </button>
-                                    </div>
-                                  ))
-                              ) : (
-                                <div className="badge-file-none">Nenhum ficheiro anexado.</div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </article>
-              );
-            })}
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </section>
 
         {showReviewMessage && (

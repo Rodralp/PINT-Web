@@ -71,6 +71,7 @@ const sidebarConfig = [
       { id: 'dashboard_AG', labelKey: 'sidebar_dashboard', icon: Home, route: '/admin-gestor/dashboard' },
       { id: 'utilizadores_AG', labelKey: 'sidebar_users', icon: CircleUserRound, route: '/admin-gestor/utilizadores' },
       { id: 'catalogo_AG', labelKey: 'sidebar_catalog_badges', icon: Medal, route: '/admin-gestor/catalogo-badges' },
+      { id: 'learning_paths_AG', labelKey: 'sidebar_learning_paths', icon: BookOpen, route: '/admin-gestor/learning-paths' },
       { id: 'equipas_AG', labelKey: 'sidebar_teams_sla', icon: UsersRound, route: '/admin-gestor/equipas-sla' },
       { id: 'comunicados_AG', labelKey: 'sidebar_announcements', icon: Megaphone, route: '/admin-gestor/comunicados-avisos' },
       { id: 'pedidos_AG', labelKey: 'sidebar_manage_requests', icon: FilePenLine, route: '/admin-gestor/pedidos' },

@@ -64,6 +64,15 @@
   align-items: center;
 }
 
+.lp-learning-path-card .lp-path-banner {
+  border-radius: 10px 10px 0 0;
+}
+
+.lp-learning-path-banner {
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .lp-path-banner h2 {
   margin: 0;
   font-size: 24px;
@@ -308,6 +317,21 @@
   background: #f1f6fd;
 }
 
+.lp-level-row-action.is-disabled {
+  cursor: not-allowed;
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+.lp-level-row-action.is-disabled:hover {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+.lp-level-row-action.is-disabled:focus-visible {
+  outline: none;
+}
+
 .lp-level-row-action:focus-visible {
   outline: 2px solid #1b84f4;
   outline-offset: 2px;
@@ -370,6 +394,12 @@
   border-color: #a3b1c5;
   background: #eef2f7;
   color: #6b7280;
+}
+
+.lp-level-status.status-sem-badge {
+  border-color: #f59e0b;
+  background: #fef3c7;
+  color: #b45309;
 }
 
 @media (max-width: 1199px) {
