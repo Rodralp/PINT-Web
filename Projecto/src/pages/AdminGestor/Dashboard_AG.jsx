@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Trophy, Award, Users, FileCheck2, FileText, CheckCircle2, Settings } from 'lucide-react';
 import Layout from '../../components/Layout';
 import { fetchAdminGestorDashboard } from '../../services/dashboardService';
-import '../../css/Shared/Dashboard.css';
+import '../../css/TalentManager/Dashboard_TM.css';
+import '../../css/AdminGestor/Dashboard_AG.css';
 
 const BADGES_TIMELINE_DAYS = 12;
 const NOVOS_CONSULTORES_DAYS = 10;

@@ -25,7 +25,7 @@ import {
   Zap
 } from 'lucide-react';
 import { fetchProfileData } from '../services/consultorService';
-import '../css/Shared/Dashboard.css';
+import '../css/Consultor/Dashboard_C.css';
 import '../css/profile.css';
 
 const defaultTimelineValues = [3, 2, 5, 4, 6, 3, 7, 5, 8, 4, 6, 9];
