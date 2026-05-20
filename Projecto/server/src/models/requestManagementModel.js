@@ -29,6 +29,9 @@ const REQUEST_EXPIRATION_MONTHS = 3;
 const AUTO_REJECTION_NOTE = 'Candidatura rejeitada automaticamente por expiracao de prazo.';
 
 const autoRejectExpiredRequests = async () => {
+  const rejectedEstadoId = await ensureEstadoId(workflowState.rejeitado);
+  const approvedEstadoId = await ensureEstadoId(workflowState.aprovado);
+
   await sequelize.query(
     `
       UPDATE pedidos
@@ -53,8 +56,8 @@ const autoRejectExpiredRequests = async () => {
     `,
     {
       replacements: {
-        rejectedId: pedidoEstados.rejeitado,
-        approvedId: pedidoEstados.aprovado,
+        rejectedId: rejectedEstadoId,
+        approvedId: approvedEstadoId,
         defaultDescription: AUTO_REJECTION_NOTE,
       },
       type: QueryTypes.UPDATE,
