@@ -1,11 +1,13 @@
-/* Entrar na Conta - Página de login */
+/* LoginAccount.css */
 
+/* Reset */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* Root / Background */
 .entrar-root {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: #0a0a0a;
@@ -89,6 +91,7 @@
   cursor: pointer;
 }
 
+/* Inputs */
 .entrar-input {
   padding: 12px 16px;
   border: 1px solid #ddd;
@@ -145,6 +148,7 @@
   margin-top: 3px;
 }
 
+/* Buttons */
 .entrar-btn-continuar {
   padding: 14px 16px;
   background: linear-gradient(135deg, #0088FF 0%, #0066CC 100%);
@@ -167,6 +171,7 @@
   transform: translateY(0);
 }
 
+/* Entrar-specific links */
 .entrar-forgot-link {
   text-align: center;
   margin-bottom: 12px;
@@ -208,6 +213,31 @@
   text-decoration: underline;
 }
 
+/* Criar page login link now uses unified prefix */
+.entrar-login-link {
+  text-align: center;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.entrar-login-link span {
+  color: #666;
+}
+
+.entrar-login-link a {
+  color: #0088FF;
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 3px;
+  transition: color 0.2s;
+}
+
+.entrar-login-link a:hover {
+  color: #0066CC;
+  text-decoration: underline;
+}
+
+/* Footer links */
 .entrar-footer-links {
   text-align: center;
   font-size: 12px;
@@ -255,12 +285,8 @@
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .entrar-success-modal {
@@ -275,14 +301,8 @@
 }
 
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .entrar-success-icon {
@@ -292,12 +312,8 @@
 }
 
 @keyframes scaleIn {
-  from {
-    transform: scale(0);
-  }
-  to {
-    transform: scale(1);
-  }
+  from { transform: scale(0); }
+  to { transform: scale(1); }
 }
 
 .entrar-success-modal h2 {
