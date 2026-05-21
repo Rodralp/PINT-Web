@@ -101,6 +101,47 @@ const requirementsByArea = {
   ],
 };
 
+const resolveBadgeDbId = (routeBadgeId, badgeState) => {
+  const direct = Number(badgeState?.badgeDbId);
+  if (Number.isInteger(direct) && direct > 0) {
+    return direct;
+  }
+
+  const fromRoute = String(routeBadgeId || '').trim();
+  if (fromRoute) {
+    const numericRoute = Number(fromRoute);
+    if (Number.isInteger(numericRoute) && numericRoute > 0) {
+      return numericRoute;
+    }
+
+    const match = fromRoute.match(/^badge-(\d+)$/i);
+    if (match) {
+      const numericMatch = Number(match[1]);
+      if (Number.isInteger(numericMatch) && numericMatch > 0) {
+        return numericMatch;
+      }
+    }
+  }
+
+  const fromStateId = String(badgeState?.id || '').trim();
+  if (fromStateId) {
+    const numericStateId = Number(fromStateId);
+    if (Number.isInteger(numericStateId) && numericStateId > 0) {
+      return numericStateId;
+    }
+
+    const match = fromStateId.match(/^badge-(\d+)$/i);
+    if (match) {
+      const numericMatch = Number(match[1]);
+      if (Number.isInteger(numericMatch) && numericMatch > 0) {
+        return numericMatch;
+      }
+    }
+  }
+
+  return null;
+};
+
 function BadgePublica() {
   const { badgeId } = useParams();
   const navigate = useNavigate();
@@ -118,6 +159,11 @@ function BadgePublica() {
     const matchedBadge = fallbackBadges.find((item) => item.id === decodedId);
     return matchedBadge || defaultBadgeDetails;
   }, [location.state, badgeId]);
+
+  const resolvedBadgeDbId = useMemo(
+    () => resolveBadgeDbId(badgeId, badge),
+    [badgeId, badge],
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -156,7 +202,7 @@ function BadgePublica() {
 
     const loadRequirements = async () => {
       try {
-        const badgeDbId = badge.badgeDbId;
+        const badgeDbId = resolvedBadgeDbId;
         if (!badgeDbId) return;
 
         const reqs = await fetchBadgeRequirements(badgeDbId);
@@ -173,7 +219,7 @@ function BadgePublica() {
     return () => {
       isMounted = false;
     };
-  }, [badge.badgeDbId]);
+  }, [resolvedBadgeDbId]);
 
   const requirements = useMemo(() => {
     if (dynamicRequirements && Array.isArray(dynamicRequirements) && dynamicRequirements.length > 0) {

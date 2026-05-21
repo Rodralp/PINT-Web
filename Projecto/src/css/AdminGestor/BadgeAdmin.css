@@ -130,6 +130,28 @@
   resize: vertical;
 }
 
+.badge-admin-help-text {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.badge-admin-image-preview-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.badge-admin-image-preview {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid #d6deeb;
+  background: #f8fafc;
+  padding: 4px;
+}
+
 .badge-admin-error {
   color: #d92d20;
   font-size: 12px;

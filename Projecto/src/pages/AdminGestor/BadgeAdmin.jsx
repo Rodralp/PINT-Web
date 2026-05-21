@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, Plus, Save, Trash2 } from 'lucide-react';
+import { ChevronLeft, Plus, Save, Trash2, XCircle } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { fetchAdminLearningPaths } from '../../services/adminLearningPathService';
@@ -8,19 +8,20 @@ import '../../css/AdminGestor/BadgeAdmin.css';
 
 const SPECIAL_BADGE_TYPE = 'special';
 const STANDARD_BADGE_TYPE = 'standard';
+const MAX_BADGE_IMAGE_SIZE_BYTES = 1_500_000;
 
 const badgeLevels = [
-  { levelKey: 'badge_level_junior', points: 100, badgeImage: '/badges/J%C3%BAnior.png' },
-  { levelKey: 'badge_level_intermediate', points: 150, badgeImage: '/badges/Interm%C3%A9dio.png' },
-  { levelKey: 'badge_level_senior', points: 200, badgeImage: '/badges/S%C3%A9nior.png' },
-  { levelKey: 'badge_level_specialist', points: 250, badgeImage: '/badges/Especialista.png' },
-  { levelKey: 'badge_level_knowledge_lead', points: 300, badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png' },
+  { levelKey: 'badge_level_junior', label: 'Júnior', points: 100, badgeImage: '/badges/J%C3%BAnior.png' },
+  { levelKey: 'badge_level_intermediate', label: 'Intermédio', points: 150, badgeImage: '/badges/Interm%C3%A9dio.png' },
+  { levelKey: 'badge_level_senior', label: 'Sénior', points: 200, badgeImage: '/badges/S%C3%A9nior.png' },
+  { levelKey: 'badge_level_specialist', label: 'Especialista', points: 250, badgeImage: '/badges/Especialista.png' },
+  { levelKey: 'badge_level_knowledge_lead', label: 'Líder de Conhecimento', points: 300, badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png' },
 ];
 
 const specialRequirementOptions = [
-  { id: 'badge_count', label: 'Obter numero de badges' },
-  { id: 'ranking_position', label: 'Alcancar lugar no ranking' },
-  { id: 'streak_days', label: 'Streak de dias' },
+  { id: 'badge_count', label: 'Número de badges obtidas' },
+  { id: 'ranking_position', label: 'Posição no ranking' },
+  { id: 'streak_days', label: 'Dias consecutivos de atividade' },
 ];
 
 const formatDateLabel = (value) => {
@@ -95,16 +96,11 @@ const buildLevelOptions = (paths) => {
             return;
           }
 
-          const levelTitle = level?.title || 'Nivel';
-          const levelMeta = resolveLevelMetaFromTitle(levelTitle) || badgeLevels[0];
-
           options.push({
             id: levelId,
-            title: levelTitle,
-            label: `${pathName} / ${serviceLineName} / ${areaName} / ${levelTitle}`,
-            levelKey: levelMeta.levelKey,
-            points: levelMeta.points,
-            badgeImage: levelMeta.badgeImage,
+            title: level?.title || 'Nivel',
+            label: `${pathName} / ${serviceLineName} / ${areaName} / ${level?.title || 'Nivel'}`,
+            badgeCount: Number(level?.badgeCount) || 0,
           });
         });
       });
@@ -114,21 +110,31 @@ const buildLevelOptions = (paths) => {
   return options;
 };
 
+const getSelectableLevelOptions = (levelOptions, currentLevelId) =>
+  (levelOptions || []).filter((option) => option.badgeCount === 0 || option.id === currentLevelId);
+
 const buildFormState = (badge, isCreate) => {
   const hasBadge = Boolean(badge);
   const isSpecial = hasBadge
-    ? badge.typeId === SPECIAL_BADGE_TYPE || badge.isSpecial || !badge.levelKey
+    ? badge.typeId === SPECIAL_BADGE_TYPE || badge.isSpecial === true
     : false;
-  const levelMetaFromBadge = badge?.levelKey
-    ? resolveLevelMeta(badge.levelKey)
-    : resolveLevelMetaFromTitle(badge?.levelTitle || badge?.level || '');
-  const levelMeta = levelMetaFromBadge || badgeLevels[0];
+
+  const levelMetaFromBadgeType = !isSpecial && badge?.typeId
+    ? resolveLevelMeta(badge.typeId)
+    : null;
+  const levelMetaFromBadgeTitle = !isSpecial
+    ? resolveLevelMetaFromTitle(badge?.levelTitle || badge?.level || '')
+    : null;
+  const levelMeta = levelMetaFromBadgeType || levelMetaFromBadgeTitle || badgeLevels[0];
+
   const pointsValue = Number.isFinite(Number(badge?.points))
     ? Number(badge.points)
     : isSpecial
       ? 0
       : levelMeta.points;
+
   const badgeImage = badge?.badgeImage || (isSpecial ? '/badges/default.png' : levelMeta.badgeImage);
+
   const specialRequirements = Array.isArray(badge?.specialRequirements) && badge.specialRequirements.length > 0
     ? badge.specialRequirements.map((req) => buildRequirement(req))
     : [buildRequirement()];
@@ -140,13 +146,20 @@ const buildFormState = (badge, isCreate) => {
     name: badge?.area || badge?.name || '',
     description: badge?.description || '',
     type: isSpecial ? SPECIAL_BADGE_TYPE : STANDARD_BADGE_TYPE,
-    levelKey: isSpecial ? null : levelMeta.levelKey,
+    badgeTypeId: isSpecial ? '' : levelMeta.levelKey,
     points: String(pointsValue),
     badgeImage,
     date: badge?.date || formatDateLabel(),
     specialRequirements,
   };
 };
+
+const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(String(reader.result || ''));
+  reader.onerror = () => reject(new Error('Nao foi possivel ler o ficheiro de imagem.'));
+  reader.readAsDataURL(file);
+});
 
 function BadgeAdmin() {
   const { badgeId } = useParams();
@@ -161,9 +174,16 @@ function BadgeAdmin() {
   const [levelOptions, setLevelOptions] = useState([]);
   const [isLoadingLevels, setIsLoadingLevels] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
   const isSpecial = form.type === SPECIAL_BADGE_TYPE;
-  const selectedLevelOption = useMemo(
-    () => levelOptions.find((option) => option.id === form.levelId) || null,
+
+  const selectedBadgeTypeMeta = useMemo(
+    () => resolveLevelMeta(form.badgeTypeId || badgeLevels[0].levelKey),
+    [form.badgeTypeId],
+  );
+
+  const selectableLevelOptions = useMemo(
+    () => getSelectableLevelOptions(levelOptions, form.levelId),
     [levelOptions, form.levelId],
   );
 
@@ -181,7 +201,7 @@ function BadgeAdmin() {
         setLevelOptions(buildLevelOptions(data));
       } catch {
         if (isMounted) {
-          setStatusMessage('Falha ao carregar os niveis.');
+          setStatusMessage('Falha ao carregar os níveis.');
         }
       } finally {
         if (isMounted) {
@@ -203,9 +223,6 @@ function BadgeAdmin() {
     if (location.state?.badge) {
       setInitialBadge(location.state.badge);
       setStatusMessage('');
-      return () => {
-        isMounted = false;
-      };
     }
 
     if (isCreate) {
@@ -226,7 +243,7 @@ function BadgeAdmin() {
         }
       } catch {
         if (isMounted) {
-          setStatusMessage('Badge nao encontrada.');
+          setStatusMessage('Badge não encontrada.');
         }
       }
     };
@@ -245,7 +262,7 @@ function BadgeAdmin() {
 
   useEffect(() => {
     if (!initialBadge && !isCreate) {
-      setStatusMessage('Badge nao encontrada.');
+      setStatusMessage('Badge não encontrada.');
     }
   }, [initialBadge, isCreate]);
 
@@ -258,6 +275,19 @@ function BadgeAdmin() {
 
   const handleFieldChange = (field) => (event) => {
     const { value } = event.target;
+
+    if (field === 'points') {
+      const numericValue = Number(value);
+      const safeValue = value === ''
+        ? ''
+        : (Number.isFinite(numericValue) ? String(Math.max(0, numericValue)) : '0');
+      setForm((current) => ({
+        ...current,
+        [field]: safeValue,
+      }));
+      return;
+    }
+
     setForm((current) => ({
       ...current,
       [field]: value,
@@ -274,49 +304,91 @@ function BadgeAdmin() {
           ...current,
           type: nextType,
           levelId: null,
-          levelKey: null,
+          badgeTypeId: '',
+          points: '0',
+          badgeImage: current.badgeImage && !current.badgeImage.startsWith('/badges/')
+            ? current.badgeImage
+            : '/badges/default.png',
           specialRequirements: current.specialRequirements.length > 0
             ? current.specialRequirements
             : [buildRequirement()],
         };
       }
 
-      const fallbackOption = levelOptions.find((option) => option.id === current.levelId) || levelOptions[0];
-      const fallbackMeta = current.levelKey ? resolveLevelMeta(current.levelKey) : badgeLevels[0];
-      const levelKey = fallbackOption?.levelKey || fallbackMeta.levelKey;
-      const points = fallbackOption?.points ?? fallbackMeta.points;
-      const badgeImage = fallbackOption?.badgeImage || fallbackMeta.badgeImage;
+      const fallbackBadgeType = current.badgeTypeId || badgeLevels[0].levelKey;
+      const badgeTypeMeta = resolveLevelMeta(fallbackBadgeType);
+      const availableOptions = getSelectableLevelOptions(levelOptions, current.levelId);
+      const nextLevelId = current.levelId || availableOptions[0]?.id || null;
 
       return {
         ...current,
         type: nextType,
-        levelId: fallbackOption?.id || current.levelId,
-        levelKey,
-        points: String(points),
-        badgeImage,
+        levelId: nextLevelId,
+        badgeTypeId: badgeTypeMeta.levelKey,
+        points: String(badgeTypeMeta.points),
+        badgeImage: current.badgeImage && !current.badgeImage.startsWith('/badges/')
+          ? current.badgeImage
+          : badgeTypeMeta.badgeImage,
       };
     });
+  };
+
+  const handleBadgeTypeChange = (event) => {
+    const { value } = event.target;
+    const selectedMeta = resolveLevelMeta(value);
+
+    setForm((current) => ({
+      ...current,
+      badgeTypeId: selectedMeta.levelKey,
+      points: String(selectedMeta.points),
+      badgeImage: current.badgeImage && !current.badgeImage.startsWith('/badges/')
+        ? current.badgeImage
+        : selectedMeta.badgeImage,
+    }));
   };
 
   const handleLevelChange = (event) => {
     const { value } = event.target;
     const parsedLevelId = parseNumericId(value);
-    const selected = levelOptions.find((option) => option.id === parsedLevelId) || null;
-
-    if (!selected) {
-      setForm((current) => ({
-        ...current,
-        levelId: null,
-      }));
-      return;
-    }
 
     setForm((current) => ({
       ...current,
-      levelId: selected.id,
-      levelKey: selected.levelKey,
-      points: String(selected.points),
-      badgeImage: selected.badgeImage,
+      levelId: parsedLevelId,
+    }));
+  };
+
+  const handleImageFileChange = async (event) => {
+    const selectedFile = event.target.files?.[0];
+    if (!selectedFile) {
+      return;
+    }
+
+    if (!String(selectedFile.type || '').startsWith('image/')) {
+      setStatusMessage('Escolha um ficheiro de imagem válido.');
+      return;
+    }
+
+    if (selectedFile.size > MAX_BADGE_IMAGE_SIZE_BYTES) {
+      setStatusMessage('A imagem é demasiado grande (máximo 1.5MB).');
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(selectedFile);
+      setForm((current) => ({
+        ...current,
+        badgeImage: dataUrl,
+      }));
+      setStatusMessage('');
+    } catch (error) {
+      setStatusMessage(error?.message || 'Não foi possível carregar a imagem.');
+    }
+  };
+
+  const clearCustomImage = () => {
+    setForm((current) => ({
+      ...current,
+      badgeImage: isSpecial ? '/badges/default.png' : selectedBadgeTypeMeta.badgeImage,
     }));
   };
 
@@ -343,6 +415,9 @@ function BadgeAdmin() {
     }));
   };
 
+  const isRequirementTypeDisabled = (typeId, currentRequirementId) =>
+    form.specialRequirements.some((requirement) => requirement.id !== currentRequirementId && requirement.type === typeId);
+
   const validateForm = () => {
     const nextErrors = {};
 
@@ -350,15 +425,28 @@ function BadgeAdmin() {
       nextErrors.name = 'Indique o nome do badge.';
     }
 
+    if (!isSpecial && !form.badgeTypeId) {
+      nextErrors.badgeTypeId = 'Selecione o nível do badge.';
+    }
+
     if (!isSpecial && !form.levelId) {
-      nextErrors.levelId = 'Selecione um nivel valido.';
+      nextErrors.levelId = 'Selecione um nível associado válido.';
+    }
+
+    if (!isSpecial && selectableLevelOptions.length === 0 && isCreate) {
+      nextErrors.levelId = 'Não existem níveis disponíveis sem badge associada.';
     }
 
     if (isSpecial) {
       const validSpecial = form.specialRequirements.filter((req) => Number(req.value) > 0);
       if (validSpecial.length === 0) {
-        nextErrors.specialRequirements = 'Defina pelo menos um requisito com valor.';
+        nextErrors.specialRequirements = 'Defina pelo menos um trigger com valor.';
       }
+    }
+
+    const numericPoints = Number(form.points);
+    if (!Number.isFinite(numericPoints) || numericPoints < 0) {
+      nextErrors.points = 'Os pontos não podem ser negativos.';
     }
 
     setFormErrors(nextErrors);
@@ -367,6 +455,7 @@ function BadgeAdmin() {
 
   const handleSave = async () => {
     if (!validateForm()) {
+      setStatusMessage('Existem campos inválidos. Verifique os erros no formulário.');
       return;
     }
 
@@ -374,12 +463,20 @@ function BadgeAdmin() {
     setStatusMessage('');
 
     const pointsValue = Number(form.points);
-    const fallbackPoints = selectedLevelOption?.points ?? 0;
     const safePoints = Number.isFinite(pointsValue)
       ? pointsValue
-      : (isSpecial ? 0 : fallbackPoints);
+      : (isSpecial ? 0 : selectedBadgeTypeMeta.points);
+
     const trimmedName = form.name.trim();
     const trimmedDescription = form.description.trim();
+    const specialRequirementsPayload = isSpecial
+      ? form.specialRequirements
+        .map((requirement) => ({
+          type: String(requirement.type || '').trim(),
+          value: Number(requirement.value),
+        }))
+        .filter((requirement) => Number.isInteger(requirement.value) && requirement.value > 0)
+      : [];
 
     const payload = {
       name: trimmedName,
@@ -387,6 +484,9 @@ function BadgeAdmin() {
       points: safePoints,
       levelId: isSpecial ? null : form.levelId,
       isSpecial,
+      typeId: isSpecial ? SPECIAL_BADGE_TYPE : form.badgeTypeId,
+      badgeImage: form.badgeImage || null,
+      specialRequirements: specialRequirementsPayload,
     };
 
     try {
@@ -395,7 +495,7 @@ function BadgeAdmin() {
       } else {
         const targetBadgeId = form.badgeDbId || parseNumericId(badgeId);
         if (!targetBadgeId) {
-          setStatusMessage('Nao foi possivel identificar o badge para atualizar.');
+          setStatusMessage('Não foi possível identificar o badge para atualizar.');
           setIsSaving(false);
           return;
         }
@@ -455,7 +555,7 @@ function BadgeAdmin() {
             </label>
 
             <label className="badge-admin-field">
-              <span>Descricao</span>
+              <span>Descrição</span>
               <textarea
                 rows={3}
                 value={form.description}
@@ -467,17 +567,31 @@ function BadgeAdmin() {
             <label className="badge-admin-field">
               <span>Tipo</span>
               <select value={form.type} onChange={handleTypeChange}>
-                <option value={STANDARD_BADGE_TYPE}>Nivel (com candidatura)</option>
+                <option value={STANDARD_BADGE_TYPE}>Nível (com candidatura)</option>
                 <option value={SPECIAL_BADGE_TYPE}>Especial (sem candidatura)</option>
               </select>
             </label>
 
             {!isSpecial && (
               <label className="badge-admin-field">
-                <span>Nivel associado</span>
+                <span>Nível do badge</span>
+                <select value={form.badgeTypeId || ''} onChange={handleBadgeTypeChange}>
+                  {badgeLevels.map((option) => (
+                    <option key={option.levelKey} value={option.levelKey}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {formErrors.badgeTypeId && <span className="badge-admin-error">{formErrors.badgeTypeId}</span>}
+              </label>
+            )}
+
+            {!isSpecial && (
+              <label className="badge-admin-field">
+                <span>Nível associado</span>
                 <select value={form.levelId || ''} onChange={handleLevelChange} disabled={isLoadingLevels}>
-                  <option value="">Selecionar nivel</option>
-                  {levelOptions.map((option) => (
+                  <option value="">Selecionar nível</option>
+                  {selectableLevelOptions.map((option) => (
                     <option key={option.id} value={option.id}>
                       {option.label}
                     </option>
@@ -495,25 +609,31 @@ function BadgeAdmin() {
                 value={form.points}
                 onChange={handleFieldChange('points')}
               />
+              {formErrors.points && <span className="badge-admin-error">{formErrors.points}</span>}
             </label>
 
-            <label className="badge-admin-field">
-              <span>Imagem do badge (URL)</span>
-              <input
-                type="text"
-                value={form.badgeImage}
-                onChange={handleFieldChange('badgeImage')}
-                placeholder="/badges/Especialista.png"
-              />
-            </label>
+            <div className="badge-admin-field">
+              <span>Imagem do badge (ficheiro)</span>
+              <input type="file" accept="image/*" onChange={handleImageFileChange} />
+              <div className="badge-admin-image-preview-wrap">
+                <img className="badge-admin-image-preview" src={form.badgeImage} alt="Preview badge" />
+                <button type="button" className="badge-admin-btn ghost" onClick={clearCustomImage}>
+                  <XCircle size={16} />
+                  Repor imagem padrão
+                </button>
+              </div>
+              <span className="badge-admin-help-text">
+                Formatos suportados: png, jpg, svg, etc. (máximo 1.5MB).
+              </span>
+            </div>
           </div>
         </section>
 
         <section className="badge-admin-card">
-          <div className="badge-admin-section-title">Requisitos especiais</div>
+          <div className="badge-admin-section-title">Triggers especiais</div>
           {!isSpecial && (
             <p className="badge-admin-muted">
-              Este badge segue o fluxo normal de candidatura e validacao.
+              Este badge segue o fluxo normal de candidatura e validação.
             </p>
           )}
           {isSpecial && (
@@ -525,7 +645,11 @@ function BadgeAdmin() {
                     onChange={(event) => updateRequirement(req.id, { type: event.target.value })}
                   >
                     {specialRequirementOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
+                      <option
+                        key={option.id}
+                        value={option.id}
+                        disabled={isRequirementTypeDisabled(option.id, req.id)}
+                      >
                         {option.label}
                       </option>
                     ))}
@@ -534,14 +658,24 @@ function BadgeAdmin() {
                     type="number"
                     min="1"
                     value={req.value}
-                    onChange={(event) => updateRequirement(req.id, { value: event.target.value })}
+                    onChange={(event) => {
+                      const rawValue = event.target.value;
+                      if (rawValue === '') {
+                        updateRequirement(req.id, { value: '' });
+                        return;
+                      }
+
+                      const parsed = Number(rawValue);
+                      const safeValue = Number.isFinite(parsed) ? String(Math.max(0, parsed)) : '0';
+                      updateRequirement(req.id, { value: safeValue });
+                    }}
                     placeholder="Valor"
                   />
                   <button
                     type="button"
                     className="badge-admin-btn icon"
                     onClick={() => removeRequirement(req.id)}
-                    aria-label="Remover requisito"
+                    aria-label="Remover trigger"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -550,7 +684,7 @@ function BadgeAdmin() {
 
               <button type="button" className="badge-admin-btn ghost" onClick={addRequirement}>
                 <Plus size={16} />
-                Adicionar requisito
+                Adicionar trigger
               </button>
 
               {formErrors.specialRequirements && (

@@ -2,6 +2,7 @@ import { QueryTypes } from 'sequelize';
 import fs from 'node:fs';
 import path from 'node:path';
 import { sequelize } from '../config/database.js';
+import { syncSpecialBadgesForConsultor } from './consultorModel.js';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const uploadsDir = path.resolve(globalThis.process?.cwd?.() || '.', 'server', 'uploads');
@@ -1062,6 +1063,14 @@ const applyDecision = async ({ role, actorUtilizadorId, request, decision, comme
   } catch (error) {
     await transaction.rollback();
     throw error;
+  }
+
+  if (shouldObtainBadge) {
+    try {
+      await syncSpecialBadgesForConsultor(consultorId);
+    } catch (error) {
+      console.error('Failed to sync special badges after approval.', error);
+    }
   }
 
   if (shouldRemoveEvidence && evidenceFilesToDelete.length > 0) {

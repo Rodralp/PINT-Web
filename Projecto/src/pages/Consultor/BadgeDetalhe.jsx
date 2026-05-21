@@ -18,7 +18,12 @@ import {
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
-import { fetchMyBadges, requestBadgeAcquisition, uploadEvidence } from '../../services/consultorService';
+import {
+  fetchBadgeRequirements,
+  fetchMyBadges,
+  requestBadgeAcquisition,
+  uploadEvidence,
+} from '../../services/consultorService';
 import '../../css/Consultor/BadgeDetalhe.css';
 
 const defaultBadgeDetails = {
@@ -171,6 +176,47 @@ const getRequirementPrefixByLevel = (levelKey) => {
   return 'E';
 };
 
+const resolveBadgeDbId = (routeBadgeId, badgeState) => {
+  const direct = Number(badgeState?.badgeDbId);
+  if (Number.isInteger(direct) && direct > 0) {
+    return direct;
+  }
+
+  const fromRoute = String(routeBadgeId || '').trim();
+  if (fromRoute) {
+    const numericRoute = Number(fromRoute);
+    if (Number.isInteger(numericRoute) && numericRoute > 0) {
+      return numericRoute;
+    }
+
+    const match = fromRoute.match(/^badge-(\d+)$/i);
+    if (match) {
+      const numericMatch = Number(match[1]);
+      if (Number.isInteger(numericMatch) && numericMatch > 0) {
+        return numericMatch;
+      }
+    }
+  }
+
+  const fromStateId = String(badgeState?.id || '').trim();
+  if (fromStateId) {
+    const numericStateId = Number(fromStateId);
+    if (Number.isInteger(numericStateId) && numericStateId > 0) {
+      return numericStateId;
+    }
+
+    const match = fromStateId.match(/^badge-(\d+)$/i);
+    if (match) {
+      const numericMatch = Number(match[1]);
+      if (Number.isInteger(numericMatch) && numericMatch > 0) {
+        return numericMatch;
+      }
+    }
+  }
+
+  return null;
+};
+
 function BadgeDetalhe() {
   const { badgeId } = useParams();
   const navigate = useNavigate();
@@ -181,6 +227,7 @@ function BadgeDetalhe() {
   const [statusMessage, setStatusMessage] = useState('');
   const [filesByRequirement, setFilesByRequirement] = useState({});
   const [currentRequestId, setCurrentRequestId] = useState(() => Number(location.state?.badge?.requestId) || null);
+  const [dynamicRequirements, setDynamicRequirements] = useState(null);
 
   const [badge, setBadge] = useState(() => {
     if (location.state?.badge) {
@@ -193,6 +240,12 @@ function BadgeDetalhe() {
   });
   const [badgeStatus, setBadgeStatus] = useState(() => normalizeBadgeStatus(badge));
   const hasBadgeId = Number.isInteger(Number(badge?.badgeDbId)) && Number(badge.badgeDbId) > 0;
+  const isSpecialBadge = Boolean(badge?.isSpecial) || badge?.typeId === 'special' || !badge?.levelKey;
+  const levelLabel = isSpecialBadge ? 'Especial' : t(badge?.levelKey || '');
+  const resolvedBadgeDbId = useMemo(
+    () => resolveBadgeDbId(badgeId, badge),
+    [badgeId, badge],
+  );
 
   useEffect(() => {
     if (location.state?.badge) {
@@ -204,6 +257,10 @@ function BadgeDetalhe() {
     const matchedBadge = fallbackBadges.find((item) => item.id === decodedId);
     setBadge(matchedBadge || defaultBadgeDetails);
   }, [location.state?.badge, badgeId]);
+
+  useEffect(() => {
+    setDynamicRequirements(null);
+  }, [badgeId, badge?.badgeDbId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -247,6 +304,39 @@ function BadgeDetalhe() {
   }, [badgeId, location.state?.badge?.badgeDbId]);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const loadRequirements = async () => {
+      if (!resolvedBadgeDbId) {
+        return;
+      }
+
+      const hasServerRequirements = Array.isArray(badge?.requirements) && badge.requirements.length > 0;
+      if (!isSpecialBadge && hasServerRequirements) {
+        setDynamicRequirements(null);
+        return;
+      }
+
+      try {
+        const reqs = await fetchBadgeRequirements(resolvedBadgeDbId);
+        if (isMounted && Array.isArray(reqs)) {
+          setDynamicRequirements(reqs);
+        }
+      } catch {
+        if (isMounted) {
+          setDynamicRequirements(null);
+        }
+      }
+    };
+
+    loadRequirements();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [resolvedBadgeDbId, isSpecialBadge, badge?.requirements]);
+
+  useEffect(() => {
     // Initialize files state from badge payload when available (server may provide per-requirement files)
     const possible = badge?.requirementFiles || badge?.filesByRequirement || badge?.requirementSubmissions || badge?.submittedFiles;
     if (possible && typeof possible === 'object') {
@@ -269,9 +359,11 @@ function BadgeDetalhe() {
     }
     const prefix = getRequirementPrefixByLevel(badge.levelKey);
     const showFileCounters = badgeStatus !== 'visualizar';
-    const sourceRequirements = Array.isArray(badge.requirements) && badge.requirements.length > 0
-      ? badge.requirements
-      : requirementTemplate;
+    const sourceRequirements = Array.isArray(dynamicRequirements) && dynamicRequirements.length > 0
+      ? dynamicRequirements
+      : Array.isArray(badge.requirements) && badge.requirements.length > 0
+        ? badge.requirements
+        : isSpecialBadge ? [] : requirementTemplate;
 
     return sourceRequirements.map((item, index) => {
       const fallback = requirementTemplate[index % requirementTemplate.length];
@@ -282,7 +374,9 @@ function BadgeDetalhe() {
       return {
         ...item,
         id: String(item?.id || `req-${index + 1}`),
-        title: hasPrefixedTitle ? rawTitle : `${prefix}${index + 1} - ${rawTitle}`,
+        title: isSpecialBadge
+          ? rawTitle
+          : (hasPrefixedTitle ? rawTitle : `${prefix}${index + 1} - ${rawTitle}`),
         description: item?.description || fallback.description,
         files: Number.isInteger(filesCount) && filesCount >= 0
           ? filesCount
@@ -290,7 +384,7 @@ function BadgeDetalhe() {
         image: badge.badgeImage,
       };
     });
-  }, [badge.requirements, badge.levelKey, badgeStatus, badge.badgeImage, hasBadgeId]);
+  }, [badge.requirements, badge.levelKey, badgeStatus, badge.badgeImage, hasBadgeId, isSpecialBadge, dynamicRequirements]);
 
   const fallbackBackRoute =
     typeof location.state?.backTo === 'string' && location.state.backTo.trim().length > 0
@@ -477,12 +571,12 @@ function BadgeDetalhe() {
 
         <section className="badge-hero-card" aria-label={`Detalhes do badge ${badgeId || ''}`}>
           <div className="badge-hero-media">
-            <img src={badge.badgeImage} alt={t(badge.levelKey)} className="badge-hero-image" />
+            <img src={badge.badgeImage} alt={levelLabel} className="badge-hero-image" />
           </div>
 
           <div className="badge-hero-content">
             <h2>{badge.area}</h2>
-            <p>{t(badge.levelKey)}</p>
+            <p>{levelLabel}</p>
 
             <div className="badge-hero-meta">
               <span>
@@ -513,7 +607,7 @@ function BadgeDetalhe() {
         </section>
 
         <p className="badge-breadcrumb">
-          {badge.area} {'>'} {badge.serviceLineName} {'>'} {badge.learningPathName} {'>'} {t(badge.levelKey)}
+          {badge.area} {'>'} {badge.serviceLineName} {'>'} {badge.learningPathName} {'>'} {levelLabel}
         </p>
 
         <section className="badge-requirements-card">

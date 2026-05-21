@@ -82,6 +82,7 @@ const buildLearningPathTree = (rows) => {
       title,
       isActive: Boolean(row.n_is_active),
       subtitle: `Nivel ${area.levels.length + 1}`,
+      badgeCount: Number(row.badge_count) || 0,
     });
   });
 
@@ -115,7 +116,8 @@ export const adminLearningPathModel = {
           a.is_active AS a_is_active,
           n.nnivel,
           n.nivel,
-          n.is_active AS n_is_active
+          n.is_active AS n_is_active,
+          COALESCE(nbc.badge_count, 0) AS badge_count
         FROM learning_path AS lp
         LEFT JOIN service_line AS sl
           ON sl.nlpath = lp.nlpath
@@ -123,6 +125,12 @@ export const adminLearningPathModel = {
           ON a.nsline = sl.nsline
         LEFT JOIN nivel AS n
           ON n.narea = a.narea
+        LEFT JOIN (
+          SELECT nnivel, COUNT(DISTINCT nbadge) AS badge_count
+          FROM nivel_contem_b
+          GROUP BY nnivel
+        ) AS nbc
+          ON nbc.nnivel = n.nnivel
         ORDER BY lp.nlpath ASC, sl.nsline ASC, a.narea ASC, n.nnivel ASC
       `,
       { type: QueryTypes.SELECT },

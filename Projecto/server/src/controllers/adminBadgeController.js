@@ -1,6 +1,9 @@
 import { adminBadgeService } from '../services/adminBadgeService.js';
 import { adminLearningPathService } from '../services/adminLearningPathService.js';
 
+const specialTriggerTypes = new Set(['badge_count', 'ranking_position', 'streak_days']);
+const MAX_BADGE_IMAGE_LENGTH = 2_500_000;
+
 const parseEntityId = (value) => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
@@ -40,16 +43,81 @@ const parsePoints = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const parseTypeIdentifier = (value) => {
+  if (Number.isInteger(value) && value > 0) {
+    return value;
+  }
+
+  const normalized = String(value || '').trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const parsedNumeric = Number(normalized);
+  if (Number.isInteger(parsedNumeric) && parsedNumeric > 0) {
+    return parsedNumeric;
+  }
+
+  return normalized;
+};
+
+const parseBadgeImage = (value) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.length > MAX_BADGE_IMAGE_LENGTH) {
+    return null;
+  }
+
+  return normalized;
+};
+
+const parseSpecialRequirements = (value) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const seenTypes = new Set();
+  const requirements = [];
+
+  for (const item of value) {
+    const type = String(item?.type || '').trim();
+    const parsedValue = Number(item?.value);
+
+    if (!specialTriggerTypes.has(type)) {
+      continue;
+    }
+
+    if (!Number.isInteger(parsedValue) || parsedValue <= 0) {
+      continue;
+    }
+
+    if (seenTypes.has(type)) {
+      continue;
+    }
+
+    seenTypes.add(type);
+    requirements.push({ type, value: parsedValue });
+  }
+
+  return requirements;
+};
+
 const toBadgeResponse = (row) => ({
   id: `badge-${Number(row.nbadge)}`,
   badgeDbId: Number(row.nbadge),
   name: row.b_nome,
   description: row.b_descricao,
   points: Number(row.pontos) || 0,
+  badgeImage: row.imagem || null,
   levelId: row.levelId || null,
   levelTitle: row.levelTitle || null,
   isSpecial: Boolean(row.isSpecial),
   typeName: row.typeName || null,
+  typeId: row.typeKey || null,
+  specialRequirements: Array.isArray(row.specialRequirements) ? row.specialRequirements : [],
 });
 
 export const getBadge = async (req, res) => {
@@ -79,9 +147,17 @@ export const createBadge = async (req, res) => {
   const isSpecial = parseBoolean(req.body?.isSpecial);
   const levelId = parseEntityId(req.body?.levelId);
   const points = parsePoints(req.body?.points);
+  const typeId = parseTypeIdentifier(req.body?.typeId);
+  const badgeImage = parseBadgeImage(req.body?.badgeImage);
+  const specialRequirements = parseSpecialRequirements(req.body?.specialRequirements);
 
   if (!name) {
     res.status(400).json({ message: 'Name is required.' });
+    return;
+  }
+
+  if (points !== null && points < 0) {
+    res.status(400).json({ message: 'Points cannot be negative.' });
     return;
   }
 
@@ -90,6 +166,16 @@ export const createBadge = async (req, res) => {
 
   if (!specialFlag && !levelId) {
     res.status(400).json({ message: 'Level id is required for standard badges.' });
+    return;
+  }
+
+  if (!specialFlag && !typeId) {
+    res.status(400).json({ message: 'Type id is required for standard badges.' });
+    return;
+  }
+
+  if (specialFlag && specialRequirements.length === 0) {
+    res.status(400).json({ message: 'At least one special trigger is required.' });
     return;
   }
 
@@ -108,6 +194,9 @@ export const createBadge = async (req, res) => {
       points,
       levelId,
       isSpecial: specialFlag,
+      typeId,
+      badgeImage,
+      specialRequirements,
     });
 
     if (!row) {
@@ -128,6 +217,9 @@ export const updateBadge = async (req, res) => {
   const isSpecial = parseBoolean(req.body?.isSpecial);
   const levelId = parseEntityId(req.body?.levelId);
   const points = parsePoints(req.body?.points);
+  const typeId = parseTypeIdentifier(req.body?.typeId);
+  const badgeImage = parseBadgeImage(req.body?.badgeImage);
+  const specialRequirements = parseSpecialRequirements(req.body?.specialRequirements);
 
   if (!badgeId) {
     res.status(400).json({ message: 'Badge id is required.' });
@@ -139,11 +231,26 @@ export const updateBadge = async (req, res) => {
     return;
   }
 
+  if (points !== null && points < 0) {
+    res.status(400).json({ message: 'Points cannot be negative.' });
+    return;
+  }
+
   const badgeDescription = description || `Badge ${name}`;
   const specialFlag = isSpecial === null ? false : isSpecial;
 
   if (!specialFlag && !levelId) {
     res.status(400).json({ message: 'Level id is required for standard badges.' });
+    return;
+  }
+
+  if (!specialFlag && !typeId) {
+    res.status(400).json({ message: 'Type id is required for standard badges.' });
+    return;
+  }
+
+  if (specialFlag && specialRequirements.length === 0) {
+    res.status(400).json({ message: 'At least one special trigger is required.' });
     return;
   }
 
@@ -163,6 +270,9 @@ export const updateBadge = async (req, res) => {
       points,
       levelId,
       isSpecial: specialFlag,
+      typeId,
+      badgeImage,
+      specialRequirements,
     });
 
     if (!row) {
