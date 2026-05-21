@@ -22,6 +22,7 @@ import MinhaServiceLineSLL from './pages/ServiceLineLeader/MinhaServiceLine_SLL'
 import HistoricoSLL from './pages/ServiceLineLeader/Historico_SLL'
 import DashboardAG from './pages/AdminGestor/Dashboard_AG'
 import CatalogoBadges from './pages/CatalogoBadges'
+import BadgeAdmin from './pages/AdminGestor/BadgeAdmin'
 import GestaoPedidosAG from './pages/AdminGestor/GestaoPedidos_AG'
 import PedidoAG from './pages/AdminGestor/Pedido_AG'
 import EquipasSLAAG from './pages/AdminGestor/EquipasSLA_AG'
@@ -109,6 +110,7 @@ function App() {
         <Route path='/admin-gestor/definicoes' element={<Definicoes />} />
         <Route path='/admin-gestor/utilizadores' element={<UtilizadoresAG />} />
         <Route path='/admin-gestor/catalogo-badges' element={<CatalogoBadges />} />
+        <Route path='/admin-gestor/badge/:badgeId' element={<BadgeAdmin />} />
         <Route path='/admin-gestor/learning-paths' element={<LearningPathsAG />} />
         <Route path='/admin-gestor/equipas-sla' element={<EquipasSLAAG />} />
         <Route path='/admin-gestor/comunicados-avisos' element={<ComunicadosAvisosAG />} />

@@ -67,6 +67,15 @@ const normalizeLevelTitle = (value) => {
   return withoutPathPrefix.replace(/^nivel\s+/i, '').trim();
 };
 
+const normalizeForCompare = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
+const isSpecialTypeName = (value) => normalizeForCompare(value) === 'especial';
+
 const normalizePedidoEstado = (estado) => String(estado || '').trim().toLowerCase();
 const isEstadoEmValidacaoTm = (estado) => (
   estado === pedidoEstados.emValidacaoTm || estado === pedidoEstados.emValidacaoTmLegacy
@@ -1836,10 +1845,17 @@ export const consultorModel = {
       `
         SELECT
           b.nbadge,
+          b.b_nome,
+          b.b_descricao,
+          b.pontos,
+          t.tipo AS tipo,
+          n.nnivel,
           a.area,
           n.nivel,
           sl.sline
         FROM badge AS b
+        LEFT JOIN tipo AS t
+          ON b.ntipo = t.ntipo
         LEFT JOIN nivel_contem_b AS ncb
           ON b.nbadge = ncb.nbadge
         LEFT JOIN nivel AS n
@@ -1854,16 +1870,25 @@ export const consultorModel = {
     );
 
     const items = rawBadges.map((row) => {
+      const isSpecial = isSpecialTypeName(row.tipo);
       const template = resolveBadgeTemplate(row.nivel);
+      const resolvedPoints = Number(row.pontos) > 0 ? Number(row.pontos) : template.points;
+      const name = row.b_nome || row.area || 'Badge';
+
       return {
         id: `badge-${row.nbadge}`,
         badgeDbId: Number(row.nbadge),
-        area: row.area || 'Diversos',
+        levelId: row.nnivel ? Number(row.nnivel) : null,
+        area: row.area || row.b_nome || 'Diversos',
+        name,
+        description: row.b_descricao || '',
         stateId: 'candidatura_aberta',
         status: 'visualizar',
-        levelKey: template.levelKey,
-        points: template.points,
-        badgeImage: template.badgeImage,
+        levelKey: isSpecial ? null : template.levelKey,
+        typeId: isSpecial ? 'special' : template.levelKey,
+        isSpecial,
+        points: resolvedPoints,
+        badgeImage: isSpecial ? '/badges/default.png' : template.badgeImage,
         learningPathName: 'Jornada Técnica',
         serviceLineName: row.sline || 'Application Operations',
       };
