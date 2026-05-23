@@ -99,6 +99,7 @@ function MeusBadges() {
 
   const filters = useMemo(() => [
     { id: 'todos', label: 'Todos' },
+    { id: 'special', label: 'Especial' },
     { id: 'aprovado', label: 'Aprovado' },
     { id: 'em_validacao', label: 'Em Validação' },
     { id: 'candidatura_em_progresso', label: 'Candidatura em Progresso' },
@@ -132,9 +133,11 @@ function MeusBadges() {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
     return badgeItems.filter((item) => {
-      const translatedLevel = t(item.levelKey);
+      const isSpecial = Boolean(item?.isSpecial) || item?.typeId === 'special' || !item?.levelKey;
+      const translatedLevel = isSpecial ? 'Especial' : t(item.levelKey || '');
       const stateLabel = badgeStateMap[item.stateId]?.label || '';
-      const filterMatch = activeFilter === 'todos' || item.stateId === activeFilter;
+      const filterMatch = activeFilter === 'todos'
+        || (activeFilter === 'special' ? isSpecial : item.stateId === activeFilter);
       const searchMatch =
         normalizedSearch.length === 0
         || item.area.toLowerCase().includes(normalizedSearch)
@@ -207,7 +210,12 @@ function MeusBadges() {
   };
 
   const handleOpenBadgeDetails = (item) => {
-    navigate(`/consultor/badge/${encodeURIComponent(item.id)}`, {
+    const badgeDbId = Number(item?.badgeDbId);
+    const routeBadgeId = Number.isInteger(badgeDbId) && badgeDbId > 0
+      ? String(badgeDbId)
+      : String(item.id);
+
+    navigate(`/consultor/badge/${encodeURIComponent(routeBadgeId)}`, {
       state: {
         badge: item,
         backTo: '/consultor/meus-badges',
@@ -322,6 +330,8 @@ function MeusBadges() {
 
           <div className="catalog-grid">
             {pagedBadges.map((item) => {
+              const isSpecial = Boolean(item?.isSpecial) || item?.typeId === 'special';
+              const levelLabel = isSpecial ? 'Especial' : t(item.levelKey || '');
               const currentState = badgeStateMap[item.stateId] || badgeStateMap.aprovado;
               const { Icon } = currentState;
 
@@ -339,11 +349,11 @@ function MeusBadges() {
                   }}
                 >
                   <div className="catalog-badge-frame">
-                    <img className="catalog-badge-image" src={item.badgeImage} alt={t(item.levelKey)} />
+                    <img className="catalog-badge-image" src={item.badgeImage} alt={levelLabel} />
                   </div>
 
                   <div className="catalog-card-title">{item.area}</div>
-                  <div className="catalog-card-level">{t(item.levelKey)}</div>
+                  <div className="catalog-card-level">{levelLabel}</div>
 
                   <div className="catalog-card-meta">
                     <div className="catalog-meta-row">

@@ -10,22 +10,34 @@
 CREATE TABLE IF NOT EXISTS learning_path (
     nlpath INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     lpath VARCHAR(25) NOT NULL,
-    lp_desc VARCHAR(255) NOT NULL
+    lp_desc VARCHAR(255) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
+
+ALTER TABLE learning_path
+    ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 
 CREATE TABLE IF NOT EXISTS service_line (
     nsline INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     sline VARCHAR(25) NOT NULL,
     sl_desc VARCHAR(255) NOT NULL,
-    nlpath INTEGER NOT NULL REFERENCES learning_path(nlpath)
+    nlpath INTEGER NOT NULL REFERENCES learning_path(nlpath),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
+
+ALTER TABLE service_line
+    ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 
 CREATE TABLE IF NOT EXISTS area (
     narea INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     area VARCHAR(25) NOT NULL,
     a_desc VARCHAR(255) NOT NULL,
-    nsline INTEGER NOT NULL REFERENCES service_line(nsline)
+    nsline INTEGER NOT NULL REFERENCES service_line(nsline),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
+
+ALTER TABLE area
+    ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 
 CREATE TABLE IF NOT EXISTS tipo (
     ntipo INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -38,9 +50,12 @@ CREATE TABLE IF NOT EXISTS badge (
     b_descricao VARCHAR(255) NOT NULL,
     validade DATE,
     pontos INTEGER DEFAULT 0,
-    nlpath INTEGER REFERENCES learning_path(nlpath),
+    imagem TEXT,
     ntipo INTEGER NOT NULL REFERENCES tipo(ntipo)
 );
+
+ALTER TABLE badge
+    ADD COLUMN IF NOT EXISTS imagem TEXT;
 
 CREATE TABLE IF NOT EXISTS b_pertence_a (
     narea INTEGER NOT NULL REFERENCES area(narea),
@@ -63,8 +78,12 @@ CREATE TABLE IF NOT EXISTS b_pertence_lp (
 CREATE TABLE IF NOT EXISTS nivel (
     nnivel INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nivel VARCHAR(100) NOT NULL UNIQUE,
-    narea INTEGER REFERENCES area(narea)
+    narea INTEGER REFERENCES area(narea),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
+
+ALTER TABLE nivel
+    ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 
 CREATE TABLE IF NOT EXISTS nivel_contem_b (
     nnivel INTEGER NOT NULL REFERENCES nivel(nnivel),
@@ -129,6 +148,13 @@ CREATE TABLE IF NOT EXISTS requisitos (
     nbadge INTEGER NOT NULL REFERENCES badge(nbadge)
 );
 
+CREATE TABLE IF NOT EXISTS badge_trigger (
+    nbadge INTEGER NOT NULL REFERENCES badge(nbadge) ON DELETE CASCADE,
+    trigger_tipo VARCHAR(50) NOT NULL,
+    trigger_valor INTEGER NOT NULL CHECK (trigger_valor > 0),
+    PRIMARY KEY (nbadge, trigger_tipo)
+);
+
 CREATE TABLE IF NOT EXISTS sll_gere_p (
     ser_nutilizador INTEGER NOT NULL REFERENCES utilizador(nutilizador),
     npedido INTEGER NOT NULL REFERENCES pedidos(npedido),
@@ -187,21 +213,6 @@ CREATE TABLE IF NOT EXISTS logs (
         resumo VARCHAR(255),
         prioridade INTEGER DEFAULT 2
 );
-
-ALTER TABLE logs
-    ALTER COLUMN data_log SET DEFAULT CURRENT_DATE;
-
-ALTER TABLE logs
-    ADD COLUMN IF NOT EXISTS titulo VARCHAR(200);
-
-ALTER TABLE logs
-    ADD COLUMN IF NOT EXISTS mensagem TEXT;
-
-ALTER TABLE logs
-    ADD COLUMN IF NOT EXISTS resumo VARCHAR(255);
-
-ALTER TABLE logs
-    ADD COLUMN IF NOT EXISTS prioridade INTEGER DEFAULT 2;
 
 CREATE TABLE IF NOT EXISTS ficheiro_log (
         nflog INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

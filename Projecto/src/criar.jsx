@@ -1,11 +1,11 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from './components/Navbar';
 import TermsModal from './components/TermsModal';
 import PrivacyModal from './components/PrivacyModal';
 import { registerAccount } from './services/authService';
-import './css/Criar.css';
+import './css/LoginAccount.css';
 
 function CriarConta() {
   const navigate = useNavigate();
@@ -106,7 +106,7 @@ function CriarConta() {
   };
 
   return (
-    <div className="criar-root">
+    <div className="entrar-root">
       <Navbar />
 
       {/* TERMS MODAL */}
@@ -117,24 +117,24 @@ function CriarConta() {
 
       {/* SUCCESS MODAL */}
       {showSuccess && (
-        <div className="criar-overlay">
-          <div className="criar-success-modal">
-            <svg className="criar-success-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0088FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <div className="entrar-overlay">
+          <div className="entrar-success-modal">
+            <svg className="entrar-success-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0088FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
             <h2>{t('register_success_title')}</h2>
             <p>{t('register_success_subtitle')}</p>
-            <button onClick={handleCloseSuccess} className="criar-success-btn">
+            <button onClick={handleCloseSuccess} className="entrar-success-btn">
               {t('register_success_cta')}
             </button>
           </div>
         </div>
       )}
 
-      <div className="criar-container">
-        <div className="criar-form-container">
-        {/* Título e subtítulo */}
-        <div className="criar-header">
+      <div className="entrar-container">
+        <div className="entrar-form-container">
+        {/* TÃ­tulo e subtÃ­tulo */}
+        <div className="entrar-header">
           <h1>{t('register_title')}</h1>
           <p>{t('register_subtitle')}</p>
         </div>
@@ -145,44 +145,44 @@ function CriarConta() {
           </div>
         )}
 
-        {/* Formulário */}
-        <form onSubmit={handleSubmit} className="criar-form">
-          <div className="criar-form-group">
+        {/* FormulÃ¡rio */}
+        <form onSubmit={handleSubmit} className="entrar-form">
+          <div className="entrar-form-group">
             <input
               type="text"
               name="nome"
               placeholder={t('register_placeholder_name')}
               value={formData.nome}
               onChange={handleChange}
-              className={erros.nome ? 'criar-input erro' : 'criar-input'}
+              className={erros.nome ? 'entrar-input erro' : 'entrar-input'}
             />
-            {erros.nome && <span className="criar-erro">{erros.nome}</span>}
+            {erros.nome && <span className="entrar-erro">{erros.nome}</span>}
           </div>
 
-          <div className="criar-form-group">
+          <div className="entrar-form-group">
             <input
               type="email"
               name="email"
               placeholder={t('login_placeholder_email')}
               value={formData.email}
               onChange={handleChange}
-              className={erros.email ? 'criar-input erro' : 'criar-input'}
+              className={erros.email ? 'entrar-input erro' : 'entrar-input'}
             />
-            {erros.email && <span className="criar-erro">{erros.email}</span>}
+            {erros.email && <span className="entrar-erro">{erros.email}</span>}
           </div>
 
-          <div className="criar-form-group">
-            <div className="criar-password-wrapper">
+          <div className="entrar-form-group">
+            <div className="entrar-password-wrapper">
               <input
                 type={mostraSenha ? 'text' : 'password'}
                 name="senha"
                 placeholder={t('login_placeholder_password')}
                 value={formData.senha}
                 onChange={handleChange}
-                className={erros.senha ? 'criar-input erro' : 'criar-input'}
+                className={erros.senha ? 'entrar-input erro' : 'entrar-input'}
               />
               <svg 
-                className="criar-eye-icon" 
+                className="entrar-eye-icon" 
                 onClick={toggleMostraSenha}
                 xmlns="http://www.w3.org/2000/svg" 
                 width="20" 
@@ -207,21 +207,21 @@ function CriarConta() {
                 )}
               </svg>
             </div>
-            {erros.senha && <span className="criar-erro">{erros.senha}</span>}
+            {erros.senha && <span className="entrar-erro">{erros.senha}</span>}
           </div>
 
-          <div className="criar-form-group">
-            <div className="criar-password-wrapper">
+          <div className="entrar-form-group">
+            <div className="entrar-password-wrapper">
               <input
                 type={mostraConfirmaSenha ? 'text' : 'password'}
                 name="confirmaSenha"
                 placeholder={t('register_placeholder_confirm_password')}
                 value={formData.confirmaSenha}
                 onChange={handleChange}
-                className={erros.confirmaSenha ? 'criar-input erro' : 'criar-input'}
+                className={erros.confirmaSenha ? 'entrar-input erro' : 'entrar-input'}
               />
               <svg 
-                className="criar-eye-icon" 
+                className="entrar-eye-icon" 
                 onClick={toggleMostraConfirmaSenha}
                 xmlns="http://www.w3.org/2000/svg" 
                 width="20" 
@@ -246,24 +246,24 @@ function CriarConta() {
                 )}
               </svg>
             </div>
-            {erros.confirmaSenha && <span className="criar-erro">{erros.confirmaSenha}</span>}
+            {erros.confirmaSenha && <span className="entrar-erro">{erros.confirmaSenha}</span>}
           </div>
 
-          <button type="submit" className="criar-btn-continuar">
+          <button type="submit" className="entrar-btn-continuar">
             {t('register_continue')}
           </button>
         </form>
 
         {/* Login link */}
-        <div className="criar-login-link">
+        <div className="entrar-login-link">
           <span>{t('register_have_account')}</span>
           <a href="#" onClick={(e) => { e.preventDefault(); navigate('/entrar'); }}>{t('register_login_link')}</a>
         </div>
 
         {/* Footer links */}
-        <div className="criar-footer-links">
+        <div className="entrar-footer-links">
           <p>{t('legal_agree_prefix')}</p>
-          <div className="criar-links">
+          <div className="entrar-links">
             <a href="#termos" onClick={(e) => { e.preventDefault(); setShowTermsModal(true); }}>{t('legal_terms')}</a>
             <span>{` ${t('legal_and')} `}</span>
             <a href="#privacidade" onClick={(e) => { e.preventDefault(); setShowPrivacyModal(true); }}>{t('legal_privacy')}</a>
@@ -276,3 +276,4 @@ function CriarConta() {
 }
 
 export default CriarConta;
+

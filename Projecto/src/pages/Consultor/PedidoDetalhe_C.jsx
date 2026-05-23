@@ -12,7 +12,7 @@ import {
   Users,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
-import '../../css/TalentManager/GestaoPedidos_TM.css';
+import '../../css/Shared/GestaoPedidosDetalhe.css';
 import { getConsultorRequestById } from '../../data/requests/consultorRequestsData';
 
 const statusMeta = {

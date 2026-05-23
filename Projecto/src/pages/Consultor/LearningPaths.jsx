@@ -39,6 +39,11 @@ const statusConfig = {
     className: 'status-visualizar',
     Icon: null,
   },
+  sem_badge: {
+    label: 'Sem badge associado',
+    className: 'status-sem-badge',
+    Icon: AlertTriangle,
+  },
 };
 
 const flattenServiceLineLevels = (serviceLine) =>
@@ -71,6 +76,9 @@ function LearningPaths() {
         ? location.state.selectedPathId
         : null
     ),
+  );
+  const [expandedPathIds, setExpandedPathIds] = useState(
+    () => (Array.isArray(location.state?.expandedPathIds) ? location.state.expandedPathIds : []),
   );
   const [selectedServiceLineId, setSelectedServiceLineId] = useState(
     () => (typeof location.state?.selectedServiceLineId === 'string' ? location.state.selectedServiceLineId : null),
@@ -148,6 +156,13 @@ function LearningPaths() {
     setSelectedPathId(pathId);
     setSelectedServiceLineId(serviceLineId);
     setExpandedAreaIds([]);
+    setExpandedPathIds((current) => Array.from(new Set([...current, pathId])));
+  };
+
+  const toggleLearningPath = (pathId) => {
+    setExpandedPathIds((current) =>
+      current.includes(pathId) ? current.filter((id) => id !== pathId) : [...current, pathId],
+    );
   };
 
   const toggleArea = (areaId) => {
@@ -158,13 +173,21 @@ function LearningPaths() {
 
   const openBadgeDetails = (area, level) => {
     const badgeId = `${area.id}-${level.id}`;
+    const badgeDbId = Number(level?.badgeDbId);
+    if (!Number.isInteger(badgeDbId) || badgeDbId <= 0) {
+      return;
+    }
+    const routeBadgeId = Number.isInteger(badgeDbId) && badgeDbId > 0
+      ? String(badgeDbId)
+      : badgeId;
     const backToState = {
       selectedPathId,
       selectedServiceLineId,
+      expandedPathIds,
       expandedAreaIds: Array.from(new Set([...expandedAreaIds, area.id])),
     };
 
-    navigate(`/consultor/badge/${encodeURIComponent(badgeId)}`, {
+    navigate(`/consultor/badge/${encodeURIComponent(routeBadgeId)}`, {
       state: {
         badge: {
           id: badgeId,
@@ -187,59 +210,84 @@ function LearningPaths() {
   };
 
   const renderLearningPathView = () => {
-    if (!selectedPath) {
+    if (!learningPathsData.length) {
       return null;
     }
 
     return (
-      <section className="lp-shell lp-shell-surface">
-        <article className="lp-path-card">
-          <header className="lp-path-banner">
-            <h2>{selectedPath.name}</h2>
-          </header>
+      <section className="lp-shell">
+        <div className="lp-area-list lp-learning-path-list">
+          {learningPathsData.map((path) => {
+            const isExpanded = expandedPathIds.includes(path.id);
 
-          <div className="lp-section-body">
-            <div className="lp-section-title-row">
-              <h3>Service Lines</h3>
-            </div>
+            return (
+              <article key={path.id} className={`lp-area-card lp-learning-path-card ${isExpanded ? 'is-expanded' : ''}`}>
+                <button
+                  type="button"
+                  className="lp-area-toggle"
+                  onClick={() => toggleLearningPath(path.id)}
+                  aria-expanded={isExpanded}
+                  aria-controls={`learning-path-${path.id}`}
+                >
+                  <div className="lp-path-banner lp-learning-path-banner">
+                    <h2>{path.name}</h2>
+                    <div className="lp-area-banner-actions">
+                      <ChevronDown
+                        size={20}
+                        className={`lp-area-chevron ${isExpanded ? 'is-open' : ''}`}
+                        aria-hidden="true"
+                      />
+                    </div>
+                  </div>
+                </button>
 
-            <div className="lp-service-line-list">
-              {selectedPath.serviceLines.map((serviceLine) => {
-                const progress = calculateProgress(flattenServiceLineLevels(serviceLine));
-
-                return (
-                  <button
-                    key={serviceLine.id}
-                    type="button"
-                    className="lp-service-line-card"
-                    onClick={() => selectServiceLine(selectedPath.id, serviceLine.id)}
-                  >
-                    <div className="lp-service-line-head">
-                      <strong>{serviceLine.name}</strong>
-                      <ChevronRight size={24} className="lp-go-icon" aria-hidden="true" />
+                {isExpanded && (
+                  <div id={`learning-path-${path.id}`} className="lp-area-badges">
+                    <div className="lp-section-title-row">
+                      <h3>Service Lines</h3>
                     </div>
 
-                    <div className="lp-service-line-body">
-                      <img src={serviceLine.image} alt={serviceLine.name} className="lp-service-line-image" />
+                    <div className="lp-service-line-list">
+                      {path.serviceLines.map((serviceLine) => {
+                        const progress = calculateProgress(flattenServiceLineLevels(serviceLine));
 
-                      <div className="lp-service-line-main">
-                        <p>{serviceLine.description}</p>
-                        <span className="lp-progress-label">{progress.label}</span>
+                        return (
+                          <button
+                            key={serviceLine.id}
+                            type="button"
+                            className="lp-service-line-card"
+                            onClick={() => selectServiceLine(path.id, serviceLine.id)}
+                          >
+                            <div className="lp-service-line-head">
+                              <strong>{serviceLine.name}</strong>
+                              <ChevronRight size={24} className="lp-go-icon" aria-hidden="true" />
+                            </div>
 
-                        <div className="lp-progress-track" aria-hidden="true">
-                          <span
-                            className={`lp-progress-fill ${progress.isComplete ? 'is-success' : 'is-primary'}`}
-                            style={{ width: `${progress.percent}%` }}
-                          />
-                        </div>
-                      </div>
+                            <div className="lp-service-line-body">
+                              <img src={serviceLine.image} alt={serviceLine.name} className="lp-service-line-image" />
+
+                              <div className="lp-service-line-main">
+                                <p>{serviceLine.description}</p>
+                                <span className="lp-progress-label">{progress.label}</span>
+
+                                <div className="lp-progress-track" aria-hidden="true">
+                                  <span
+                                    className={`lp-progress-fill ${progress.isComplete ? 'is-success' : 'is-primary'}`}
+                                    style={{ width: `${progress.percent}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </article>
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
       </section>
     );
   };
@@ -307,15 +355,19 @@ function LearningPaths() {
 
                       <div className="lp-level-list">
                         {area.levels.map((level) => {
-                          const status = statusConfig[level.status] || statusConfig.visualizar;
+                          const hasBadge = Number.isInteger(Number(level?.badgeDbId)) && Number(level.badgeDbId) > 0;
+                          const status = hasBadge
+                            ? statusConfig[level.status] || statusConfig.visualizar
+                            : statusConfig.sem_badge;
                           const StatusIcon = status.Icon;
 
                           return (
                             <button
                               key={`${area.id}-${level.id}`}
                               type="button"
-                              className="lp-level-row lp-level-row-action"
+                              className={`lp-level-row lp-level-row-action ${hasBadge ? '' : 'is-disabled'}`}
                               onClick={() => openBadgeDetails(area, level)}
+                              disabled={!hasBadge}
                               aria-label={`Ver badge ${level.title}`}
                             >
                               <div className="lp-level-copy">

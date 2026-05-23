@@ -18,7 +18,7 @@ import {
   SendHorizontal,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
-import '../../css/ServiceLineLeader/GestaoPedidos_SLL.css';
+import '../../css/Shared/GestaoPedidosDetalhe.css';
 import {
   fetchManagedRequestById,
   getManagedEvidenceDownloadUrl,

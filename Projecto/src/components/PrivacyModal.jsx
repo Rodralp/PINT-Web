@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import '../css/TermsModal.css';
+import '../css/LoginAccount.css';
 
 function PrivacyModal({ isOpen, onClose }) {
   const { i18n } = useTranslation();

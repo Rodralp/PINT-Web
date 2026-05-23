@@ -58,6 +58,22 @@ const defaultRequirementTemplates = [
   },
 ];
 
+const SPECIAL_BADGE_TYPE_NAME = 'Especial';
+const specialTriggerDefinitions = Object.freeze({
+  badge_count: {
+    baseTitle: 'Número de badges obtidas',
+    buildDescription: (value) => `Obter pelo menos ${value} badge(s) aprovadas.`,
+  },
+  ranking_position: {
+    baseTitle: 'Posição no ranking',
+    buildDescription: (value) => `Atingir a posição #${value} ou melhor no ranking de consultores.`,
+  },
+  streak_days: {
+    baseTitle: 'Streak de atividade',
+    buildDescription: (value) => `Manter uma streak de atividade de pelo menos ${value} dia(s) consecutivos.`,
+  },
+});
+
 const normalizeLevelTitle = (value) => {
   const rawTitle = String(value || '').trim();
   const withoutPathPrefix = rawTitle.includes(' - ')
@@ -66,6 +82,15 @@ const normalizeLevelTitle = (value) => {
 
   return withoutPathPrefix.replace(/^nivel\s+/i, '').trim();
 };
+
+const normalizeForCompare = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
+const isSpecialTypeName = (value) => normalizeForCompare(value) === 'especial';
 
 const normalizePedidoEstado = (estado) => String(estado || '').trim().toLowerCase();
 const isEstadoEmValidacaoTm = (estado) => (
@@ -134,7 +159,38 @@ const mapPedidoEstadoToMyRequestStatus = (estado) => {
   return 'pendente';
 };
 
-const resolveBadgeTemplate = (levelName, fallbackIndex = 0) => {
+const resolveBadgeTemplateByTypeName = (typeName) => {
+  const normalizedTypeName = String(typeName || '').trim().toLowerCase();
+
+  if (normalizedTypeName.includes('junior')) {
+    return badgeLevelTemplates[0];
+  }
+
+  if (normalizedTypeName.includes('intermedio') || normalizedTypeName.includes('interm')) {
+    return badgeLevelTemplates[1];
+  }
+
+  if (normalizedTypeName.includes('senior')) {
+    return badgeLevelTemplates[2];
+  }
+
+  if (normalizedTypeName.includes('especialista')) {
+    return badgeLevelTemplates[3];
+  }
+
+  if (normalizedTypeName.includes('lider')) {
+    return badgeLevelTemplates[4];
+  }
+
+  return null;
+};
+
+const resolveBadgeTemplate = (levelName, fallbackIndex = 0, typeName = null) => {
+  const templateFromType = resolveBadgeTemplateByTypeName(typeName);
+  if (templateFromType) {
+    return templateFromType;
+  }
+
   const normalizedLevelName = String(levelName || '').trim().toLowerCase();
 
   if (normalizedLevelName.includes('junior')) {
@@ -158,6 +214,19 @@ const resolveBadgeTemplate = (levelName, fallbackIndex = 0) => {
   }
 
   return badgeLevelTemplates[fallbackIndex % badgeLevelTemplates.length];
+};
+
+const resolveBadgeImage = (customImage, fallbackImage, isSpecial = false) => {
+  const normalizedCustomImage = String(customImage || '').trim();
+  if (normalizedCustomImage) {
+    return normalizedCustomImage;
+  }
+
+  if (isSpecial) {
+    return '/badges/default.png';
+  }
+
+  return fallbackImage || '/badges/default.png';
 };
 
 const hasActiveBadgeRequest = (status) =>
@@ -238,6 +307,317 @@ const calculateConsecutiveDayStreak = (values) => {
   return streak;
 };
 
+const buildSpecialRequirement = (badgeId, triggerType, triggerValue, index = 0) => {
+  const definition = specialTriggerDefinitions[triggerType];
+  const safeValue = Number(triggerValue);
+  const safeIndex = Number(index) + 1;
+
+  if (!definition || !Number.isInteger(safeValue) || safeValue <= 0) {
+    return {
+      id: `special-${badgeId}-${triggerType}-${safeIndex}`,
+      title: 'Trigger especial',
+      description: `Cumprir a condição especial definida (${triggerType}: ${safeValue || 0}).`,
+      files: 0,
+      attachments: [],
+      triggerType,
+      triggerValue: safeValue || 0,
+    };
+  }
+
+  return {
+    id: `special-${badgeId}-${triggerType}-${safeIndex}`,
+    title: definition.baseTitle,
+    description: definition.buildDescription(safeValue),
+    files: 0,
+    attachments: [],
+    triggerType,
+    triggerValue: safeValue,
+  };
+};
+
+const loadSpecialRequirementsByBadgeIds = async (badgeIds) => {
+  const normalizedBadgeIds = normalizeBadgeIds(badgeIds);
+  const requirementsByBadge = new Map();
+
+  if (normalizedBadgeIds.length === 0) {
+    return requirementsByBadge;
+  }
+
+  const rows = await sequelize.query(
+    `
+      SELECT
+        bt.nbadge,
+        bt.trigger_tipo,
+        bt.trigger_valor
+      FROM badge_trigger AS bt
+      WHERE bt.nbadge IN (:badgeIds)
+      ORDER BY bt.nbadge ASC, bt.trigger_tipo ASC
+    `,
+    {
+      replacements: { badgeIds: normalizedBadgeIds },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  for (const row of rows) {
+    const badgeId = Number(row.nbadge);
+    if (!requirementsByBadge.has(badgeId)) {
+      requirementsByBadge.set(badgeId, []);
+    }
+
+    const currentRequirements = requirementsByBadge.get(badgeId);
+    currentRequirements.push(
+      buildSpecialRequirement(
+        badgeId,
+        String(row.trigger_tipo || '').trim(),
+        Number(row.trigger_valor),
+        currentRequirements.length,
+      ),
+    );
+  }
+
+  return requirementsByBadge;
+};
+
+const isSpecialTriggerSatisfied = (triggerType, triggerValue, metrics) => {
+  const safeValue = Number(triggerValue);
+  if (!Number.isInteger(safeValue) || safeValue <= 0) {
+    return false;
+  }
+
+  if (triggerType === 'badge_count') {
+    return Number(metrics?.badgeCount || 0) >= safeValue;
+  }
+
+  if (triggerType === 'ranking_position') {
+    const rankingPosition = Number(metrics?.rankingPosition || 0);
+    return Number.isInteger(rankingPosition) && rankingPosition > 0 && rankingPosition <= safeValue;
+  }
+
+  if (triggerType === 'streak_days') {
+    return Number(metrics?.streakDays || 0) >= safeValue;
+  }
+
+  return false;
+};
+
+const collectConsultorMetrics = async (utilizadorId, transaction) => {
+  const [badgeCountRow, rankingRow, streakRows] = await Promise.all([
+    sequelize.query(
+      `
+        SELECT COUNT(DISTINCT cb.nbadge) AS total_badges
+        FROM c_obtem_b AS cb
+        WHERE cb.nutilizador = :utilizadorId
+      `,
+      {
+        replacements: { utilizadorId: Number(utilizadorId) },
+        type: QueryTypes.SELECT,
+        transaction,
+      },
+    ),
+    sequelize.query(
+      `
+        WITH consultor_points AS (
+          SELECT
+            u.nutilizador,
+            COALESCE(SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)), 0) AS points
+          FROM utilizador AS u
+          LEFT JOIN c_obtem_b AS cb
+            ON cb.nutilizador = u.nutilizador
+          LEFT JOIN badge AS b
+            ON b.nbadge = cb.nbadge
+          WHERE LOWER(u.permissoes) LIKE '%consultor%'
+          GROUP BY u.nutilizador
+        ),
+        ranked AS (
+          SELECT
+            nutilizador,
+            RANK() OVER (ORDER BY points DESC, nutilizador ASC) AS ranking_position
+          FROM consultor_points
+        )
+        SELECT ranking_position
+        FROM ranked
+        WHERE nutilizador = :utilizadorId
+        LIMIT 1
+      `,
+      {
+        replacements: { utilizadorId: Number(utilizadorId) },
+        type: QueryTypes.SELECT,
+        transaction,
+      },
+    ),
+    sequelize.query(
+      `
+        SELECT DISTINCT activity_date
+        FROM (
+          SELECT DATE(p.data_submissao) AS activity_date
+          FROM pedidos AS p
+          WHERE p.nutilizador = :utilizadorId
+          UNION
+          SELECT DATE(l.data_log) AS activity_date
+          FROM logs AS l
+          WHERE l.nutilizador = :utilizadorId
+        ) AS activity_days
+        WHERE activity_date IS NOT NULL
+        ORDER BY activity_date DESC
+      `,
+      {
+        replacements: { utilizadorId: Number(utilizadorId) },
+        type: QueryTypes.SELECT,
+        transaction,
+      },
+    ),
+  ]);
+
+  return {
+    badgeCount: Number(badgeCountRow?.[0]?.total_badges) || 0,
+    rankingPosition: Number(rankingRow?.[0]?.ranking_position) || 0,
+    streakDays: calculateConsecutiveDayStreak((streakRows || []).map((row) => row.activity_date)),
+  };
+};
+
+export const syncSpecialBadgesForConsultor = async (utilizadorId) => {
+  const approvedEstadoId = await ensureEstadoId('aprovado');
+
+  await sequelize.transaction(async (transaction) => {
+    const specialBadgeRows = await sequelize.query(
+      `
+        SELECT
+          b.nbadge,
+          b.pontos,
+          bt.trigger_tipo,
+          bt.trigger_valor
+        FROM badge AS b
+        INNER JOIN tipo AS t
+          ON t.ntipo = b.ntipo
+        INNER JOIN badge_trigger AS bt
+          ON bt.nbadge = b.nbadge
+        WHERE LOWER(t.tipo) = LOWER(:specialTypeName)
+        ORDER BY b.nbadge ASC, bt.trigger_tipo ASC
+      `,
+      {
+        replacements: { specialTypeName: SPECIAL_BADGE_TYPE_NAME },
+        type: QueryTypes.SELECT,
+        transaction,
+      },
+    );
+
+    if (!specialBadgeRows || specialBadgeRows.length === 0) {
+      return;
+    }
+
+    const badgeDefinitions = new Map();
+    for (const row of specialBadgeRows) {
+      const badgeId = Number(row.nbadge);
+      if (!badgeDefinitions.has(badgeId)) {
+        badgeDefinitions.set(badgeId, {
+          badgeId,
+          points: Number(row.pontos) || 0,
+          triggers: [],
+        });
+      }
+
+      badgeDefinitions.get(badgeId).triggers.push({
+        type: String(row.trigger_tipo || '').trim(),
+        value: Number(row.trigger_valor),
+      });
+    }
+
+    const obtainedRows = await sequelize.query(
+      `
+        SELECT nbadge
+        FROM c_obtem_b
+        WHERE nutilizador = :utilizadorId
+      `,
+      {
+        replacements: { utilizadorId: Number(utilizadorId) },
+        type: QueryTypes.SELECT,
+        transaction,
+      },
+    );
+
+    const obtainedBadgeIds = new Set(obtainedRows.map((row) => Number(row.nbadge)));
+    let hasNewAwards = true;
+    let safetyCounter = 0;
+
+    while (hasNewAwards && safetyCounter < 20) {
+      safetyCounter += 1;
+      hasNewAwards = false;
+      const metrics = await collectConsultorMetrics(utilizadorId, transaction);
+
+      for (const definition of badgeDefinitions.values()) {
+        if (obtainedBadgeIds.has(definition.badgeId)) {
+          continue;
+        }
+
+        const allTriggersMet = definition.triggers.length > 0
+          && definition.triggers.every((trigger) =>
+            isSpecialTriggerSatisfied(trigger.type, trigger.value, metrics),
+          );
+
+        if (!allTriggersMet) {
+          continue;
+        }
+
+        const [createdRequest] = await sequelize.query(
+          `
+            INSERT INTO pedidos (nbadge, nutilizador, estado, data_submissao, data_limite, descricao)
+            VALUES (
+              :badgeId,
+              :utilizadorId,
+              :approvedEstadoId,
+              CURRENT_DATE,
+              CURRENT_DATE + INTERVAL '3 months',
+              :descricao
+            )
+            RETURNING npedido
+          `,
+          {
+            replacements: {
+              badgeId: Number(definition.badgeId),
+              utilizadorId: Number(utilizadorId),
+              approvedEstadoId,
+              descricao: 'Badge especial atribuída automaticamente por trigger.',
+            },
+            type: QueryTypes.SELECT,
+            transaction,
+          },
+        );
+
+        const requestId = Number(createdRequest?.npedido);
+        if (!Number.isInteger(requestId) || requestId <= 0) {
+          continue;
+        }
+
+        await sequelize.query(
+          `
+            INSERT INTO c_obtem_b (nutilizador, nbadge, npedido, pontos_obtidos, data_obtencao)
+            VALUES (:utilizadorId, :badgeId, :requestId, :points, CURRENT_DATE)
+            ON CONFLICT (nutilizador, nbadge)
+            DO UPDATE SET
+              npedido = EXCLUDED.npedido,
+              pontos_obtidos = EXCLUDED.pontos_obtidos,
+              data_obtencao = EXCLUDED.data_obtencao
+          `,
+          {
+            replacements: {
+              utilizadorId: Number(utilizadorId),
+              badgeId: Number(definition.badgeId),
+              requestId,
+              points: Number(definition.points) || 0,
+            },
+            type: QueryTypes.INSERT,
+            transaction,
+          },
+        );
+
+        obtainedBadgeIds.add(definition.badgeId);
+        hasNewAwards = true;
+      }
+    }
+  });
+};
+
 const getUtilizadorIdByAccountId = async (accountId) => {
   const [utilizador] = await sequelize.query(
     `
@@ -286,6 +666,50 @@ const ensureEstadoId = async (estadoNome) => {
   );
 
   return Number(inserted.nestado);
+};
+
+const REQUEST_EXPIRATION_MONTHS = 3;
+const AUTO_REJECTION_NOTE = 'Candidatura rejeitada automaticamente por expiracao de prazo.';
+
+const syncRequestDeadlines = async () => {
+  await sequelize.query(
+    `
+      UPDATE pedidos
+      SET data_limite = COALESCE(data_limite, data_submissao + INTERVAL '${REQUEST_EXPIRATION_MONTHS} months')
+      WHERE data_submissao IS NOT NULL
+        AND data_limite IS NULL
+    `,
+    {
+      type: QueryTypes.UPDATE,
+    },
+  );
+};
+
+const autoRejectExpiredRequests = async () => {
+  const rejectedId = await ensureEstadoId('rejeitado');
+  const approvedId = await ensureEstadoId('aprovado');
+
+  await syncRequestDeadlines();
+
+  await sequelize.query(
+    `
+      UPDATE pedidos
+      SET estado = :rejectedId,
+          descricao = COALESCE(NULLIF(descricao, ''), :defaultDescription)
+      WHERE data_limite IS NOT NULL
+        AND data_limite <= CURRENT_DATE
+        AND estado <> :rejectedId
+        AND estado <> :approvedId
+    `,
+    {
+      replacements: {
+        rejectedId,
+        approvedId,
+        defaultDescription: AUTO_REJECTION_NOTE,
+      },
+      type: QueryTypes.UPDATE,
+    },
+  );
 };
 
 const normalizeBadgeIds = (badgeIds) => [...new Set(
@@ -548,6 +972,8 @@ const buildProfileData = async (accountId) => {
     return clone(profileData);
   }
 
+  await autoRejectExpiredRequests();
+
   const [row] = await sequelize.query(
     `
       WITH badge_scores AS (
@@ -778,6 +1204,7 @@ const buildProfileData = async (accountId) => {
 };
 
 const buildLearningPaths = async (accountId) => {
+  await autoRejectExpiredRequests();
   const rows = await sequelize.query(
     `
       SELECT
@@ -796,12 +1223,16 @@ const buildLearningPaths = async (accountId) => {
       FROM learning_path AS lp
       INNER JOIN service_line AS sl
         ON sl.nlpath = lp.nlpath
+       AND sl.is_active = TRUE
       LEFT JOIN area AS a
         ON a.nsline = sl.nsline
+       AND a.is_active = TRUE
       LEFT JOIN nivel AS n
         ON n.narea = a.narea
+       AND n.is_active = TRUE
       LEFT JOIN nivel_contem_b AS nb
         ON nb.nnivel = n.nnivel
+      WHERE lp.is_active = TRUE
       ORDER BY lp.nlpath ASC, sl.nsline ASC, a.narea ASC, n.nnivel ASC
     `,
     { type: QueryTypes.SELECT },
@@ -954,6 +1385,7 @@ const buildLearningPaths = async (accountId) => {
 };
 
 const buildMyBadges = async (accountId) => {
+  await autoRejectExpiredRequests();
   const utilizadorId = await getUtilizadorIdByAccountId(accountId);
   if (!utilizadorId) {
     return [];
@@ -966,12 +1398,16 @@ const buildMyBadges = async (accountId) => {
           cb.nbadge,
           a.area,
           n.nivel,
+          b.imagem,
+          t.tipo,
           cb.pontos_obtidos,
           cb.data_obtencao,
           cb.nutilizador
         FROM c_obtem_b AS cb
         INNER JOIN badge AS b
           ON b.nbadge = cb.nbadge
+        LEFT JOIN tipo AS t
+          ON t.ntipo = b.ntipo
         LEFT JOIN nivel_contem_b AS ncb
           ON ncb.nbadge = cb.nbadge
         LEFT JOIN nivel AS n
@@ -993,11 +1429,18 @@ const buildMyBadges = async (accountId) => {
           p.nbadge,
           p.data_submissao,
           e.estado,
+          b.imagem,
+          b.pontos AS badge_pontos,
+          t.tipo,
           a.area,
           n.nivel
         FROM pedidos AS p
         INNER JOIN estado AS e
           ON e.nestado = p.estado
+        LEFT JOIN badge AS b
+          ON b.nbadge = p.nbadge
+        LEFT JOIN tipo AS t
+          ON t.ntipo = b.ntipo
         LEFT JOIN nivel_contem_b AS ncb
           ON ncb.nbadge = p.nbadge
         LEFT JOIN nivel AS n
@@ -1093,7 +1536,8 @@ const buildMyBadges = async (accountId) => {
   const existingBadgeIds = new Set();
 
   for (const row of obtainedRows) {
-    const template = resolveBadgeTemplate(row.nivel);
+    const isSpecial = isSpecialTypeName(row.tipo);
+    const template = resolveBadgeTemplate(row.nivel, 0, row.tipo);
     const badgeId = Number(row.nbadge);
     existingBadgeIds.add(badgeId);
 
@@ -1103,9 +1547,9 @@ const buildMyBadges = async (accountId) => {
       area: row.area || 'Badge',
       stateId: 'aprovado',
       status: 'obtido',
-      levelKey: template.levelKey,
+      levelKey: isSpecial ? null : template.levelKey,
       points: Number(row.pontos_obtidos) || template.points,
-      badgeImage: template.badgeImage,
+      badgeImage: resolveBadgeImage(row.imagem, template.badgeImage, isSpecial),
       date: formatDate(row.data_obtencao),
     });
   }
@@ -1116,7 +1560,8 @@ const buildMyBadges = async (accountId) => {
       continue;
     }
 
-    const template = resolveBadgeTemplate(row.nivel);
+    const isSpecial = isSpecialTypeName(row.tipo);
+    const template = resolveBadgeTemplate(row.nivel, 0, row.tipo);
     const mappedStatus = mapPedidoEstadoToLearningPathStatus(row.estado);
     const requestId = Number(row.npedido);
     const requestEvidence = evidenceByRequest.get(requestId);
@@ -1147,9 +1592,9 @@ const buildMyBadges = async (accountId) => {
       area: row.area || 'Badge',
       stateId: mapPedidoEstadoToMyBadgeState(row.estado),
       status: mappedStatus,
-      levelKey: template.levelKey,
-      points: template.points,
-      badgeImage: template.badgeImage,
+      levelKey: isSpecial ? null : template.levelKey,
+      points: Number(row.badge_pontos) > 0 ? Number(row.badge_pontos) : template.points,
+      badgeImage: resolveBadgeImage(row.imagem, template.badgeImage, isSpecial),
       date: formatDate(row.data_submissao),
       requirements: badgeRequirements,
       evidence: badgeRequirements,
@@ -1160,6 +1605,7 @@ const buildMyBadges = async (accountId) => {
 };
 
 const buildMyRequests = async (accountId) => {
+  await autoRejectExpiredRequests();
   const utilizadorId = await getUtilizadorIdByAccountId(accountId);
   if (!utilizadorId) {
     return [];
@@ -1373,6 +1819,7 @@ const saveUserPreferences = async (accountId, areaIds) => {
 };
 
 const buildBadgeSuggestions = async (accountId, limit = 3) => {
+  await autoRejectExpiredRequests();
   const safeLimit = Number.isInteger(Number(limit)) && Number(limit) > 0 ? Number(limit) : 3;
   const utilizadorId = await getUtilizadorIdByAccountId(accountId);
   if (!utilizadorId) {
@@ -1535,6 +1982,7 @@ const buildBadgeSuggestions = async (accountId, limit = 3) => {
 };
 
 const requestBadgeAcquisition = async (accountId, badgeId) => {
+  await autoRejectExpiredRequests();
   const parsedBadgeId = Number(badgeId);
   if (!Number.isInteger(parsedBadgeId) || parsedBadgeId <= 0) {
     const error = new Error('Invalid badge id.');
@@ -1636,7 +2084,8 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
       `
         UPDATE pedidos
         SET estado = :estadoId,
-            data_submissao = CURRENT_DATE
+            data_submissao = CURRENT_DATE,
+            data_limite = CURRENT_DATE + INTERVAL '3 months'
         WHERE npedido = :pedidoId
       `,
       {
@@ -1653,8 +2102,8 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
 
   const [createdRequest] = await sequelize.query(
     `
-      INSERT INTO pedidos (nbadge, nutilizador, estado, data_submissao)
-      VALUES (:badgeId, :utilizadorId, :estadoId, CURRENT_DATE)
+      INSERT INTO pedidos (nbadge, nutilizador, estado, data_submissao, data_limite)
+      VALUES (:badgeId, :utilizadorId, :estadoId, CURRENT_DATE, CURRENT_DATE + INTERVAL '3 months')
       RETURNING npedido
     `,
     {
@@ -1780,10 +2229,18 @@ export const consultorModel = {
       `
         SELECT
           b.nbadge,
+          b.b_nome,
+          b.b_descricao,
+          b.pontos,
+          b.imagem,
+          t.tipo AS tipo,
+          n.nnivel,
           a.area,
           n.nivel,
           sl.sline
         FROM badge AS b
+        LEFT JOIN tipo AS t
+          ON b.ntipo = t.ntipo
         LEFT JOIN nivel_contem_b AS ncb
           ON b.nbadge = ncb.nbadge
         LEFT JOIN nivel AS n
@@ -1798,16 +2255,25 @@ export const consultorModel = {
     );
 
     const items = rawBadges.map((row) => {
-      const template = resolveBadgeTemplate(row.nivel);
+      const isSpecial = isSpecialTypeName(row.tipo);
+      const template = resolveBadgeTemplate(row.nivel, 0, row.tipo);
+      const resolvedPoints = Number(row.pontos) > 0 ? Number(row.pontos) : template.points;
+      const name = row.b_nome || row.area || 'Badge';
+
       return {
         id: `badge-${row.nbadge}`,
         badgeDbId: Number(row.nbadge),
-        area: row.area || 'Diversos',
+        levelId: row.nnivel ? Number(row.nnivel) : null,
+        area: row.area || row.b_nome || 'Diversos',
+        name,
+        description: row.b_descricao || '',
         stateId: 'candidatura_aberta',
         status: 'visualizar',
-        levelKey: template.levelKey,
-        points: template.points,
-        badgeImage: template.badgeImage,
+        levelKey: isSpecial ? null : template.levelKey,
+        typeId: isSpecial ? 'special' : template.levelKey,
+        isSpecial,
+        points: resolvedPoints,
+        badgeImage: resolveBadgeImage(row.imagem, template.badgeImage, isSpecial),
         learningPathName: 'Jornada Técnica',
         serviceLineName: row.sline || 'Application Operations',
       };
@@ -1879,6 +2345,8 @@ export const consultorModel = {
       color: payload.color,
     });
 
+    await syncReminderIdSequence(nextReminderId);
+
     return mapReminder(reminder);
   },
 
@@ -1916,6 +2384,40 @@ export const consultorModel = {
     const parsedBadgeId = Number(badgeId);
     if (!Number.isInteger(parsedBadgeId) || parsedBadgeId <= 0) {
       return [];
+    }
+
+    const [badgeRow] = await sequelize.query(
+      `
+        SELECT t.tipo
+        FROM badge AS b
+        LEFT JOIN tipo AS t
+          ON t.ntipo = b.ntipo
+        WHERE b.nbadge = :badgeId
+        LIMIT 1
+      `,
+      {
+        replacements: { badgeId: parsedBadgeId },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    if (badgeRow && isSpecialTypeName(badgeRow.tipo)) {
+      const specialRequirementsByBadge = await loadSpecialRequirementsByBadgeIds([parsedBadgeId]);
+      const specialRequirements = specialRequirementsByBadge.get(parsedBadgeId) || [];
+
+      if (specialRequirements.length > 0) {
+        return specialRequirements;
+      }
+
+      return [
+        {
+          id: `special-${parsedBadgeId}-missing-1`,
+          title: 'Trigger especial',
+          description: 'Nenhuma trigger especial definida para este badge.',
+          files: 0,
+          attachments: [],
+        },
+      ];
     }
 
     const rows = await sequelize.query(

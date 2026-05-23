@@ -167,6 +167,12 @@
   line-height: 1.1;
 }
 
+.badge-requirements-empty {
+  margin: 0;
+  color: #7a869b;
+  font-size: 14px;
+}
+
 .badge-requirements-list {
   display: flex;
   flex-direction: column;

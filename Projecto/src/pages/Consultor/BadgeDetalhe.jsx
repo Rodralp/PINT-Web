@@ -18,7 +18,12 @@ import {
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
-import { requestBadgeAcquisition, uploadEvidence } from '../../services/consultorService';
+import {
+  fetchBadgeRequirements,
+  fetchMyBadges,
+  requestBadgeAcquisition,
+  uploadEvidence,
+} from '../../services/consultorService';
 import '../../css/Consultor/BadgeDetalhe.css';
 
 const defaultBadgeDetails = {
@@ -171,6 +176,47 @@ const getRequirementPrefixByLevel = (levelKey) => {
   return 'E';
 };
 
+const resolveBadgeDbId = (routeBadgeId, badgeState) => {
+  const direct = Number(badgeState?.badgeDbId);
+  if (Number.isInteger(direct) && direct > 0) {
+    return direct;
+  }
+
+  const fromRoute = String(routeBadgeId || '').trim();
+  if (fromRoute) {
+    const numericRoute = Number(fromRoute);
+    if (Number.isInteger(numericRoute) && numericRoute > 0) {
+      return numericRoute;
+    }
+
+    const match = fromRoute.match(/^badge-(\d+)$/i);
+    if (match) {
+      const numericMatch = Number(match[1]);
+      if (Number.isInteger(numericMatch) && numericMatch > 0) {
+        return numericMatch;
+      }
+    }
+  }
+
+  const fromStateId = String(badgeState?.id || '').trim();
+  if (fromStateId) {
+    const numericStateId = Number(fromStateId);
+    if (Number.isInteger(numericStateId) && numericStateId > 0) {
+      return numericStateId;
+    }
+
+    const match = fromStateId.match(/^badge-(\d+)$/i);
+    if (match) {
+      const numericMatch = Number(match[1]);
+      if (Number.isInteger(numericMatch) && numericMatch > 0) {
+        return numericMatch;
+      }
+    }
+  }
+
+  return null;
+};
+
 function BadgeDetalhe() {
   const { badgeId } = useParams();
   const navigate = useNavigate();
@@ -181,8 +227,9 @@ function BadgeDetalhe() {
   const [statusMessage, setStatusMessage] = useState('');
   const [filesByRequirement, setFilesByRequirement] = useState({});
   const [currentRequestId, setCurrentRequestId] = useState(() => Number(location.state?.badge?.requestId) || null);
+  const [dynamicRequirements, setDynamicRequirements] = useState(null);
 
-  const badge = useMemo(() => {
+  const [badge, setBadge] = useState(() => {
     if (location.state?.badge) {
       return location.state.badge;
     }
@@ -190,8 +237,104 @@ function BadgeDetalhe() {
     const decodedId = decodeURIComponent(badgeId || '');
     const matchedBadge = fallbackBadges.find((item) => item.id === decodedId);
     return matchedBadge || defaultBadgeDetails;
-  }, [location.state, badgeId]);
+  });
   const [badgeStatus, setBadgeStatus] = useState(() => normalizeBadgeStatus(badge));
+  const hasBadgeId = Number.isInteger(Number(badge?.badgeDbId)) && Number(badge.badgeDbId) > 0;
+  const isSpecialBadge = Boolean(badge?.isSpecial) || badge?.typeId === 'special' || !badge?.levelKey;
+  const levelLabel = isSpecialBadge ? 'Especial' : t(badge?.levelKey || '');
+  const resolvedBadgeDbId = useMemo(
+    () => resolveBadgeDbId(badgeId, badge),
+    [badgeId, badge],
+  );
+
+  useEffect(() => {
+    if (location.state?.badge) {
+      setBadge(location.state.badge);
+      return;
+    }
+
+    const decodedId = decodeURIComponent(badgeId || '');
+    const matchedBadge = fallbackBadges.find((item) => item.id === decodedId);
+    setBadge(matchedBadge || defaultBadgeDetails);
+  }, [location.state?.badge, badgeId]);
+
+  useEffect(() => {
+    setDynamicRequirements(null);
+  }, [badgeId, badge?.badgeDbId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadFromDatabase = async () => {
+      try {
+        const data = await fetchMyBadges();
+        if (!isMounted || !Array.isArray(data) || data.length === 0) {
+          return;
+        }
+
+        const decodedId = decodeURIComponent(badgeId || '');
+        const numericId = Number(decodedId);
+        const locationBadgeId = Number(location.state?.badge?.badgeDbId);
+
+        const matched = data.find((item) => {
+          if (Number.isInteger(locationBadgeId) && Number(item.badgeDbId) === locationBadgeId) {
+            return true;
+          }
+
+          if (decodedId && String(item.id) === decodedId) {
+            return true;
+          }
+
+          return Number.isInteger(numericId) && Number(item.badgeDbId) === numericId;
+        });
+
+        if (matched) {
+          setBadge((current) => ({ ...current, ...matched }));
+        }
+      } catch {
+        // Ignore fetch errors and keep the current badge payload.
+      }
+    };
+
+    loadFromDatabase();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [badgeId, location.state?.badge?.badgeDbId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRequirements = async () => {
+      if (!resolvedBadgeDbId) {
+        return;
+      }
+
+      const hasServerRequirements = Array.isArray(badge?.requirements) && badge.requirements.length > 0;
+      if (!isSpecialBadge && hasServerRequirements) {
+        setDynamicRequirements(null);
+        return;
+      }
+
+      try {
+        const reqs = await fetchBadgeRequirements(resolvedBadgeDbId);
+        if (isMounted && Array.isArray(reqs)) {
+          setDynamicRequirements(reqs);
+        }
+      } catch {
+        if (isMounted) {
+          setDynamicRequirements(null);
+        }
+      }
+    };
+
+    loadRequirements();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [resolvedBadgeDbId, isSpecialBadge, badge?.requirements]);
 
   useEffect(() => {
     // Initialize files state from badge payload when available (server may provide per-requirement files)
@@ -211,11 +354,16 @@ function BadgeDetalhe() {
   }, [badge]);
 
   const requirements = useMemo(() => {
+    if (!hasBadgeId) {
+      return [];
+    }
     const prefix = getRequirementPrefixByLevel(badge.levelKey);
     const showFileCounters = badgeStatus !== 'visualizar';
-    const sourceRequirements = Array.isArray(badge.requirements) && badge.requirements.length > 0
-      ? badge.requirements
-      : requirementTemplate;
+    const sourceRequirements = Array.isArray(dynamicRequirements) && dynamicRequirements.length > 0
+      ? dynamicRequirements
+      : Array.isArray(badge.requirements) && badge.requirements.length > 0
+        ? badge.requirements
+        : isSpecialBadge ? [] : requirementTemplate;
 
     return sourceRequirements.map((item, index) => {
       const fallback = requirementTemplate[index % requirementTemplate.length];
@@ -226,7 +374,9 @@ function BadgeDetalhe() {
       return {
         ...item,
         id: String(item?.id || `req-${index + 1}`),
-        title: hasPrefixedTitle ? rawTitle : `${prefix}${index + 1} - ${rawTitle}`,
+        title: isSpecialBadge
+          ? rawTitle
+          : (hasPrefixedTitle ? rawTitle : `${prefix}${index + 1} - ${rawTitle}`),
         description: item?.description || fallback.description,
         files: Number.isInteger(filesCount) && filesCount >= 0
           ? filesCount
@@ -234,7 +384,7 @@ function BadgeDetalhe() {
         image: badge.badgeImage,
       };
     });
-  }, [badge.requirements, badge.levelKey, badgeStatus, badge.badgeImage]);
+  }, [badge.requirements, badge.levelKey, badgeStatus, badge.badgeImage, hasBadgeId, isSpecialBadge, dynamicRequirements]);
 
   const fallbackBackRoute =
     typeof location.state?.backTo === 'string' && location.state.backTo.trim().length > 0
@@ -269,10 +419,11 @@ function BadgeDetalhe() {
     location.state?.activeSidebarRoute === '/consultor/catalogo-badges';
 
   const canRequestBadge =
+    hasBadgeId &&
     (badgeStatus === 'visualizar' || badgeStatus === 'evidencias_insuficientes') &&
     !(openedFromCatalog && badgeStatus === 'visualizar');
   const isProgressStatus = badgeStatus === 'candidatura_em_progresso';
-  const canSubmitProgress = canRequestBadge || isProgressStatus;
+  const canSubmitProgress = hasBadgeId && (canRequestBadge || isProgressStatus);
   const hasStatusBanner = badgeStatus !== 'visualizar';
   const statusMeta = statusConfig[badgeStatus] || null;
   const showReviewMessage = badgeStatus === 'evidencias_insuficientes';
@@ -338,6 +489,31 @@ function BadgeDetalhe() {
         setCurrentRequestId(returnedRequestId);
       }
 
+      if (shouldUploadEvidence) {
+        setFilesByRequirement({});
+      }
+
+      try {
+        const data = await fetchMyBadges();
+        if (Array.isArray(data) && data.length > 0) {
+          const decodedId = decodeURIComponent(badgeId || '');
+          const numericId = Number(decodedId);
+          const matched = data.find((item) => {
+            if (decodedId && String(item.id) === decodedId) {
+              return true;
+            }
+
+            return Number.isInteger(numericId) && Number(item.badgeDbId) === numericId;
+          });
+
+          if (matched) {
+            setBadge((current) => ({ ...current, ...matched }));
+          }
+        }
+      } catch {
+        // Ignore refresh errors after submission.
+      }
+
       setBadgeStatus(nextStatus);
       if (nextStatus === 'obtido') {
         setStatusMessage('Este badge ja foi adquirido.');
@@ -353,15 +529,22 @@ function BadgeDetalhe() {
     }
   };
 
-  const getFilesLabel = (requirementId, filesProp) => {
-    const arr = Array.isArray(filesByRequirement[requirementId]) ? filesByRequirement[requirementId] : null;
-    const countFromState = arr ? arr.length : 0;
-    const countFromProp = Number.isInteger(Number(filesProp)) && Number(filesProp) > 0 ? Number(filesProp) : 0;
-    const total = countFromState > 0 ? countFromState : countFromProp;
+  const getFilesLabel = (requirementId, filesProp, attachments) => {
+    const pendingFiles = Array.isArray(filesByRequirement[requirementId])
+      ? filesByRequirement[requirementId].filter((file) => typeof File !== 'undefined' && file instanceof File)
+      : [];
+    const pendingCount = pendingFiles.length;
+    const submittedCount = Array.isArray(attachments) ? attachments.length : 0;
+    const countFromProp = Number.isInteger(Number(filesProp)) && Number(filesProp) >= 0 ? Number(filesProp) : 0;
+    const baseCount = submittedCount > 0 ? submittedCount : countFromProp;
+    const total = baseCount + pendingCount;
 
     if (total > 0) return `${String(total).padStart(2, '0')} Arquivos Submetidos`;
     return 'Nenhum Arquivo Submetido';
   };
+
+  const getAttachmentLabel = (attachment) =>
+    String(attachment?.label || attachment?.name || attachment?.fileName || attachment?.filename || 'Arquivo').trim();
 
   const handleFilesSelected = (requirementId, fileList) => {
     const files = Array.from(fileList || []);
@@ -376,30 +559,6 @@ function BadgeDetalhe() {
     });
   };
 
-  const filesStorageKey = useMemo(() => `consultor-badge-files:${decodeURIComponent(badgeId || 'default')}`, [badgeId]);
-
-  useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(filesStorageKey);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed && typeof parsed === 'object') {
-          setFilesByRequirement(parsed);
-        }
-      }
-    } catch {
-      // Ignore malformed storage and continue with empty state.
-    }
-  }, [badge, filesStorageKey]);
-
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(filesStorageKey, JSON.stringify(filesByRequirement));
-    } catch {
-      // Ignore storage failures.
-    }
-  }, [filesByRequirement, filesStorageKey]);
-
   return (
     <Layout>
       <div className="badge-details-page">
@@ -412,12 +571,12 @@ function BadgeDetalhe() {
 
         <section className="badge-hero-card" aria-label={`Detalhes do badge ${badgeId || ''}`}>
           <div className="badge-hero-media">
-            <img src={badge.badgeImage} alt={t(badge.levelKey)} className="badge-hero-image" />
+            <img src={badge.badgeImage} alt={levelLabel} className="badge-hero-image" />
           </div>
 
           <div className="badge-hero-content">
             <h2>{badge.area}</h2>
-            <p>{t(badge.levelKey)}</p>
+            <p>{levelLabel}</p>
 
             <div className="badge-hero-meta">
               <span>
@@ -448,61 +607,82 @@ function BadgeDetalhe() {
         </section>
 
         <p className="badge-breadcrumb">
-          {badge.area} {'>'} {badge.serviceLineName} {'>'} {badge.learningPathName} {'>'} {t(badge.levelKey)}
+          {badge.area} {'>'} {badge.serviceLineName} {'>'} {badge.learningPathName} {'>'} {levelLabel}
         </p>
 
         <section className="badge-requirements-card">
           <h3>Requisitos</h3>
+          {!hasBadgeId && (
+            <p className="badge-requirements-empty">Este nivel ainda nao tem badge associado.</p>
+          )}
 
-            {requirements.map((requirement, index) => {
-              const isOpen = openRequirementId === requirement.id;
-              const ToggleIcon = isOpen ? EyeOff : Eye;
+          {hasBadgeId && requirements.map((requirement, index) => {
+            const isOpen = openRequirementId === requirement.id;
+            const ToggleIcon = isOpen ? EyeOff : Eye;
 
-              return (
-                <article key={`${badge.id}-${requirement.id}`} className={`badge-requirement-item ${isOpen ? 'is-open' : ''}`}>
-                  <div className="badge-requirement-head">
-                    <div>
-                      <p>{requirement.title}</p>
-                      {badgeStatus !== 'visualizar' && (
-                        <span>{getFilesLabel(requirement.id, requirement.files)}</span>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      className="badge-requirement-view-btn"
-                      aria-label={isOpen ? `Ocultar requisito ${index + 1}` : `Ver requisito ${index + 1}`}
-                      title={isOpen ? 'Ocultar requisito' : 'Ver requisito'}
-                      aria-expanded={isOpen}
-                      onClick={() => toggleRequirement(requirement.id)}
-                    >
-                      <ToggleIcon size={19} />
-                    </button>
+            return (
+              <article key={`${badge.id}-${requirement.id}`} className={`badge-requirement-item ${isOpen ? 'is-open' : ''}`}>
+                <div className="badge-requirement-head">
+                  <div>
+                    <p>{requirement.title}</p>
+                    {badgeStatus !== 'visualizar' && (
+                      <span>{getFilesLabel(requirement.id, requirement.files, requirement.attachments)}</span>
+                    )}
                   </div>
 
-                  {isOpen && (
-                    <div className="badge-requirement-detail">
-                      <img
-                        src={requirement.image || badge.badgeImage}
-                        alt={`Ilustracao do requisito ${index + 1}`}
-                        className="badge-requirement-detail-image"
-                      />
-                      <div className="badge-requirement-detail-content">
-                        <p>{requirement.description}</p>
-                        {(badgeStatus === 'candidatura_em_progresso' || badgeStatus === 'evidencias_insuficientes') && (
-                          <div className="badge-requirement-files">
-                            <label className="badge-file-input-label">Anexar arquivos</label>
-                            <input
-                              className="badge-file-input"
-                              type="file"
-                              multiple
-                              onChange={(e) => handleFilesSelected(requirement.id, e.target.files)}
-                              aria-label={`Anexar arquivos ao requisito ${index + 1}`}
-                            />
+                  <button
+                    type="button"
+                    className="badge-requirement-view-btn"
+                    aria-label={isOpen ? `Ocultar requisito ${index + 1}` : `Ver requisito ${index + 1}`}
+                    title={isOpen ? 'Ocultar requisito' : 'Ver requisito'}
+                    aria-expanded={isOpen}
+                    onClick={() => toggleRequirement(requirement.id)}
+                  >
+                    <ToggleIcon size={19} />
+                  </button>
+                </div>
 
-                            <div className="badge-file-list">
-                              {Array.isArray(filesByRequirement[requirement.id]) && filesByRequirement[requirement.id].length > 0 ? (
-                                filesByRequirement[requirement.id].map((f, fi) => (
+                {isOpen && (
+                  <div className="badge-requirement-detail">
+                    <img
+                      src={requirement.image || badge.badgeImage}
+                      alt={`Ilustracao do requisito ${index + 1}`}
+                      className="badge-requirement-detail-image"
+                    />
+                    <div className="badge-requirement-detail-content">
+                      <p>{requirement.description}</p>
+                      {badgeStatus !== 'visualizar' && (
+                        <div className="badge-requirement-files">
+                          <label className="badge-file-input-label">Arquivos submetidos</label>
+                          <div className="badge-file-list">
+                            {Array.isArray(requirement.attachments) && requirement.attachments.length > 0 ? (
+                              requirement.attachments.map((attachment, index) => (
+                                <div key={`${requirement.id}-attachment-${index}`} className="badge-file-item">
+                                  <span className="badge-file-name">{getAttachmentLabel(attachment)}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="badge-file-none">Nenhum ficheiro submetido.</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {(badgeStatus === 'candidatura_em_progresso' || badgeStatus === 'evidencias_insuficientes') && (
+                        <div className="badge-requirement-files">
+                          <label className="badge-file-input-label">Anexar arquivos</label>
+                          <input
+                            className="badge-file-input"
+                            type="file"
+                            multiple
+                            onChange={(e) => handleFilesSelected(requirement.id, e.target.files)}
+                            aria-label={`Anexar arquivos ao requisito ${index + 1}`}
+                          />
+
+                          <div className="badge-file-list">
+                            {Array.isArray(filesByRequirement[requirement.id]) && filesByRequirement[requirement.id].length > 0 ? (
+                              filesByRequirement[requirement.id]
+                                .filter((file) => typeof File !== 'undefined' && file instanceof File)
+                                .map((f, fi) => (
                                   <div key={`${requirement.id}-file-${fi}`} className="badge-file-item">
                                     <span className="badge-file-name">{f.name}</span>
                                     <button
@@ -515,18 +695,18 @@ function BadgeDetalhe() {
                                     </button>
                                   </div>
                                 ))
-                              ) : (
-                                <div className="badge-file-none">Nenhum ficheiro anexado.</div>
-                              )}
-                            </div>
+                            ) : (
+                              <div className="badge-file-none">Nenhum ficheiro anexado.</div>
+                            )}
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </article>
-              );
-            })}
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </section>
 
         {showReviewMessage && (

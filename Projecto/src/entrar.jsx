@@ -6,7 +6,7 @@ import TermsModal from './components/TermsModal';
 import PrivacyModal from './components/PrivacyModal';
 import ForgotPasswordModal from './components/ForgotPasswordModal';
 import { loginAccount } from './services/authService';
-import './css/entrar.css';
+import './css/LoginAccount.css';
 
 const dashboardPathByRole = {
   consultor: '/consultor/dashboard',

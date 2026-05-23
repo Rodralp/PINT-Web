@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Clock3, Filter, Search, SlidersHorizontal, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Clock3, Filter, Search, SlidersHorizontal, Trophy, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../components/Layout';
 import { fetchCatalogBadges } from '../services/consultorService';
@@ -16,6 +16,8 @@ const badgeLevels = [
 
 const badgeAreas = ['LowCode (Outsystems)', 'Cloud Architecture'];
 
+const SPECIAL_BADGE_TYPE = 'special';
+
 const badgeTypes = [
   { id: 'todos', label: 'Todos' },
   { id: 'badge_level_junior', label: 'Júnior' },
@@ -23,14 +25,21 @@ const badgeTypes = [
   { id: 'badge_level_senior', label: 'Sénior' },
   { id: 'badge_level_specialist', label: 'Especialista' },
   { id: 'badge_level_knowledge_lead', label: 'Líder de Conhecimento' },
+  { id: SPECIAL_BADGE_TYPE, label: 'Especial' },
 ];
 
 const ITEMS_PER_PAGE = 10;
 
-const normalizeBadgeItem = (item) => ({
-  ...item,
-  typeId: item.typeId || item.levelKey,
-});
+const normalizeBadgeItem = (item) => {
+  const typeId = item.typeId || item.levelKey || (item.isSpecial ? SPECIAL_BADGE_TYPE : null);
+  const isSpecial = typeId === SPECIAL_BADGE_TYPE || item.isSpecial || !item.levelKey;
+
+  return {
+    ...item,
+    typeId,
+    isSpecial,
+  };
+};
 
 const buildDefaultBadgeItems = () =>
   badgeAreas.flatMap((area, areaIndex) =>
@@ -47,7 +56,10 @@ const buildDefaultBadgeItems = () =>
 
 function CatalogoBadges() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
+  const isAdminRoute = location.pathname.includes('/admin-gestor') || location.pathname.includes('/dashboard/admin');
+  const catalogPath = isAdminRoute ? '/admin-gestor/catalogo-badges' : '/consultor/catalogo-badges';
   const [badgeItems, setBadgeItems] = useState(buildDefaultBadgeItems);
   const [statusMessage, setStatusMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,8 +76,16 @@ function CatalogoBadges() {
     const loadCatalog = async () => {
       try {
         const data = await fetchCatalogBadges();
-        if (isMounted && Array.isArray(data) && data.length > 0) {
-          setBadgeItems(data.map(normalizeBadgeItem));
+        if (!isMounted) {
+          return;
+        }
+
+        const nextItems = Array.isArray(data) && data.length > 0
+          ? data.map(normalizeBadgeItem)
+          : buildDefaultBadgeItems().map(normalizeBadgeItem);
+
+        if (nextItems.length > 0) {
+          setBadgeItems(nextItems);
           setStatusMessage('');
         }
       } catch {
@@ -80,14 +100,39 @@ function CatalogoBadges() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isAdminRoute, location.state?.refreshCatalog]);
 
   const handleOpenBadgeDetails = (item) => {
-    navigate(`/consultor/badge/${encodeURIComponent(item.id)}`, {
+    const badgeDbId = Number(item?.badgeDbId);
+    const routeBadgeId = Number.isInteger(badgeDbId) && badgeDbId > 0
+      ? String(badgeDbId)
+      : String(item.id);
+
+    if (isAdminRoute) {
+      navigate(`/admin-gestor/badge/${encodeURIComponent(routeBadgeId)}`, {
+        state: {
+          badge: item,
+          backTo: catalogPath,
+          activeSidebarRoute: catalogPath,
+        },
+      });
+      return;
+    }
+
+    navigate(`/consultor/badge/${encodeURIComponent(routeBadgeId)}`, {
       state: {
         badge: item,
-        backTo: '/consultor/catalogo-badges',
-        activeSidebarRoute: '/consultor/catalogo-badges',
+        backTo: catalogPath,
+        activeSidebarRoute: catalogPath,
+      },
+    });
+  };
+
+  const handleCreateBadge = () => {
+    navigate('/admin-gestor/badge/novo', {
+      state: {
+        backTo: catalogPath,
+        activeSidebarRoute: catalogPath,
       },
     });
   };
@@ -128,10 +173,12 @@ function CatalogoBadges() {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
     return badgeItems.filter((item) => {
-      const translatedLevel = t(item.levelKey).toLowerCase();
+      const badgeTitle = String(item.area || item.name || item.title || '').toLowerCase();
+      const levelLabel = item.isSpecial ? 'Especial' : t(item.levelKey || '');
+      const translatedLevel = levelLabel.toLowerCase();
       const searchMatch =
         normalizedSearch.length === 0
-        || item.area.toLowerCase().includes(normalizedSearch)
+        || badgeTitle.includes(normalizedSearch)
         || translatedLevel.includes(normalizedSearch);
       const filterMatch = activeFilter === 'todos' || item.typeId === activeFilter;
 
@@ -215,6 +262,14 @@ function CatalogoBadges() {
       <div className="catalog-page">
         <header className="catalog-header">
           <h1>{t('catalog_title')}</h1>
+          {isAdminRoute && (
+            <div className="catalog-header-actions">
+              <button type="button" className="catalog-create-btn" onClick={handleCreateBadge}>
+                <Plus size={18} />
+                Criar badge
+              </button>
+            </div>
+          )}
         </header>
 
         <section className="catalog-shell">
@@ -290,34 +345,40 @@ function CatalogoBadges() {
           </div>
 
           <div className="catalog-grid">
-            {pagedBadges.map((item) => (
-              <article
-                key={item.id}
-                className="catalog-card"
-                role="button"
-                tabIndex={0}
-                onClick={() => handleOpenBadgeDetails(item)}
-                onKeyDown={(event) => handleCardKeyDown(event, item)}
-              >
-                <div className="catalog-badge-frame">
-                  <img className="catalog-badge-image" src={item.badgeImage} alt={t(item.levelKey)} />
-                </div>
+            {pagedBadges.map((item) => {
+              const badgeTitle = item.area || item.name || item.title || 'Badge';
+              const levelLabel = item.isSpecial ? 'Especial' : t(item.levelKey || '');
+              const badgeDate = item.date || '--';
 
-                <div className="catalog-card-title">{item.area}</div>
-                <div className="catalog-card-level">{t(item.levelKey)}</div>
+              return (
+                <article
+                  key={item.id}
+                  className="catalog-card"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleOpenBadgeDetails(item)}
+                  onKeyDown={(event) => handleCardKeyDown(event, item)}
+                >
+                  <div className="catalog-badge-frame">
+                    <img className="catalog-badge-image" src={item.badgeImage} alt={levelLabel} />
+                  </div>
 
-                <div className="catalog-card-meta">
-                  <div className="catalog-meta-row">
-                    <Trophy size={14} />
-                    <span>{item.points} {t('points')}</span>
+                  <div className="catalog-card-title">{badgeTitle}</div>
+                  <div className="catalog-card-level">{levelLabel}</div>
+
+                  <div className="catalog-card-meta">
+                    <div className="catalog-meta-row">
+                      <Trophy size={14} />
+                      <span>{item.points} {t('points')}</span>
+                    </div>
+                    <div className="catalog-meta-row">
+                      <Clock3 size={14} />
+                      <span>{badgeDate}</span>
+                    </div>
                   </div>
-                  <div className="catalog-meta-row">
-                    <Clock3 size={14} />
-                    <span>{item.date}</span>
-                  </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
 
           {filteredBadges.length === 0 && (
