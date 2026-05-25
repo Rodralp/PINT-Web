@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n API,WEB \"npm:dev:server\" \"npm:dev:client\"",
-    "dev:client": "vite",
+    "dev:client": "vite --host",
     "dev:server": "node --watch server/src/server.js",
     "start:server": "node server/src/server.js",
     "db:create": "node server/src/scripts/createDatabase.js",
