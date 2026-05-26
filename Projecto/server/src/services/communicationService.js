@@ -21,6 +21,14 @@ export const communicationService = {
     return communicationModel.markNotificationRead(accountId, notificationId);
   },
 
+  getUserNotificationSettings(accountId) {
+    return communicationModel.getUserNotificationSettings(accountId);
+  },
+
+  updateUserNotificationSettings(accountId, settings) {
+    return communicationModel.updateUserNotificationSettings(accountId, settings);
+  },
+
   getAnnouncementAttachment(accountId, logId, fileId) {
     return communicationModel.getAnnouncementAttachment(accountId, logId, fileId);
   },

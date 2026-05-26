@@ -1,6 +1,7 @@
 import { QueryTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import { Account } from './sql/Account.js';
+import { communicationModel } from './communicationModel.js';
 
 const DEFAULT_ROLE = 'consultor';
 const ALLOWED_ROLES = new Set(['consultor', 'talent-manager', 'service-line-leader', 'admin-gestor']);
@@ -176,6 +177,19 @@ export const authModel = {
       status: 'pendente',
     });
 
+    try {
+      await communicationModel.dispatchEventNotification({
+        eventKey: 'Novo registo',
+        actorAccountId: account.id,
+        title: 'Novo registo',
+        message: `Novo registo de utilizador: ${account.nome} (${account.email}).`,
+        consultorIds: [account.id],
+        broadcastSll: true,
+      });
+    } catch (error) {
+      console.error('Failed to notify new registration.', error);
+    }
+
     return sanitizeAccount(account, false);
   },
 
@@ -249,6 +263,18 @@ export const authModel = {
 
     account.senha = String(newPassword || '');
     await account.save();
+
+    try {
+      await communicationModel.dispatchEventNotification({
+        eventKey: 'Mudanca de credenciais',
+        actorAccountId: parsedAccountId,
+        title: 'Mudanca de credenciais',
+        message: `O utilizador ${account.nome} alterou as credenciais de acesso.`,
+        consultorIds: [parsedAccountId],
+      });
+    } catch (error) {
+      console.error('Failed to notify credential change.', error);
+    }
 
     return { updated: true };
   },
@@ -387,7 +413,22 @@ export const authModel = {
         },
       );
 
-      return mapUserRow(created);
+      const mappedUser = mapUserRow(created);
+
+      try {
+        await communicationModel.dispatchEventNotification({
+          eventKey: 'Novo registo',
+          actorAccountId: account.id,
+          title: 'Novo registo',
+          message: `Novo registo de utilizador: ${mappedUser.nome} (${mappedUser.email}).`,
+          consultorIds: [Number(account.id)],
+          broadcastSll: true,
+        });
+      } catch (error) {
+        console.error('Failed to notify admin-created user.', error);
+      }
+
+      return mappedUser;
     } catch (error) {
       await transaction.rollback();
       throw error;
@@ -470,7 +511,24 @@ export const authModel = {
         },
       );
 
-      return mapUserRow(updated);
+      const mappedUser = mapUserRow(updated);
+      const roleSummary = normalizedRoles.join(', ');
+      const primaryServiceLineId = normalizedServiceLineIds[0] || null;
+
+      try {
+        await communicationModel.dispatchEventNotification({
+          eventKey: 'Alteracao de permissoes',
+          actorAccountId: parsedAccountId,
+          title: 'Permissoes atualizadas',
+          message: `As permissoes de ${mappedUser.nome} foram atualizadas para ${roleSummary}.`,
+          consultorIds: [parsedAccountId],
+          serviceLineId: primaryServiceLineId,
+        });
+      } catch (error) {
+        console.error('Failed to notify permission update.', error);
+      }
+
+      return mappedUser;
     } catch (error) {
       await transaction.rollback();
       throw error;

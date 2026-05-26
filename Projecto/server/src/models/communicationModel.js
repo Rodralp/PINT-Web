@@ -55,6 +55,407 @@ const normalizeRecipientIds = (ids) => {
     .filter((entry) => Number.isInteger(entry) && entry > 0))];
 };
 
+const eventNotificationDefaults = [
+  {
+    event: 'Novo registo',
+    admin: true,
+    sll: true,
+    tl: false,
+    consultor: false,
+    email: false,
+    webApp: true,
+  },
+  {
+    event: 'Alteracao de permissoes',
+    admin: true,
+    sll: true,
+    tl: true,
+    consultor: true,
+    email: true,
+    webApp: true,
+  },
+  {
+    event: 'Recebe badge',
+    admin: false,
+    sll: false,
+    tl: false,
+    consultor: true,
+    email: true,
+    webApp: true,
+  },
+  {
+    event: 'Notificacao teste',
+    admin: true,
+    sll: false,
+    tl: false,
+    consultor: false,
+    email: true,
+    webApp: true,
+  },
+  {
+    event: 'Manutencao do Site / App',
+    admin: true,
+    sll: true,
+    tl: true,
+    consultor: true,
+    email: true,
+    webApp: true,
+  },
+  {
+    event: 'Mudanca de credenciais',
+    admin: false,
+    sll: true,
+    tl: true,
+    consultor: false,
+    email: true,
+    webApp: false,
+  },
+  {
+    event: 'Expiracao de sessao',
+    admin: false,
+    sll: false,
+    tl: true,
+    consultor: false,
+    email: false,
+    webApp: true,
+  },
+  {
+    event: 'Alerta de seguranca',
+    admin: true,
+    sll: false,
+    tl: true,
+    consultor: false,
+    email: true,
+    webApp: false,
+  },
+  {
+    event: 'Nova politica aplicada',
+    admin: false,
+    sll: false,
+    tl: false,
+    consultor: true,
+    email: true,
+    webApp: true,
+  },
+  {
+    event: 'Relatorio semanal pronto',
+    admin: false,
+    sll: false,
+    tl: false,
+    consultor: true,
+    email: false,
+    webApp: true,
+  },
+];
+
+const userNotificationDefaults = [
+  { field: 'emailUpdates', generalKey: 'Notificacoes email', fallback: true },
+  { field: 'inAppAlerts', generalKey: 'Notificacoes in-app', fallback: true },
+  { field: 'weeklySummary', generalKey: 'Resumo semanal', fallback: false },
+];
+
+const userNotificationOptions = ['Ativo', 'Inativo'];
+
+const toGeneralBooleanValue = (value) => (value ? 'Ativo' : 'Inativo');
+
+const parseGeneralBoolean = (value, fallback) => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    if (value === 1) {
+      return true;
+    }
+    if (value === 0) {
+      return false;
+    }
+  }
+
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (['ativo', 'true', '1', 'sim', 'yes', 'y'].includes(normalized)) {
+    return true;
+  }
+  if (['inativo', 'false', '0', 'nao', 'no', 'n'].includes(normalized)) {
+    return false;
+  }
+
+  return fallback;
+};
+
+const ensureUserNotificationDefaults = async (transaction) => {
+  for (const item of userNotificationDefaults) {
+    await sequelize.query(
+      `
+        INSERT INTO config_geral (chave, valor, opcoes)
+        VALUES (:key, :value, ARRAY[:options]::TEXT[])
+        ON CONFLICT (chave) DO NOTHING
+      `,
+      {
+        replacements: {
+          key: item.generalKey,
+          value: toGeneralBooleanValue(item.fallback),
+          options: userNotificationOptions,
+        },
+        type: QueryTypes.INSERT,
+        transaction,
+      },
+    );
+  }
+};
+
+const loadUserNotificationDefaults = async (transaction) => {
+  await ensureUserNotificationDefaults(transaction);
+
+  const keys = userNotificationDefaults.map((item) => item.generalKey);
+  const rows = await sequelize.query(
+    `
+      SELECT chave, valor
+      FROM config_geral
+      WHERE chave IN (:keys)
+    `,
+    {
+      replacements: { keys },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+
+  const valueByKey = new Map((rows || []).map((row) => [row.chave, row.valor]));
+  const defaults = {};
+
+  userNotificationDefaults.forEach((item) => {
+    defaults[item.field] = parseGeneralBoolean(valueByKey.get(item.generalKey), item.fallback);
+  });
+
+  return defaults;
+};
+
+const ensureEventNotificationDefaults = async (transaction) => {
+  const [row] = await sequelize.query(
+    'SELECT COUNT(*) AS total FROM config_notificacao',
+    { type: QueryTypes.SELECT, transaction },
+  );
+
+  if (Number(row?.total) > 0) {
+    return;
+  }
+
+  for (const item of eventNotificationDefaults) {
+    await sequelize.query(
+      `
+        INSERT INTO config_notificacao (evento, admin, sll, tl, consultor, email, web_app)
+        VALUES (:event, :admin, :sll, :tl, :consultor, :email, :webApp)
+      `,
+      {
+        replacements: {
+          event: item.event,
+          admin: item.admin,
+          sll: item.sll,
+          tl: item.tl,
+          consultor: item.consultor,
+          email: item.email,
+          webApp: item.webApp,
+        },
+        type: QueryTypes.INSERT,
+        transaction,
+      },
+    );
+  }
+};
+
+const fetchEventNotificationConfig = async (eventKey, transaction) => {
+  await ensureEventNotificationDefaults(transaction);
+
+  const [row] = await sequelize.query(
+    `
+      SELECT evento, admin, sll, tl, consultor, email, web_app
+      FROM config_notificacao
+      WHERE LOWER(evento) = LOWER(:eventKey)
+      LIMIT 1
+    `,
+    {
+      replacements: { eventKey: String(eventKey || '').trim() },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    event: row.evento,
+    admin: Boolean(row.admin),
+    sll: Boolean(row.sll),
+    tl: Boolean(row.tl),
+    consultor: Boolean(row.consultor),
+    email: Boolean(row.email),
+    webApp: Boolean(row.web_app),
+  };
+};
+
+const listActiveUserIdsByRole = async (roleKey, transaction) => {
+  const normalizedRole = String(roleKey || '').trim().toLowerCase();
+  if (!normalizedRole) {
+    return [];
+  }
+
+  const rows = await sequelize.query(
+    `
+      SELECT nutilizador AS id
+      FROM utilizador
+      WHERE LOWER(status) = 'ativo'
+        AND LOWER(permissoes) LIKE :rolePattern
+    `,
+    {
+      replacements: { rolePattern: `%${normalizedRole}%` },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+
+  return rows.map((row) => Number(row.id)).filter((id) => Number.isInteger(id) && id > 0);
+};
+
+const listActiveUserIdsByIds = async (ids, transaction) => {
+  const normalized = normalizeRecipientIds(ids);
+  if (normalized.length === 0) {
+    return [];
+  }
+
+  const rows = await sequelize.query(
+    `
+      SELECT nutilizador AS id
+      FROM utilizador
+      WHERE nutilizador IN (:ids)
+        AND LOWER(status) = 'ativo'
+    `,
+    {
+      replacements: { ids: normalized },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+
+  return rows.map((row) => Number(row.id)).filter((id) => Number.isInteger(id) && id > 0);
+};
+
+const listSllIdsByServiceLine = async (serviceLineId, transaction) => {
+  const parsedServiceLineId = Number(serviceLineId);
+  if (!Number.isInteger(parsedServiceLineId) || parsedServiceLineId <= 0) {
+    return [];
+  }
+
+  const rows = await sequelize.query(
+    `
+      SELECT s.nutilizador AS id
+      FROM sll_leader_sl AS s
+      INNER JOIN utilizador AS u
+        ON u.nutilizador = s.nutilizador
+      WHERE s.nsline = :serviceLineId
+        AND LOWER(u.status) = 'ativo'
+    `,
+    {
+      replacements: { serviceLineId: parsedServiceLineId },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+
+  return rows.map((row) => Number(row.id)).filter((id) => Number.isInteger(id) && id > 0);
+};
+
+const filterRecipientsByInAppPreference = async (recipientIds, transaction) => {
+  const normalizedIds = normalizeRecipientIds(recipientIds);
+  if (normalizedIds.length === 0) {
+    return [];
+  }
+
+  const defaults = await loadUserNotificationDefaults(transaction);
+  const defaultInApp = Boolean(defaults.inAppAlerts);
+
+  const rows = await sequelize.query(
+    `
+      SELECT nutilizador, valor
+      FROM config_notificacao_utilizador
+      WHERE chave = 'inAppAlerts'
+        AND nutilizador IN (:ids)
+    `,
+    {
+      replacements: { ids: normalizedIds },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+
+  const overrideById = new Map(
+    rows.map((row) => [Number(row.nutilizador), Boolean(row.valor)]),
+  );
+
+  return normalizedIds.filter((id) => (
+    overrideById.has(id) ? overrideById.get(id) : defaultInApp
+  ));
+};
+
+const insertLogEntry = async ({ actorId, title, message, type, priority, transaction }) => {
+  const parsedActorId = Number(actorId);
+  if (!Number.isInteger(parsedActorId) || parsedActorId <= 0) {
+    const error = new Error('Invalid actor id for log entry.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const trimmedTitle = String(title || '').trim() || 'Notificacao';
+  const trimmedMessage = String(message || '').trim();
+  const summary = buildSummary(trimmedMessage);
+
+  const [row] = await sequelize.query(
+    `
+      INSERT INTO logs (nutilizador, data_log, tipo_log, titulo, mensagem, resumo, prioridade)
+      VALUES (:actorId, CURRENT_DATE, :type, :title, :message, :summary, :priority)
+      RETURNING nlog
+    `,
+    {
+      replacements: {
+        actorId: parsedActorId,
+        type: normalizeLogType(type),
+        title: trimmedTitle,
+        message: trimmedMessage,
+        summary,
+        priority: normalizePriority(priority),
+      },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+
+  return row?.nlog ? Number(row.nlog) : null;
+};
+
+const listUserNotificationOverrides = async (accountId, transaction) => {
+  const rows = await sequelize.query(
+    `
+      SELECT chave, valor
+      FROM config_notificacao_utilizador
+      WHERE nutilizador = :accountId
+    `,
+    {
+      replacements: { accountId: Number(accountId) },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+
+  const overrides = {};
+  (rows || []).forEach((row) => {
+    overrides[row.chave] = Boolean(row.valor);
+  });
+
+  return overrides;
+};
+
 const deleteUploadedFiles = async (files) => {
   const safeFiles = Array.isArray(files) ? files : [];
   await Promise.all(safeFiles.map(async (file) => {
@@ -250,6 +651,103 @@ export const communicationModel = {
       await deleteUploadedFiles(files);
       throw error;
     }
+  },
+
+  async dispatchEventNotification({
+    eventKey,
+    actorAccountId,
+    title,
+    message,
+    type = 'aviso',
+    priority = 2,
+    consultorIds = [],
+    serviceLineId = null,
+    broadcastConsultors = false,
+    broadcastSll = false,
+  }) {
+    const normalizedEventKey = String(eventKey || '').trim();
+    if (!normalizedEventKey) {
+      return null;
+    }
+
+    const parsedActorId = Number(actorAccountId);
+    if (!Number.isInteger(parsedActorId) || parsedActorId <= 0) {
+      const error = new Error('Invalid actor id for event notification.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    return sequelize.transaction(async (transaction) => {
+      const config = await fetchEventNotificationConfig(normalizedEventKey, transaction);
+      if (!config) {
+        return null;
+      }
+
+      const recipientSet = new Set();
+
+      if (config.admin) {
+        const adminIds = await listActiveUserIdsByRole('admin-gestor', transaction);
+        adminIds.forEach((id) => recipientSet.add(id));
+      }
+
+      if (config.tl) {
+        const tmIds = await listActiveUserIdsByRole('talent-manager', transaction);
+        tmIds.forEach((id) => recipientSet.add(id));
+      }
+
+      if (config.sll) {
+        const sllIds = serviceLineId
+          ? await listSllIdsByServiceLine(serviceLineId, transaction)
+          : broadcastSll
+            ? await listActiveUserIdsByRole('service-line-leader', transaction)
+            : [];
+        sllIds.forEach((id) => recipientSet.add(id));
+      }
+
+      if (config.consultor) {
+        const consultorIdList = normalizeRecipientIds(consultorIds);
+        const consultorRecipients = consultorIdList.length > 0
+          ? await listActiveUserIdsByIds(consultorIdList, transaction)
+          : broadcastConsultors
+            ? await listActiveUserIdsByRole('consultor', transaction)
+            : [];
+        consultorRecipients.forEach((id) => recipientSet.add(id));
+      }
+
+      const recipients = Array.from(recipientSet);
+      const logId = await insertLogEntry({
+        actorId: parsedActorId,
+        title,
+        message,
+        type,
+        priority,
+        transaction,
+      });
+
+      if (!logId || recipients.length === 0 || !config.webApp) {
+        return { logId, recipients: [] };
+      }
+
+      const inAppRecipients = await filterRecipientsByInAppPreference(recipients, transaction);
+      for (const recipientId of inAppRecipients) {
+        await sequelize.query(
+          `
+            INSERT INTO notificacao (nutilizador, nlog, lida)
+            VALUES (:recipientId, :logId, FALSE)
+          `,
+          {
+            replacements: {
+              recipientId,
+              logId,
+            },
+            type: QueryTypes.INSERT,
+            transaction,
+          },
+        );
+      }
+
+      return { logId, recipients: inAppRecipients };
+    });
   },
 
   async getUserAnnouncements(accountId) {
@@ -476,5 +974,84 @@ export const communicationModel = {
       originalName: row.nome_original,
       storedName: row.nome_armazenado,
     };
+  },
+
+  async getUserNotificationSettings(accountId) {
+    const parsedAccountId = Number(accountId);
+    if (!Number.isInteger(parsedAccountId) || parsedAccountId <= 0) {
+      const error = new Error('Invalid account id.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    return sequelize.transaction(async (transaction) => {
+      const defaults = await loadUserNotificationDefaults(transaction);
+      const overrides = await listUserNotificationOverrides(parsedAccountId, transaction);
+      const settings = { ...defaults, ...overrides };
+
+      return { settings, defaults };
+    });
+  },
+
+  async updateUserNotificationSettings(accountId, settings) {
+    const parsedAccountId = Number(accountId);
+    if (!Number.isInteger(parsedAccountId) || parsedAccountId <= 0) {
+      const error = new Error('Invalid account id.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const payload = settings && typeof settings === 'object' ? settings : {};
+
+    return sequelize.transaction(async (transaction) => {
+      const defaults = await loadUserNotificationDefaults(transaction);
+
+      for (const item of userNotificationDefaults) {
+        const value = payload[item.field];
+        const shouldOverride = typeof value === 'boolean' && value !== defaults[item.field];
+
+        if (!shouldOverride) {
+          await sequelize.query(
+            `
+              DELETE FROM config_notificacao_utilizador
+              WHERE nutilizador = :accountId
+                AND chave = :key
+            `,
+            {
+              replacements: {
+                accountId: parsedAccountId,
+                key: item.field,
+              },
+              type: QueryTypes.DELETE,
+              transaction,
+            },
+          );
+          continue;
+        }
+
+        await sequelize.query(
+          `
+            INSERT INTO config_notificacao_utilizador (nutilizador, chave, valor)
+            VALUES (:accountId, :key, :value)
+            ON CONFLICT (nutilizador, chave)
+            DO UPDATE SET valor = EXCLUDED.valor
+          `,
+          {
+            replacements: {
+              accountId: parsedAccountId,
+              key: item.field,
+              value,
+            },
+            type: QueryTypes.INSERT,
+            transaction,
+          },
+        );
+      }
+
+      const overrides = await listUserNotificationOverrides(parsedAccountId, transaction);
+      const mergedSettings = { ...defaults, ...overrides };
+
+      return { settings: mergedSettings, defaults };
+    });
   },
 };

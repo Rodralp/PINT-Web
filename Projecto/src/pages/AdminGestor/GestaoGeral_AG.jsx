@@ -1,6 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 import Layout from '../../components/Layout';
+import {
+  fetchAdminGeneralManagement,
+  updateAdminGeneralSettings,
+  updateAdminNotificationSettings,
+  updateAdminRgpdTopics,
+} from '../../services/adminGeneralManagementService';
 import '../../css/AdminGestor/GestaoGeral_AG.css';
 
 const tabs = [
@@ -158,14 +164,88 @@ const generalSettings = [
     value: 'Português (PT)',
     options: ['Português (PT)', 'English (EN)', 'Español (ES)'],
   },
+  {
+    id: 3,
+    key: 'Notificações email',
+    value: 'Ativo',
+    options: ['Ativo', 'Inativo'],
+  },
+  {
+    id: 4,
+    key: 'Notificações in-app',
+    value: 'Ativo',
+    options: ['Ativo', 'Inativo'],
+  },
+  {
+    id: 5,
+    key: 'Resumo semanal',
+    value: 'Inativo',
+    options: ['Ativo', 'Inativo'],
+  },
 ];
 
 function GestaoGeralAG() {
   const [activeTab, setActiveTab] = useState('notificacoes');
   const [searchTerm, setSearchTerm] = useState('');
-  const [notificationRows, setNotificationRows] = useState(initialNotificationRows);
-  const [rgpdRows, setRgpdRows] = useState(rgpdTopics);
-  const [generalRows, setGeneralRows] = useState(generalSettings);
+  const [notificationRows, setNotificationRows] = useState([]);
+  const [rgpdRows, setRgpdRows] = useState([]);
+  const [generalRows, setGeneralRows] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const isMountedRef = useRef(false);
+
+  const loadGeneralManagement = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const data = await fetchAdminGeneralManagement();
+
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      setNotificationRows(
+        Array.isArray(data?.notifications) && data.notifications.length > 0
+          ? data.notifications
+          : initialNotificationRows,
+      );
+      setRgpdRows(
+        Array.isArray(data?.rgpd) && data.rgpd.length > 0
+          ? data.rgpd
+          : rgpdTopics,
+      );
+      setGeneralRows(
+        Array.isArray(data?.settings) && data.settings.length > 0
+          ? data.settings
+          : generalSettings,
+      );
+      setStatusMessage('');
+      setErrorMessage('');
+    } catch (error) {
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      setNotificationRows(initialNotificationRows);
+      setRgpdRows(rgpdTopics);
+      setGeneralRows(generalSettings);
+      setErrorMessage(error?.message || 'Nao foi possivel carregar a configuracao geral.');
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    loadGeneralManagement();
+
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [loadGeneralManagement]);
 
   const filteredNotificationRows = useMemo(() => {
     const normalizedTerm = searchTerm.trim().toLowerCase();
@@ -218,6 +298,43 @@ function GestaoGeralAG() {
     setGeneralRows((current) => current.map((row) => (row.id === rowId ? { ...row, value } : row)));
   };
 
+  const handleCancelChanges = () => {
+    setStatusMessage('');
+    setErrorMessage('');
+    loadGeneralManagement();
+  };
+
+  const handleApplyChanges = async () => {
+    setIsSaving(true);
+    setStatusMessage('');
+    setErrorMessage('');
+
+    try {
+      if (activeTab === 'notificacoes') {
+        const data = await updateAdminNotificationSettings(notificationRows);
+        if (Array.isArray(data?.notifications)) {
+          setNotificationRows(data.notifications);
+        }
+      } else if (activeTab === 'rgpd') {
+        const data = await updateAdminRgpdTopics(rgpdRows);
+        if (Array.isArray(data?.rgpd)) {
+          setRgpdRows(data.rgpd);
+        }
+      } else {
+        const data = await updateAdminGeneralSettings(generalRows);
+        if (Array.isArray(data?.settings)) {
+          setGeneralRows(data.settings);
+        }
+      }
+
+      setStatusMessage('Alteracoes guardadas com sucesso.');
+    } catch (error) {
+      setErrorMessage(error?.message || 'Nao foi possivel guardar as alteracoes.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="ag-general-page">
@@ -236,6 +353,8 @@ function GestaoGeralAG() {
               onClick={() => {
                 setActiveTab(tab.id);
                 setSearchTerm('');
+                setStatusMessage('');
+                setErrorMessage('');
               }}
             >
               {tab.label}
@@ -257,10 +376,37 @@ function GestaoGeralAG() {
               />
             </label>
 
-            <button type="button" className="ag-general-apply-btn">
-              Aplicar alterações
+            <button
+              type="button"
+              className="ag-general-cancel-btn"
+              onClick={handleCancelChanges}
+              disabled={isLoading || isSaving}
+            >
+              Cancelar alterações
+            </button>
+
+            <button
+              type="button"
+              className="ag-general-apply-btn"
+              onClick={handleApplyChanges}
+              disabled={isLoading || isSaving}
+              aria-busy={isSaving}
+            >
+              {isSaving ? 'A guardar...' : 'Aplicar alterações'}
             </button>
           </div>
+
+          {isLoading && (
+            <p className="ag-general-status" role="status">
+              A carregar dados...
+            </p>
+          )}
+
+          {!isLoading && (statusMessage || errorMessage) && (
+            <p className={`ag-general-status ${errorMessage ? 'error' : 'success'}`} role="status">
+              {errorMessage || statusMessage}
+            </p>
+          )}
 
           {activeTab === 'notificacoes' && (
             <div className="ag-general-table-wrap">
@@ -281,7 +427,15 @@ function GestaoGeralAG() {
                 </thead>
 
                 <tbody>
-                  {filteredNotificationRows.length === 0 && (
+                  {isLoading && (
+                    <tr>
+                      <td colSpan={7} className="ag-general-empty-row">
+                        A carregar...
+                      </td>
+                    </tr>
+                  )}
+
+                  {!isLoading && filteredNotificationRows.length === 0 && (
                     <tr>
                       <td colSpan={7} className="ag-general-empty-row">
                         Sem eventos para os filtros escolhidos.
@@ -289,7 +443,7 @@ function GestaoGeralAG() {
                     </tr>
                   )}
 
-                  {filteredNotificationRows.map((row) => (
+                  {!isLoading && filteredNotificationRows.map((row) => (
                     <tr key={row.id}>
                       <td className="ag-general-event-cell">{row.event}</td>
                       <td>
@@ -354,11 +508,15 @@ function GestaoGeralAG() {
                 <span className="ag-rgpd-col-topic" role="columnheader">Tópico</span>
               </div>
 
-              {filteredRgpdTopics.length === 0 && (
+                  {isLoading && (
+                    <p className="ag-rgpd-empty">A carregar...</p>
+                  )}
+
+                  {!isLoading && filteredRgpdTopics.length === 0 && (
                 <p className="ag-rgpd-empty">Sem tópicos para os filtros escolhidos.</p>
               )}
 
-              {filteredRgpdTopics.map((item) => (
+                  {!isLoading && filteredRgpdTopics.map((item) => (
                 <article key={item.id} className="ag-rgpd-topic-card" role="rowgroup">
                   <div className="ag-rgpd-topic-head" role="row">
                     <span className="ag-rgpd-col-num" role="cell">{item.id}</span>
@@ -378,11 +536,15 @@ function GestaoGeralAG() {
 
           {activeTab === 'geral' && (
             <div className="ag-settings-wrap">
-              {filteredGeneralSettings.length === 0 && (
+              {isLoading && (
+                <p className="ag-rgpd-empty">A carregar...</p>
+              )}
+
+              {!isLoading && filteredGeneralSettings.length === 0 && (
                 <p className="ag-rgpd-empty">Sem definições para os filtros escolhidos.</p>
               )}
 
-              {filteredGeneralSettings.map((item) => (
+              {!isLoading && filteredGeneralSettings.map((item) => (
                 <article key={item.id} className="ag-setting-row">
                   <span className="ag-setting-key-label">{item.key}</span>
                   <select
@@ -391,7 +553,7 @@ function GestaoGeralAG() {
                     onChange={(event) => updateGeneralOption(item.id, event.target.value)}
                     aria-label={`Valor da definição ${item.id}`}
                   >
-                    {item.options.map((option) => (
+                    {(Array.isArray(item.options) ? item.options : []).map((option) => (
                       <option key={option} value={option}>
                         {option}
                       </option>

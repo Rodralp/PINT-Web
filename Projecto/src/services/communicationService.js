@@ -146,6 +146,30 @@ export async function fetchUserNotifications() {
   return response.data;
 }
 
+export async function fetchUserNotificationSettings() {
+  const accountId = await ensureLoggedAccountId();
+  if (!accountId) {
+    throw new Error('Missing logged account id.');
+  }
+
+  const response = await apiClient.get(`/notifications/settings?accountId=${accountId}`);
+  return response.data;
+}
+
+export async function updateUserNotificationSettings(settings) {
+  const accountId = await ensureLoggedAccountId();
+  if (!accountId) {
+    throw new Error('Missing logged account id.');
+  }
+
+  const response = await apiClient.put('/notifications/settings', {
+    accountId,
+    settings: settings || {},
+  });
+
+  return response.data;
+}
+
 export function getAnnouncementAttachmentDownloadUrl(logId, fileId, accountIdOverride) {
   const accountId = accountIdOverride || getLoggedAccountId();
   if (!accountId || !logId || !fileId) {

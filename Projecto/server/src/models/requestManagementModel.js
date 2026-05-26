@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { sequelize } from '../config/database.js';
 import { syncSpecialBadgesForConsultor } from './consultorModel.js';
+import { communicationModel } from './communicationModel.js';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const uploadsDir = path.resolve(globalThis.process?.cwd?.() || '.', 'server', 'uploads');

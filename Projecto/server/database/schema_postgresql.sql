@@ -258,7 +258,43 @@ CREATE TABLE IF NOT EXISTS preferencias (
 );
 
 -- ============================================================
--- 8. TABELAS DE GESTAO
+-- 8. TABELAS DE CONFIGURACAO GERAL
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS config_notificacao (
+    nconfig INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    evento VARCHAR(150) NOT NULL UNIQUE,
+    admin BOOLEAN NOT NULL DEFAULT FALSE,
+    sll BOOLEAN NOT NULL DEFAULT FALSE,
+    tl BOOLEAN NOT NULL DEFAULT FALSE,
+    consultor BOOLEAN NOT NULL DEFAULT FALSE,
+    email BOOLEAN NOT NULL DEFAULT FALSE,
+    web_app BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS rgpd_topico (
+    nrgpd INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    titulo VARCHAR(150) NOT NULL,
+    corpo TEXT NOT NULL,
+    ordem INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS config_geral (
+    nconfig INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    chave VARCHAR(150) NOT NULL UNIQUE,
+    valor VARCHAR(150) NOT NULL,
+    opcoes TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]
+);
+
+CREATE TABLE IF NOT EXISTS config_notificacao_utilizador (
+    nutilizador INTEGER NOT NULL REFERENCES utilizador(nutilizador) ON DELETE CASCADE,
+    chave VARCHAR(80) NOT NULL,
+    valor BOOLEAN NOT NULL,
+    PRIMARY KEY (nutilizador, chave)
+);
+
+-- ============================================================
+-- 9. TABELAS DE GESTAO
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS a_gere_n (
