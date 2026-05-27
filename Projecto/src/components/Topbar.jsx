@@ -121,7 +121,13 @@ function Topbar({ onToggleSidebar }) {
           <Menu size={24} strokeWidth={2} />
         </button>
         {/* Usando o mesmo logo da Navbar pública */}
-        <img src="/SoftinsaLogo.png" alt="Softinsa Logo" className="topbar-logo-img" />
+        <img 
+          src="/SoftinsaLogo.png" 
+          alt="Softinsa Logo" 
+          className="topbar-logo-img"
+          onClick={() => navigate('/')}
+          style={{ cursor: 'pointer' }}
+        />
       </div>
       <div className="topbar-right">
         <button className="topbar-icon-btn" onClick={handleNotificationsClick} aria-label={t('notifications_title')}>
