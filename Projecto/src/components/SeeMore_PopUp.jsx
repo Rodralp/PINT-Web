@@ -1,18 +1,9 @@
-import PropTypes from 'prop-types';
 import { X } from 'lucide-react';
 import '../css/SeeMore_PopUp.css';
 
 /**
  * SeeMore_PopUp - Componente reutilizável para exibir listas em modal
- *
- * Props:
- * - isOpen: boolean - Se o modal está aberto
- * - onClose: function - Função chamada para fechar o modal
- * - title: string - Título do modal
- * - items: array - Lista de items a exibir
- * - renderItem: function - Função que renderiza cada item (item, index) => JSX
- * - maxItems?: number - Limite de items a mostrar (opcional)
- * - emptyMessage?: string - Mensagem quando não há items
+ * Usa as classes CSS do modal de lembretes para manter o visual consistente
  */
 function SeeMore_PopUp({
   isOpen,
@@ -22,33 +13,27 @@ function SeeMore_PopUp({
   renderItem,
   maxItems,
   emptyMessage = 'Nenhum item para mostrar.',
+  closeLabel = 'Fechar',
 }) {
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   const displayItems = maxItems ? items.slice(0, maxItems) : items;
 
   return (
-    <div className="seemore-modal-overlay" onClick={onClose}>
-      <div className="seemore-modal" onClick={(event) => event.stopPropagation()}>
-        <div className="seemore-modal-header">
-          <h2>{title}</h2>
-          <button
-            type="button"
-            className="seemore-modal-close-btn"
-            onClick={onClose}
-            aria-label="Fechar modal"
-          >
-            <X size={24} />
+    <div className="reminder-modal-overlay" onClick={onClose}>
+      <div className="reminder-modal" onClick={(event) => event.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <h2 style={{ margin: 0 }}>{title}</h2>
+          <button type="button" onClick={onClose} className="reminders-back-btn" aria-label="Fechar">
+            <X size={18} />
           </button>
         </div>
 
-        <div className="seemore-modal-content">
+        <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: 8 }}>
           {displayItems.length > 0 ? (
             <div className="seemore-list">
               {displayItems.map((item, index) => (
-                <div key={index} className="seemore-list-item">
+                <div key={index}>
                   {renderItem(item, index)}
                 </div>
               ))}
@@ -57,19 +42,15 @@ function SeeMore_PopUp({
             <div className="seemore-empty-state">{emptyMessage}</div>
           )}
         </div>
+
+        <div className="reminder-modal-actions" style={{ marginTop: 12 }}>
+          <button type="button" className="reminder-cancel-btn" onClick={onClose}>
+            {closeLabel}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
-
-SeeMore_PopUp.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  title: PropTypes.string.isRequired,
-  items: PropTypes.array.isRequired,
-  renderItem: PropTypes.func.isRequired,
-  maxItems: PropTypes.number,
-  emptyMessage: PropTypes.string,
-};
 
 export default SeeMore_PopUp;

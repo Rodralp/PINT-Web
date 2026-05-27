@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Trophy, Award, Users, FileCheck2, FileText, CheckCircle2 } from 'lucide-react';
 import Layout from '../../components/Layout';
+import SeeMore_PopUp from '../../components/SeeMore_PopUp';
 import { fetchTalentManagerDashboard } from '../../services/dashboardService';
 import '../../css/TalentManager/Dashboard_TM.css';
 
@@ -62,6 +63,8 @@ function DashboardTM() {
   const [topConsultores, setTopConsultores] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
   const [dashboardStatusMessage, setDashboardStatusMessage] = useState('');
+  const [isTopConsultoresModalOpen, setIsTopConsultoresModalOpen] = useState(false);
+  const [isActivitiesModalOpen, setIsActivitiesModalOpen] = useState(false);
   const badgesTimelineData = useMemo(
     () => buildDailyTimelineData(badgesTimelineValues, 'day-month'),
     [badgesTimelineValues],
@@ -312,7 +315,15 @@ function DashboardTM() {
               <section className="consultores-section h-100 w-100">
                 <div className="section-header">
                   <h2>Top Consultores</h2>
-                  <a href="#consultores" onClick={(e) => e.preventDefault()}>Ver todos</a>
+                  <a
+                    href="#consultores"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsTopConsultoresModalOpen(true);
+                    }}
+                  >
+                    Ver todos
+                  </a>
                 </div>
                 <div className="consultores-grid">
                   {topConsultores.map((consultor) => {
@@ -352,7 +363,15 @@ function DashboardTM() {
               <section className="activities-section h-100 w-100">
                 <div className="section-header">
                   <h2>Atividades Recentes (Talent Manager)</h2>
-                  <a href="#atividades" onClick={(e) => e.preventDefault()}>Ver todos</a>
+                  <a
+                    href="#atividades"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsActivitiesModalOpen(true);
+                    }}
+                  >
+                    Ver todos
+                  </a>
                 </div>
                 <div className="activities-list">
                   {recentActivities.map((activity) => {
@@ -378,6 +397,65 @@ function DashboardTM() {
             </div>
           </div>
         </div>
+
+        <SeeMore_PopUp
+          isOpen={isTopConsultoresModalOpen}
+          onClose={() => setIsTopConsultoresModalOpen(false)}
+          title="Top Consultores"
+          items={topConsultores}
+          renderItem={(consultor) => {
+            const IconComponent = iconByKey[consultor.iconKey] || Users;
+
+            return (
+              <div className="consultor-card" style={{ marginBottom: 0 }}>
+                <div className="consultor-header">
+                  <div className="consultor-avatar">
+                    <IconComponent size={24} className="icon-color" />
+                  </div>
+                  <div className="consultor-info">
+                    <div className="consultor-name">{consultor.name}</div>
+                    <div className="consultor-email">{consultor.email}</div>
+                  </div>
+                </div>
+                <div className="consultor-stats">
+                  <div className="stat">
+                    <span className="stat-label">Pontos</span>
+                    <span className="stat-value">{consultor.points}</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Badges</span>
+                    <span className="stat-value">{consultor.badges}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          }}
+          emptyMessage="Sem dados de consultores para apresentar."
+        />
+
+        <SeeMore_PopUp
+          isOpen={isActivitiesModalOpen}
+          onClose={() => setIsActivitiesModalOpen(false)}
+          title="Atividades Recentes (Talent Manager)"
+          items={recentActivities}
+          renderItem={(activity) => {
+            const IconComponent = iconByKey[activity.iconKey] || FileText;
+
+            return (
+              <div className="activity-item" style={{ marginBottom: 0 }}>
+                <div className="activity-icon">
+                  <IconComponent size={20} />
+                </div>
+                <div className="activity-content">
+                  <div className="activity-title">{activity.title}</div>
+                  <div className="activity-time">{activity.timeframe}</div>
+                </div>
+                {activity.points && <div className="activity-points">{activity.points}</div>}
+              </div>
+            );
+          }}
+          emptyMessage="Sem atividades recentes para apresentar."
+        />
       </div>
     </Layout>
   );

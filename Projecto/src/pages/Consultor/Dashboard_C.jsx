@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
+import SeeMore_PopUp from '../../components/SeeMore_PopUp';
 import { fetchConsultorDashboard } from '../../services/dashboardService';
 import { fetchBadgeSuggestions } from '../../services/consultorService';
 import {
@@ -72,6 +73,8 @@ function DashboardC() {
   const [inProgressItems, setInProgressItems] = useState([]);
   const [suggestionItems, setSuggestionItems] = useState([]);
   const [dashboardStatusMessage, setDashboardStatusMessage] = useState('');
+  const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
+  const [isSuggestionsModalOpen, setIsSuggestionsModalOpen] = useState(false);
   const timelineData = useMemo(() => buildTimelineData(timelineValues, locale), [timelineValues, locale]);
   const [visibleTimelinePoints, setVisibleTimelinePoints] = useState(timelineData.length);
 
@@ -247,7 +250,13 @@ function DashboardC() {
           <section className="dashboard-card dashboard-panel-card dashboard-progress-card">
             <div className="dashboard-panel-header">
               <h2>{t('dashboard_in_progress')}</h2>
-              <a href="#ver-todos-progresso" onClick={(event) => event.preventDefault()}>
+              <a
+                href="#ver-todos-progresso"
+                onClick={(event) => {
+                  event.preventDefault();
+                  setIsProgressModalOpen(true);
+                }}
+              >
                 {t('dashboard_view_all')} <ArrowRight size={16} />
               </a>
             </div>
@@ -277,7 +286,13 @@ function DashboardC() {
           <section className="dashboard-card dashboard-panel-card dashboard-suggestions-card">
             <div className="dashboard-panel-header">
               <h2>{t('dashboard_suggestions')}</h2>
-              <a href="#ver-todos-sugestoes" onClick={(event) => event.preventDefault()}>
+              <a
+                href="#ver-todos-sugestoes"
+                onClick={(event) => {
+                  event.preventDefault();
+                  setIsSuggestionsModalOpen(true);
+                }}
+              >
                 {t('dashboard_view_all')} <ArrowRight size={16} />
               </a>
             </div>
@@ -298,6 +313,52 @@ function DashboardC() {
             </div>
           </section>
         </div>
+
+        <SeeMore_PopUp
+          isOpen={isProgressModalOpen}
+          onClose={() => setIsProgressModalOpen(false)}
+          title={t('dashboard_in_progress')}
+          items={inProgressItems}
+          renderItem={(item) => {
+            const ProgressIcon = item.icon || AlertTriangle;
+
+            return (
+              <article className="dashboard-list-item">
+                <div className={`dashboard-list-badge accent-${item.accent}`}>
+                  <Sparkles size={18} strokeWidth={2} />
+                </div>
+                <div className="dashboard-list-content">
+                  <strong>{item.title}</strong>
+                  <span>{item.subtitle || t(item.subtitleKey)}</span>
+                </div>
+                <div className={`dashboard-list-action accent-${item.accent}`}>
+                  <ProgressIcon size={18} strokeWidth={2} />
+                </div>
+              </article>
+            );
+          }}
+          emptyMessage={t('dashboard_empty_progress', 'Sem itens em progresso para mostrar.')}
+        />
+
+        <SeeMore_PopUp
+          isOpen={isSuggestionsModalOpen}
+          onClose={() => setIsSuggestionsModalOpen(false)}
+          title={t('dashboard_suggestions')}
+          items={suggestionItems}
+          renderItem={({ title, subtitleKey, accent }) => (
+            <article className="dashboard-list-item dashboard-suggestion-item">
+              <div className={`dashboard-list-badge accent-${accent}`}>
+                <GraduationCap size={18} strokeWidth={2} />
+              </div>
+              <div className="dashboard-list-content">
+                <strong>{title}</strong>
+                <span>{t(subtitleKey)}</span>
+              </div>
+              <ChevronsRight className="dashboard-item-chevron" size={18} />
+            </article>
+          )}
+          emptyMessage={t('dashboard_empty_suggestions', 'Sem sugestões para mostrar.')}
+        />
       </div>
     </Layout>
   );
