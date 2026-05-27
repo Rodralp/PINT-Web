@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Filter, Search, SlidersHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -70,6 +70,8 @@ const mapLogTypeToNotificationType = (value) => {
   return 'info';
 };
 
+const messageLogTypes = new Set(['mensagem', 'aviso', 'importante']);
+
 const mapNotificationItem = (item) => {
   const normalizedLogType = String(item?.type || '').trim().toLowerCase();
   const typeId = mapLogTypeToNotificationType(normalizedLogType);
@@ -80,6 +82,7 @@ const mapNotificationItem = (item) => {
       ? '#ef4444'
       : style.accent;
   const logId = item?.logId ? String(item.logId) : null;
+  const isMessageLog = messageLogTypes.has(normalizedLogType);
 
   return {
     id: String(item?.id || ''),
@@ -88,8 +91,9 @@ const mapNotificationItem = (item) => {
     title: item?.title || 'Notificacao',
     date: item?.date || '',
     summary: item?.summary || '',
+    message: item?.message || '',
     accent,
-    actionPath: logId ? '/consultor/mensagens-avisos' : null,
+    actionPath: isMessageLog && logId ? '/consultor/mensagens-avisos' : null,
     messageId: logId,
   };
 };
@@ -104,6 +108,7 @@ function Notificacoes() {
   const [page, setPage] = useState(1);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [expandedNotificationId, setExpandedNotificationId] = useState(null);
   const filterDropdownRef = useRef(null);
   const sortDropdownRef = useRef(null);
 
@@ -173,6 +178,7 @@ function Notificacoes() {
         normalizedSearch.length === 0
         || notification.title.toLowerCase().includes(normalizedSearch)
         || notification.summary.toLowerCase().includes(normalizedSearch)
+        || notification.message.toLowerCase().includes(normalizedSearch)
         || t(notificationTypeLabels[notification.typeId] || 'notifications_filter_all').toLowerCase().includes(normalizedSearch);
 
       return typeMatch && searchMatch;
@@ -224,13 +230,16 @@ function Notificacoes() {
       )));
     }
 
-    if (!notification.actionPath) {
+    if (notification.actionPath) {
+      navigate(notification.actionPath, {
+        state: notification.messageId ? { selectedMessageId: notification.messageId } : undefined,
+      });
       return;
     }
 
-    navigate(notification.actionPath, {
-      state: notification.messageId ? { selectedMessageId: notification.messageId } : undefined,
-    });
+    setExpandedNotificationId((current) => (
+      current === notification.id ? null : notification.id
+    ));
   };
 
   const handleMarkAsRead = async (notificationId) => {
@@ -353,51 +362,65 @@ function Notificacoes() {
                 </thead>
                 <tbody>
                   {pagedNotifications.map((notification) => {
-                    const canOpen = Boolean(notification.actionPath);
+                    const details = notification.message || notification.summary;
+                    const isExpandable = !notification.actionPath && Boolean(details);
+                    const canOpen = Boolean(notification.actionPath) || isExpandable;
+                    const isExpanded = isExpandable && expandedNotificationId === notification.id;
 
                     return (
-                      <tr key={notification.id}>
-                        <td>
-                          {notification.isRead ? (
-                            <span
-                              className={`notifications-seen-indicator ${notification.isRead ? 'is-read' : 'is-unread'}`}
-                              aria-label={t('notifications_seen_read')}
-                              title={t('notifications_seen_read')}
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              className="notifications-seen-btn"
-                              onClick={() => handleMarkAsRead(notification.id)}
-                              aria-label={t('notifications_seen_unread')}
-                              title={t('notifications_seen_unread')}
-                            >
-                              <span className="notifications-seen-indicator is-unread" />
-                            </button>
-                          )}
-                        </td>
-                        <td>
-                          <div className="notification-table-title-wrap">
-                            <span className="notification-table-title">{notification.title}</span>
-                            <span className="notification-table-summary">{notification.summary}</span>
-                          </div>
-                        </td>
-                        <td>
-                          <span className="notification-table-badge" style={{ backgroundColor: `${notification.accent}18`, color: notification.accent }}>
-                            {t(notificationTypeLabels[notification.typeId] || 'notifications_filter_all')}
-                          </span>
-                        </td>
-                        <td>{formatNotificationDate(notification.date, i18n.language === 'en' ? 'en-GB' : 'pt-PT')}</td>
-                        <td>
-                          {canOpen ? (
-                            <button type="button" className="notifications-view-btn" onClick={() => handleOpenNotification(notification)}>
-                              {t('notifications_view_button')}
-                            </button>
-                          ) : (
-                            <span className="notifications-view-empty">-</span>
-                          )}
-                        </td>
-                      </tr>
+                      <Fragment key={notification.id}>
+                        <tr>
+                          <td>
+                            {notification.isRead ? (
+                              <span
+                                className={`notifications-seen-indicator ${notification.isRead ? 'is-read' : 'is-unread'}`}
+                                aria-label={t('notifications_seen_read')}
+                                title={t('notifications_seen_read')}
+                              />
+                            ) : (
+                              <button
+                                type="button"
+                                className="notifications-seen-btn"
+                                onClick={() => handleMarkAsRead(notification.id)}
+                                aria-label={t('notifications_seen_unread')}
+                                title={t('notifications_seen_unread')}
+                              >
+                                <span className="notifications-seen-indicator is-unread" />
+                              </button>
+                            )}
+                          </td>
+                          <td>
+                            <div className="notification-table-title-wrap">
+                              <span className="notification-table-title">{notification.title}</span>
+                              <span className="notification-table-summary">{notification.summary}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <span className="notification-table-badge" style={{ backgroundColor: `${notification.accent}18`, color: notification.accent }}>
+                              {t(notificationTypeLabels[notification.typeId] || 'notifications_filter_all')}
+                            </span>
+                          </td>
+                          <td>{formatNotificationDate(notification.date, i18n.language === 'en' ? 'en-GB' : 'pt-PT')}</td>
+                          <td>
+                            {canOpen ? (
+                              <button type="button" className="notifications-view-btn" onClick={() => handleOpenNotification(notification)}>
+                                {isExpandable && isExpanded ? t('notifications_view_less') : t('notifications_view_button')}
+                              </button>
+                            ) : (
+                              <span className="notifications-view-empty">-</span>
+                            )}
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="notifications-detail-row">
+                            <td colSpan={5}>
+                              <div className="notifications-detail-body">
+                                {details}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     );
                   })}
                 </tbody>

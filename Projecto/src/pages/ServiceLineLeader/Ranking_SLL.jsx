@@ -10,7 +10,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
-import { fetchRankingConsultores } from '../../services/consultorService';
+import { fetchRankingConsultoresSLL } from '../../services/serviceLineLeaderService';
 import '../../css/Consultor/Ranking_C.css';
 import '../../css/ServiceLineLeader/Ranking_SLL.css';
 
@@ -103,6 +103,31 @@ const resolveUserServiceLine = (loginData, consultants) => {
   return knownServiceLines[0];
 };
 
+const resolveServiceLineStats = (consultant, currentServiceLine) => {
+  const stats = Array.isArray(consultant?.serviceLineStats) ? consultant.serviceLineStats : [];
+
+  if (stats.length === 0) {
+    return {
+      points: Number(consultant?.points) || 0,
+      badges: Number(consultant?.badges) || 0,
+    };
+  }
+
+  const normalizedTarget = normalizeServiceLine(currentServiceLine);
+  const matched = stats.find(
+    (item) => normalizeServiceLine(item?.serviceLine) === normalizedTarget,
+  );
+
+  if (!matched) {
+    return { points: 0, badges: 0 };
+  }
+
+  return {
+    points: Number(matched.points) || 0,
+    badges: Number(matched.badges) || 0,
+  };
+};
+
 function RankingSLL() {
   const navigate = useNavigate();
   const loginData = useMemo(() => getStoredLoginData(), []);
@@ -118,8 +143,13 @@ function RankingSLL() {
     let isMounted = true;
 
     const loadRanking = async () => {
+      const accountId = Number(loginData?.id);
+      if (!Number.isInteger(accountId) || accountId <= 0) {
+        return;
+      }
+
       try {
-        const data = await fetchRankingConsultores();
+        const data = await fetchRankingConsultoresSLL(accountId);
         if (isMounted && Array.isArray(data)) {
           setConsultants(data);
         }
@@ -133,7 +163,7 @@ function RankingSLL() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [loginData]);
 
   const currentServiceLine = useMemo(
     () => resolveUserServiceLine(loginData, consultants),
@@ -145,7 +175,14 @@ function RankingSLL() {
 
     return consultants.filter(
       (item) => normalizeServiceLine(item.serviceLine) === normalizedCurrentServiceLine,
-    );
+    ).map((item) => {
+      const stats = resolveServiceLineStats(item, currentServiceLine);
+      return {
+        ...item,
+        points: stats.points,
+        badges: stats.badges,
+      };
+    });
   }, [consultants, currentServiceLine]);
 
   const filteredConsultants = useMemo(() => {

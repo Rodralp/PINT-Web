@@ -79,6 +79,84 @@ export const getMyServiceLine = async (req, res) => {
   }
 };
 
+// Ranking - Consultores da Service Line do SLL
+export const getRankingConsultoresSLL = async (req, res) => {
+  const accountId = parseAccountId(req.query?.accountId);
+
+  if (!accountId) {
+    res.status(400).json({ message: 'Account id is required.' });
+    return;
+  }
+
+  try {
+    const serviceLine = await getServiceLineForLeader(accountId);
+
+    if (!serviceLine) {
+      res.status(404).json({ message: 'Service Line Leader not found.' });
+      return;
+    }
+
+    const serviceLineId = Number(serviceLine.nsline);
+    const serviceLineName = serviceLine.sline || 'Service Line';
+
+    const rows = await sequelize.query(
+      `
+        WITH sl_badges AS (
+          SELECT bps.nbadge
+          FROM b_pertence_sl bps
+          WHERE bps.nsline = :serviceLineId
+        ),
+        consultores_na_sl AS (
+          SELECT cb.nutilizador
+          FROM c_obtem_b cb
+          INNER JOIN sl_badges sb
+            ON sb.nbadge = cb.nbadge
+          UNION
+          SELECT p.nutilizador
+          FROM pedidos p
+          INNER JOIN sl_badges sb
+            ON sb.nbadge = p.nbadge
+        ),
+        points_badges AS (
+          SELECT
+            cb.nutilizador,
+            SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) AS points,
+            COUNT(DISTINCT cb.nbadge) AS badges
+          FROM c_obtem_b cb
+          INNER JOIN badge b
+            ON b.nbadge = cb.nbadge
+          INNER JOIN sl_badges sb
+            ON sb.nbadge = cb.nbadge
+          GROUP BY cb.nutilizador
+        )
+        SELECT
+          u.nutilizador AS id,
+          u.nome AS name,
+          u.email,
+          COALESCE(pb.points, 0) AS points,
+          COALESCE(pb.badges, 0) AS badges,
+          :serviceLineName AS "serviceLine",
+          'https://i.pravatar.cc/120?u=' || COALESCE(NULLIF(REPLACE(LOWER(u.email), '@', '.'), ''), LOWER(REPLACE(u.nome, ' ', '.'))) AS avatar
+        FROM consultores_na_sl csl
+        INNER JOIN utilizador u
+          ON u.nutilizador = csl.nutilizador
+        LEFT JOIN points_badges pb
+          ON pb.nutilizador = u.nutilizador
+        WHERE LOWER(COALESCE(u.permissoes, '')) LIKE '%consultor%'
+        ORDER BY points DESC, badges DESC, u.nome ASC
+      `,
+      {
+        replacements: { serviceLineId, serviceLineName },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    res.status(200).json(rows || []);
+  } catch (error) {
+    res.status(500).json({ message: error?.message || 'Failed to fetch ranking.' });
+  }
+};
+
 // Histórico - Áreas da Service Line (tabela por áreas)
 export const getHistoricoAreasSLL = async (req, res) => {
   const accountId = parseAccountId(req.query?.accountId);

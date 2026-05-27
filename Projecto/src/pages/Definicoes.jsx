@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Bell,
   ChevronRight,
@@ -15,11 +15,11 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../components/Layout';
 import { changePassword } from '../services/authService';
+import { fetchUserNotificationSettings, updateUserNotificationSettings } from '../services/communicationService';
 import '../css/Definicoes.css';
 
 const DEFAULT_ROLE = 'consultor';
 const REMEMBERED_LOGIN_KEY = 'rememberedLoginData';
-const NOTIFICATION_SETTINGS_PREFIX = 'notificationSettings';
 
 const dashboardPathByRole = {
   consultor: '/consultor/dashboard',
@@ -78,34 +78,6 @@ const resolveDashboardPath = (rolesValue) => {
   return path || '/consultor/dashboard';
 };
 
-const loadNotificationSettings = (accountId) => {
-  if (!Number.isInteger(accountId) || accountId <= 0) {
-    return { ...DEFAULT_NOTIFICATION_SETTINGS };
-  }
-
-  try {
-    const stored = localStorage.getItem(`${NOTIFICATION_SETTINGS_PREFIX}:${accountId}`);
-    if (!stored) {
-      return { ...DEFAULT_NOTIFICATION_SETTINGS };
-    }
-
-    const parsed = JSON.parse(stored);
-    return {
-      ...DEFAULT_NOTIFICATION_SETTINGS,
-      ...parsed,
-    };
-  } catch {
-    return { ...DEFAULT_NOTIFICATION_SETTINGS };
-  }
-};
-
-const saveNotificationSettings = (accountId, settings) => {
-  if (!Number.isInteger(accountId) || accountId <= 0) {
-    return;
-  }
-
-  localStorage.setItem(`${NOTIFICATION_SETTINGS_PREFIX}:${accountId}`, JSON.stringify(settings));
-};
 
 const updateStoredPassword = ({ accountId, email, newPassword }) => {
   const normalizedEmail = String(email || '').trim().toLowerCase();
@@ -175,8 +147,61 @@ function Definicoes() {
   });
   const [passwordStatus, setPasswordStatus] = useState({ type: '', message: '' });
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [notificationSettings, setNotificationSettings] = useState(() => loadNotificationSettings(accountId));
-  const [notificationStatus, setNotificationStatus] = useState('');
+  const [notificationSettings, setNotificationSettings] = useState({ ...DEFAULT_NOTIFICATION_SETTINGS });
+  const [notificationDefaults, setNotificationDefaults] = useState({ ...DEFAULT_NOTIFICATION_SETTINGS });
+  const [notificationStatus, setNotificationStatus] = useState({ type: '', message: '' });
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(true);
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadNotificationSettings = async () => {
+      if (!Number.isInteger(accountId) || accountId <= 0) {
+        if (isMounted) {
+          setIsLoadingNotifications(false);
+        }
+        return;
+      }
+
+      try {
+        setIsLoadingNotifications(true);
+        const data = await fetchUserNotificationSettings();
+
+        if (!isMounted) {
+          return;
+        }
+
+        const defaults = data?.defaults || DEFAULT_NOTIFICATION_SETTINGS;
+        const settings = data?.settings || defaults;
+
+        setNotificationDefaults({ ...DEFAULT_NOTIFICATION_SETTINGS, ...defaults });
+        setNotificationSettings({ ...DEFAULT_NOTIFICATION_SETTINGS, ...settings });
+        setNotificationStatus({ type: '', message: '' });
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setNotificationDefaults({ ...DEFAULT_NOTIFICATION_SETTINGS });
+        setNotificationSettings({ ...DEFAULT_NOTIFICATION_SETTINGS });
+        setNotificationStatus({
+          type: 'error',
+          message: error?.message || 'Nao foi possivel carregar as notificacoes.',
+        });
+      } finally {
+        if (isMounted) {
+          setIsLoadingNotifications(false);
+        }
+      }
+    };
+
+    loadNotificationSettings();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [accountId]);
 
   const sectionItems = useMemo(() => {
     const baseItems = [
@@ -295,17 +320,38 @@ function Definicoes() {
 
   const handleToggleNotification = (field) => {
     setNotificationSettings((current) => ({ ...current, [field]: !current[field] }));
-    setNotificationStatus('');
+    setNotificationStatus({ type: '', message: '' });
   };
 
-  const handleSaveNotifications = () => {
-    saveNotificationSettings(accountId, notificationSettings);
-    setNotificationStatus(t('settings_notifications_saved'));
+  const handleSaveNotifications = async () => {
+    if (!Number.isInteger(accountId) || accountId <= 0) {
+      setNotificationStatus({ type: 'error', message: 'Nao foi possivel guardar as notificacoes.' });
+      return;
+    }
+
+    try {
+      setIsSavingNotifications(true);
+      const data = await updateUserNotificationSettings(notificationSettings);
+
+      const defaults = data?.defaults || notificationDefaults;
+      const settings = data?.settings || notificationSettings;
+
+      setNotificationDefaults({ ...DEFAULT_NOTIFICATION_SETTINGS, ...defaults });
+      setNotificationSettings({ ...DEFAULT_NOTIFICATION_SETTINGS, ...settings });
+      setNotificationStatus({ type: 'success', message: t('settings_notifications_saved') });
+    } catch (error) {
+      setNotificationStatus({
+        type: 'error',
+        message: error?.message || 'Nao foi possivel guardar as notificacoes.',
+      });
+    } finally {
+      setIsSavingNotifications(false);
+    }
   };
 
   const handleResetNotifications = () => {
-    setNotificationSettings({ ...DEFAULT_NOTIFICATION_SETTINGS });
-    setNotificationStatus('');
+    setNotificationSettings({ ...notificationDefaults });
+    setNotificationStatus({ type: '', message: '' });
   };
 
   const handleLogout = () => {
@@ -449,6 +495,7 @@ function Definicoes() {
               <input
                 type="checkbox"
                 checked={Boolean(notificationSettings.emailUpdates)}
+                disabled={isLoadingNotifications || isSavingNotifications}
                 onChange={() => handleToggleNotification('emailUpdates')}
               />
             </label>
@@ -458,6 +505,7 @@ function Definicoes() {
               <input
                 type="checkbox"
                 checked={Boolean(notificationSettings.inAppAlerts)}
+                disabled={isLoadingNotifications || isSavingNotifications}
                 onChange={() => handleToggleNotification('inAppAlerts')}
               />
             </label>
@@ -467,23 +515,43 @@ function Definicoes() {
               <input
                 type="checkbox"
                 checked={Boolean(notificationSettings.weeklySummary)}
+                disabled={isLoadingNotifications || isSavingNotifications}
                 onChange={() => handleToggleNotification('weeklySummary')}
               />
             </label>
           </div>
 
-          {notificationStatus && (
-            <div className="settings-inline-status success" role="status">
-              {notificationStatus}
+          {isLoadingNotifications && (
+            <div className="settings-inline-status info" role="status">
+              A carregar definicoes de notificacoes...
+            </div>
+          )}
+
+          {notificationStatus.message && !isLoadingNotifications && (
+            <div
+              className={`settings-inline-status ${notificationStatus.type === 'error' ? 'error' : 'success'}`}
+              role="status"
+            >
+              {notificationStatus.message}
             </div>
           )}
 
           <div className="settings-actions-row">
-            <button type="button" className="settings-primary-btn" onClick={handleSaveNotifications}>
+            <button
+              type="button"
+              className="settings-primary-btn"
+              onClick={handleSaveNotifications}
+              disabled={isLoadingNotifications || isSavingNotifications}
+            >
               <Save size={18} />
-              {t('settings_save_changes')}
+              {isSavingNotifications ? t('settings_saving') : t('settings_save_changes')}
             </button>
-            <button type="button" className="settings-secondary-btn" onClick={handleResetNotifications}>
+            <button
+              type="button"
+              className="settings-secondary-btn"
+              onClick={handleResetNotifications}
+              disabled={isLoadingNotifications || isSavingNotifications}
+            >
               {t('settings_reset_defaults')}
             </button>
           </div>

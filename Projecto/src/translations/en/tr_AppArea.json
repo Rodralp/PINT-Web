@@ -165,6 +165,7 @@
   "notifications_seen_read": "Notification seen",
   "notifications_seen_unread": "Notification unseen",
   "notifications_view_button": "View More",
+  "notifications_view_less": "View less",
   "notifications_empty_state": "No notifications to show.",
   "back": "Back",
   "search_badges": "Search badges",
