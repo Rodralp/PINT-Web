@@ -158,6 +158,12 @@
   line-height: 1.1;
 }
 
+.bp-requirements-empty {
+  margin: 0;
+  color: #7a8393;
+  font-size: 14px;
+}
+
 .bp-requirements-list {
   display: flex;
   flex-direction: column;

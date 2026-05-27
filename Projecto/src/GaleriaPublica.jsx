@@ -7,11 +7,11 @@ import { fetchCatalogBadges, fetchRankingConsultores } from './services/consulto
 import './css/GaleriaPublica.css';
 
 const fallbackBadges = [
-  { id: 'cloud-junior', area: 'Cloud Architecture', levelKey: 'badge_level_junior', levelLabel: 'Junior', points: 100, badgeImage: '/badges/J%C3%BAnior.png', date: '12 Jan 2026' },
-  { id: 'cloud-intermediate', area: 'Cloud Architecture', levelKey: 'badge_level_intermediate', levelLabel: 'Intermedio', points: 150, badgeImage: '/badges/Interm%C3%A9dio.png', date: '12 Jan 2026' },
-  { id: 'cloud-senior', area: 'Cloud Architecture', levelKey: 'badge_level_senior', levelLabel: 'Senior', points: 200, badgeImage: '/badges/S%C3%A9nior.png', date: '12 Jan 2026' },
-  { id: 'lowcode-specialist', area: 'LowCode (Outsystems)', levelKey: 'badge_level_specialist', levelLabel: 'Especialista', points: 250, badgeImage: '/badges/Especialista.png', date: '12 Jan 2026' },
-  { id: 'lowcode-lead', area: 'LowCode (Outsystems)', levelKey: 'badge_level_knowledge_lead', levelLabel: 'Lider de Conhecimento', points: 300, badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png', date: '12 Jan 2026' },
+  { id: 'cloud-junior', name: 'Cloud Architecture', area: 'Cloud Architecture', levelKey: 'badge_level_junior', levelLabel: 'Junior', points: 100, badgeImage: '/badges/J%C3%BAnior.png', date: '12 Jan 2026' },
+  { id: 'cloud-intermediate', name: 'Cloud Architecture', area: 'Cloud Architecture', levelKey: 'badge_level_intermediate', levelLabel: 'Intermedio', points: 150, badgeImage: '/badges/Interm%C3%A9dio.png', date: '12 Jan 2026' },
+  { id: 'cloud-senior', name: 'Cloud Architecture', area: 'Cloud Architecture', levelKey: 'badge_level_senior', levelLabel: 'Senior', points: 200, badgeImage: '/badges/S%C3%A9nior.png', date: '12 Jan 2026' },
+  { id: 'lowcode-specialist', name: 'LowCode (Outsystems)', area: 'LowCode (Outsystems)', levelKey: 'badge_level_specialist', levelLabel: 'Especialista', points: 250, badgeImage: '/badges/Especialista.png', date: '12 Jan 2026' },
+  { id: 'lowcode-lead', name: 'LowCode (Outsystems)', area: 'LowCode (Outsystems)', levelKey: 'badge_level_knowledge_lead', levelLabel: 'Lider de Conhecimento', points: 300, badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png', date: '12 Jan 2026' },
 ];
 
 const fallbackConsultores = [
@@ -54,6 +54,7 @@ const normalizeBadges = (items) => {
 
   return items.map((item, index) => ({
     id: item.id || `${item.area || 'badge'}-${index}`,
+    name: item.name || item.title || item.area || 'Badge',
     area: item.area || 'Area Tecnica',
     levelKey: resolveBadgeLevelKey(item),
     levelLabel: resolveBadgeLevel(item),
@@ -137,9 +138,10 @@ function GaleriaPublica() {
     }
 
     return badges.filter((badge) => {
+      const badgeTitle = String(badge.name || badge.area || '').toLowerCase();
       const levelText = (badge.levelLabel || '').toLowerCase();
       return (
-        badge.area.toLowerCase().includes(normalizedSearch)
+        badgeTitle.includes(normalizedSearch)
         || levelText.includes(normalizedSearch)
       );
     });
@@ -267,7 +269,7 @@ function GaleriaPublica() {
                     <img className="catalog-badge-image" src={item.badgeImage} alt={t(item.levelKey)} />
                   </div>
 
-                  <div className="catalog-card-title">{item.area}</div>
+                  <div className="catalog-card-title">{item.name || item.area || 'Badge'}</div>
                   <div className="catalog-card-level">{t(item.levelKey)}</div>
 
                   <div className="catalog-card-meta">

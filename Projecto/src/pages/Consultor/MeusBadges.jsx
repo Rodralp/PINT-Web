@@ -136,11 +136,12 @@ function MeusBadges() {
       const isSpecial = Boolean(item?.isSpecial) || item?.typeId === 'special' || !item?.levelKey;
       const translatedLevel = isSpecial ? 'Especial' : t(item.levelKey || '');
       const stateLabel = badgeStateMap[item.stateId]?.label || '';
+      const badgeTitle = String(item.name || item.area || '').toLowerCase();
       const filterMatch = activeFilter === 'todos'
         || (activeFilter === 'special' ? isSpecial : item.stateId === activeFilter);
       const searchMatch =
         normalizedSearch.length === 0
-        || item.area.toLowerCase().includes(normalizedSearch)
+        || badgeTitle.includes(normalizedSearch)
         || translatedLevel.toLowerCase().includes(normalizedSearch)
         || stateLabel.toLowerCase().includes(normalizedSearch);
 
@@ -153,11 +154,11 @@ function MeusBadges() {
   const sortedBadges = useMemo(() => {
     return [...filteredBadges].sort((a, b) => {
       if (sortBy === 'area_asc') {
-        return a.area.localeCompare(b.area);
+        return String(a.area || a.name || '').localeCompare(String(b.area || b.name || ''));
       }
 
       if (sortBy === 'area_desc') {
-        return b.area.localeCompare(a.area);
+        return String(b.area || b.name || '').localeCompare(String(a.area || a.name || ''));
       }
 
       if (sortBy === 'points_asc') {
@@ -352,7 +353,7 @@ function MeusBadges() {
                     <img className="catalog-badge-image" src={item.badgeImage} alt={levelLabel} />
                   </div>
 
-                  <div className="catalog-card-title">{item.area}</div>
+                  <div className="catalog-card-title">{item.name || item.area || 'Badge'}</div>
                   <div className="catalog-card-level">{levelLabel}</div>
 
                   <div className="catalog-card-meta">

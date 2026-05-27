@@ -100,23 +100,6 @@ const fallbackBadges = [
   },
 ];
 
-const requirementTemplate = [
-  {
-    id: 'req-1',
-    title: 'Implementar conectividade híbrida',
-    description: 'Texto de exemplo que resume o requisito selecionado do subnível, do nível, da service line e do learning path.',
-  },
-  {
-    id: 'req-2',
-    title: 'Monitorizar infraestrutura híbrida',
-    description: 'Texto de exemplo com validações e evidências necessárias para demonstrar monitorização de ponta a ponta.',
-  },
-  {
-    id: 'req-3',
-    title: 'Implementar disaster recovery',
-    description: 'Texto de exemplo sobre recuperação, redundância e procedimentos de continuidade operacional do serviço.',
-  },
-];
 
 const statusConfig = {
   candidatura_em_progresso: {
@@ -246,6 +229,7 @@ function BadgeDetalhe() {
     () => resolveBadgeDbId(badgeId, badge),
     [badgeId, badge],
   );
+  const badgeTitle = badge.name || badge.area || 'Badge';
 
   useEffect(() => {
     if (location.state?.badge) {
@@ -363,11 +347,14 @@ function BadgeDetalhe() {
       ? dynamicRequirements
       : Array.isArray(badge.requirements) && badge.requirements.length > 0
         ? badge.requirements
-        : isSpecialBadge ? [] : requirementTemplate;
+        : [];
+
+    if (sourceRequirements.length === 0) {
+      return [];
+    }
 
     return sourceRequirements.map((item, index) => {
-      const fallback = requirementTemplate[index % requirementTemplate.length];
-      const rawTitle = String(item?.title || fallback.title || `Requisito ${index + 1}`).trim();
+      const rawTitle = String(item?.title || item?.requisito || `Requisito ${index + 1}`).trim();
       const hasPrefixedTitle = /^[A-E]\d+\s*-\s*/i.test(rawTitle);
       const filesCount = Number(item?.files);
 
@@ -377,7 +364,7 @@ function BadgeDetalhe() {
         title: isSpecialBadge
           ? rawTitle
           : (hasPrefixedTitle ? rawTitle : `${prefix}${index + 1} - ${rawTitle}`),
-        description: item?.description || fallback.description,
+        description: item?.description || item?.r_descricao || '',
         files: Number.isInteger(filesCount) && filesCount >= 0
           ? filesCount
           : showFileCounters ? 0 : null,
@@ -575,7 +562,7 @@ function BadgeDetalhe() {
           </div>
 
           <div className="badge-hero-content">
-            <h2>{badge.area}</h2>
+            <h2>{badgeTitle}</h2>
             <p>{levelLabel}</p>
 
             <div className="badge-hero-meta">
@@ -607,13 +594,17 @@ function BadgeDetalhe() {
         </section>
 
         <p className="badge-breadcrumb">
-          {badge.area} {'>'} {badge.serviceLineName} {'>'} {badge.learningPathName} {'>'} {levelLabel}
+          {badgeTitle} {'>'} {badge.serviceLineName} {'>'} {badge.learningPathName} {'>'} {levelLabel}
         </p>
 
         <section className="badge-requirements-card">
           <h3>Requisitos</h3>
           {!hasBadgeId && (
             <p className="badge-requirements-empty">Este nivel ainda nao tem badge associado.</p>
+          )}
+
+          {hasBadgeId && requirements.length === 0 && (
+            <p className="badge-requirements-empty">Sem requisitos definidos para este badge.</p>
           )}
 
           {hasBadgeId && requirements.map((requirement, index) => {

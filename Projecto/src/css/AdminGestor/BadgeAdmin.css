@@ -183,6 +183,11 @@
   align-items: center;
 }
 
+.badge-admin-req-row.standard {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) 36px;
+  align-items: flex-start;
+}
+
 .badge-admin-req-row input,
 .badge-admin-req-row select {
   border: 1px solid #d6deeb;
@@ -190,6 +195,15 @@
   padding: 10px 12px;
   font-size: 14px;
   background: #f9fbff;
+}
+
+.badge-admin-req-row textarea {
+  border: 1px solid #d6deeb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  background: #f9fbff;
+  resize: vertical;
 }
 
 @media (max-width: 900px) {
@@ -204,6 +218,10 @@
   }
 
   .badge-admin-req-row {
+    grid-template-columns: 1fr;
+  }
+
+  .badge-admin-req-row.standard {
     grid-template-columns: 1fr;
   }
 

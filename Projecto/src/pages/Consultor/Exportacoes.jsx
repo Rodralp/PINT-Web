@@ -85,6 +85,7 @@ const normalizeBadge = (item) => {
     ...item,
     typeId: meta.levelId,
     levelKey: meta.levelId,
+    name: item.name || item.badge || item.title || item.area || 'Badge',
     area: item.area || item.badge || item.title || 'LowCode (Outsystems)',
     points: meta.points, // Use template points instead of API points
     date: item.date || '12 Jan 2026',
@@ -136,7 +137,7 @@ const generateBadgesHTML = (badges) => {
       <hr>
       ${badges.map(badge => `
         <div class="badge">
-          <div class="badge-header">${badge.area} - ${badge.levelKey}</div>
+          <div class="badge-header">${badge.name || badge.area} - ${badge.levelKey}</div>
           <div class="badge-details">
             <div class="badge-meta">Pontos: ${badge.points}</div>
             <div class="badge-meta">Data: ${badge.date}</div>
@@ -168,7 +169,7 @@ const generateBadgesCSV = (badges) => {
   const rows = badges.map(badge => {
     const levelName = translateLevel(badge.levelKey);
     return [
-      `"${badge.area} - ${levelName}"`,
+      `"${badge.name || badge.area} - ${levelName}"`,
       `"${levelName}"`,
       `"${badge.area}"`,
       badge.points,

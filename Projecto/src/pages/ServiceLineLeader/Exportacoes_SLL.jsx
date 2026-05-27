@@ -299,7 +299,7 @@ const generateBadgesCSV = (badges) => {
   const rows = badges.map(badge => {
     const levelName = translateLevel(badge.levelId || badge.level);
     return [
-      `"${badge.area} - ${levelName}"`,
+      `"${badge.name || badge.area} - ${levelName}"`,
       `"${levelName}"`,
       `"${badge.area}"`,
       badge.points,

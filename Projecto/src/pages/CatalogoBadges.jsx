@@ -45,6 +45,7 @@ const buildDefaultBadgeItems = () =>
   badgeAreas.flatMap((area, areaIndex) =>
     badgeLevels.map((level) => ({
       id: `${area}-${level.levelKey}`,
+      name: area,
       area,
       levelKey: level.levelKey,
       points: level.points,
@@ -173,7 +174,7 @@ function CatalogoBadges() {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
     return badgeItems.filter((item) => {
-      const badgeTitle = String(item.area || item.name || item.title || '').toLowerCase();
+      const badgeTitle = String(item.name || item.title || item.area || '').toLowerCase();
       const levelLabel = item.isSpecial ? 'Especial' : t(item.levelKey || '');
       const translatedLevel = levelLabel.toLowerCase();
       const searchMatch =
@@ -189,11 +190,11 @@ function CatalogoBadges() {
   const sortedBadges = useMemo(() => {
     return [...filteredBadges].sort((a, b) => {
       if (sortBy === 'area_asc') {
-        return a.area.localeCompare(b.area);
+        return String(a.area || a.name || '').localeCompare(String(b.area || b.name || ''));
       }
 
       if (sortBy === 'area_desc') {
-        return b.area.localeCompare(a.area);
+        return String(b.area || b.name || '').localeCompare(String(a.area || a.name || ''));
       }
 
       if (sortBy === 'points_asc') {
@@ -346,7 +347,7 @@ function CatalogoBadges() {
 
           <div className="catalog-grid">
             {pagedBadges.map((item) => {
-              const badgeTitle = item.area || item.name || item.title || 'Badge';
+              const badgeTitle = item.name || item.title || item.area || 'Badge';
               const levelLabel = item.isSpecial ? 'Especial' : t(item.levelKey || '');
               const badgeDate = item.date || '--';
 

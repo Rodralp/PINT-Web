@@ -105,6 +105,25 @@ const parseSpecialRequirements = (value) => {
   return requirements;
 };
 
+const parseStandardRequirements = (value) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      const title = normalizeText(item?.title || item?.requisito, 50);
+      const description = normalizeText(item?.description || item?.r_descricao, 255);
+
+      if (!title || !description) {
+        return null;
+      }
+
+      return { title, description };
+    })
+    .filter(Boolean);
+};
+
 const toBadgeResponse = (row) => ({
   id: `badge-${Number(row.nbadge)}`,
   badgeDbId: Number(row.nbadge),
@@ -118,6 +137,7 @@ const toBadgeResponse = (row) => ({
   typeName: row.typeName || null,
   typeId: row.typeKey || null,
   specialRequirements: Array.isArray(row.specialRequirements) ? row.specialRequirements : [],
+  requirements: Array.isArray(row.requirements) ? row.requirements : [],
 });
 
 export const getBadge = async (req, res) => {
@@ -150,6 +170,7 @@ export const createBadge = async (req, res) => {
   const typeId = parseTypeIdentifier(req.body?.typeId);
   const badgeImage = parseBadgeImage(req.body?.badgeImage);
   const specialRequirements = parseSpecialRequirements(req.body?.specialRequirements);
+  const requirements = parseStandardRequirements(req.body?.requirements);
 
   if (!name) {
     res.status(400).json({ message: 'Name is required.' });
@@ -197,6 +218,7 @@ export const createBadge = async (req, res) => {
       typeId,
       badgeImage,
       specialRequirements,
+      requirements,
     });
 
     if (!row) {
@@ -220,6 +242,7 @@ export const updateBadge = async (req, res) => {
   const typeId = parseTypeIdentifier(req.body?.typeId);
   const badgeImage = parseBadgeImage(req.body?.badgeImage);
   const specialRequirements = parseSpecialRequirements(req.body?.specialRequirements);
+  const requirements = parseStandardRequirements(req.body?.requirements);
 
   if (!badgeId) {
     res.status(400).json({ message: 'Badge id is required.' });
@@ -273,6 +296,7 @@ export const updateBadge = async (req, res) => {
       typeId,
       badgeImage,
       specialRequirements,
+      requirements,
     });
 
     if (!row) {

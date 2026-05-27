@@ -54,6 +54,30 @@ const normalizeSpecialRequirements = (requirements) => {
   return Array.from(uniqueByType.values());
 };
 
+const normalizeStandardRequirements = (requirements) => {
+  if (!Array.isArray(requirements)) {
+    return [];
+  }
+
+  const normalized = [];
+
+  for (const requirement of requirements) {
+    const title = String(requirement?.title || requirement?.requisito || '').trim();
+    const description = String(requirement?.description || requirement?.r_descricao || '').trim();
+
+    if (!title || !description) {
+      continue;
+    }
+
+    normalized.push({
+      title: title.slice(0, 50),
+      description: description.slice(0, 255),
+    });
+  }
+
+  return normalized;
+};
+
 const getBadgeTypes = async (transaction) => sequelize.query(
   `
     SELECT ntipo, tipo
@@ -313,6 +337,59 @@ const loadBadgeTriggers = async (badgeId, transaction) => {
   }));
 };
 
+const loadBadgeRequirements = async (badgeId, transaction) => {
+  const rows = await sequelize.query(
+    `
+      SELECT nreq, requisito, r_descricao
+      FROM requisitos
+      WHERE nbadge = :badgeId
+      ORDER BY nreq ASC
+    `,
+    {
+      replacements: { badgeId: Number(badgeId) },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+
+  return (rows || []).map((row) => ({
+    id: `req-${Number(row.nreq)}`,
+    title: row.requisito || 'Requisito',
+    description: row.r_descricao || '',
+  }));
+};
+
+const replaceBadgeRequirements = async (badgeId, requirements, transaction) => {
+  await sequelize.query(
+    'DELETE FROM requisitos WHERE nbadge = :badgeId',
+    {
+      replacements: { badgeId: Number(badgeId) },
+      type: QueryTypes.DELETE,
+      transaction,
+    },
+  );
+
+  const normalizedRequirements = normalizeStandardRequirements(requirements);
+
+  for (const requirement of normalizedRequirements) {
+    await sequelize.query(
+      `
+        INSERT INTO requisitos (requisito, r_descricao, nbadge)
+        VALUES (:title, :description, :badgeId)
+      `,
+      {
+        replacements: {
+          title: requirement.title,
+          description: requirement.description,
+          badgeId: Number(badgeId),
+        },
+        type: QueryTypes.INSERT,
+        transaction,
+      },
+    );
+  }
+};
+
 const createBadgeAssociations = async (badgeId, levelContext, transaction) => {
   if (!levelContext) {
     return;
@@ -409,7 +486,7 @@ const mapBadgeTypeMeta = (typeName) => {
   };
 };
 
-const mapBadgeResponse = ({ badgeRow, levelContext, typeName, specialRequirements }) => {
+const mapBadgeResponse = ({ badgeRow, levelContext, typeName, specialRequirements, requirements }) => {
   const typeMeta = mapBadgeTypeMeta(typeName);
 
   return {
@@ -425,6 +502,7 @@ const mapBadgeResponse = ({ badgeRow, levelContext, typeName, specialRequirement
     levelTitle: levelContext?.levelTitle || null,
     isSpecial: typeMeta.isSpecial,
     specialRequirements: specialRequirements || [],
+    requirements: requirements || [],
   };
 };
 
@@ -459,7 +537,7 @@ const fetchBadgeLevelContextByBadgeId = async (badgeId, transaction) => {
 };
 
 export const adminBadgeModel = {
-  async createBadge({ name, description, points, levelId, isSpecial, typeId, badgeImage, specialRequirements }) {
+  async createBadge({ name, description, points, levelId, isSpecial, typeId, badgeImage, specialRequirements, requirements }) {
     return sequelize.transaction(async (transaction) => {
       const safePoints = Number.isFinite(Number(points)) ? Number(points) : 0;
       const parsedLevelId = parseId(levelId);
@@ -512,9 +590,12 @@ export const adminBadgeModel = {
 
       await replaceBadgeTriggers(badgeRow.nbadge, isSpecial ? specialRequirements : [], transaction);
 
-      const [typeName, triggerRows] = await Promise.all([
+      await replaceBadgeRequirements(badgeRow.nbadge, isSpecial ? [] : requirements, transaction);
+
+      const [typeName, triggerRows, requirementRows] = await Promise.all([
         getTypeNameById(resolvedTypeId, transaction),
         loadBadgeTriggers(badgeRow.nbadge, transaction),
+        loadBadgeRequirements(badgeRow.nbadge, transaction),
       ]);
 
       return mapBadgeResponse({
@@ -522,11 +603,12 @@ export const adminBadgeModel = {
         levelContext,
         typeName,
         specialRequirements: triggerRows,
+        requirements: requirementRows,
       });
     });
   },
 
-  async updateBadge({ badgeId, name, description, points, levelId, isSpecial, typeId, badgeImage, specialRequirements }) {
+  async updateBadge({ badgeId, name, description, points, levelId, isSpecial, typeId, badgeImage, specialRequirements, requirements }) {
     return sequelize.transaction(async (transaction) => {
       const parsedBadgeId = parseId(badgeId);
       if (!parsedBadgeId) {
@@ -591,9 +673,12 @@ export const adminBadgeModel = {
 
       await replaceBadgeTriggers(parsedBadgeId, isSpecial ? specialRequirements : [], transaction);
 
-      const [typeName, triggerRows] = await Promise.all([
+      await replaceBadgeRequirements(parsedBadgeId, isSpecial ? [] : requirements, transaction);
+
+      const [typeName, triggerRows, requirementRows] = await Promise.all([
         getTypeNameById(resolvedTypeId, transaction),
         loadBadgeTriggers(parsedBadgeId, transaction),
+        loadBadgeRequirements(parsedBadgeId, transaction),
       ]);
 
       return mapBadgeResponse({
@@ -601,6 +686,7 @@ export const adminBadgeModel = {
         levelContext,
         typeName,
         specialRequirements: triggerRows,
+        requirements: requirementRows,
       });
     });
   },
@@ -611,7 +697,7 @@ export const adminBadgeModel = {
       return null;
     }
 
-    const [row, specialRequirements] = await Promise.all([
+    const [row, specialRequirements, requirementRows] = await Promise.all([
       sequelize.query(
         `
           SELECT
@@ -634,6 +720,7 @@ export const adminBadgeModel = {
         },
       ),
       loadBadgeTriggers(parsedBadgeId),
+      loadBadgeRequirements(parsedBadgeId),
     ]);
 
     if (!row || row.length === 0) {
@@ -648,6 +735,7 @@ export const adminBadgeModel = {
       levelContext,
       typeName: badgeRow.tipo,
       specialRequirements,
+      requirements: requirementRows,
     });
   },
 };

@@ -43,20 +43,6 @@ const badgeLevelTemplates = [
 ];
 
 const suggestionAccentPalette = ['success', 'violet', 'amber', 'warning', 'info', 'yellow'];
-const defaultRequirementTemplates = [
-  {
-    title: 'Implementar conectividade hibrida',
-    description: 'Texto de suporte do requisito associado a conectividade e integracao do servico.',
-  },
-  {
-    title: 'Monitorizar infraestrutura hibrida',
-    description: 'Texto de suporte do requisito associado a observabilidade, alertas e estabilidade operacional.',
-  },
-  {
-    title: 'Implementar disaster recovery',
-    description: 'Texto de suporte do requisito associado a resiliencia e continuidade de negocio.',
-  },
-];
 
 const SPECIAL_BADGE_TYPE_NAME = 'Especial';
 const specialTriggerDefinitions = Object.freeze({
@@ -718,45 +704,8 @@ const normalizeBadgeIds = (badgeIds) => [...new Set(
     .filter((value) => Number.isInteger(value) && value > 0),
 )];
 
-const ensureRequirementsForBadges = async (badgeIds) => {
-  const normalizedBadgeIds = normalizeBadgeIds(badgeIds);
-  if (normalizedBadgeIds.length === 0) {
-    return;
-  }
-
-  const existingRows = await sequelize.query(
-    `
-      SELECT DISTINCT nbadge
-      FROM requisitos
-      WHERE nbadge IN (:badgeIds)
-    `,
-    {
-      replacements: { badgeIds: normalizedBadgeIds },
-      type: QueryTypes.SELECT,
-    },
-  );
-
-  const existingBadgeIds = new Set(existingRows.map((row) => Number(row.nbadge)));
-  const missingBadgeIds = normalizedBadgeIds.filter((badgeId) => !existingBadgeIds.has(badgeId));
-
-  for (const badgeId of missingBadgeIds) {
-    for (const template of defaultRequirementTemplates) {
-      await sequelize.query(
-        `
-          INSERT INTO requisitos (requisito, r_descricao, nbadge)
-          VALUES (:title, :description, :badgeId)
-        `,
-        {
-          replacements: {
-            title: template.title,
-            description: template.description,
-            badgeId,
-          },
-          type: QueryTypes.INSERT,
-        },
-      );
-    }
-  }
+const ensureRequirementsForBadges = async (_badgeIds) => {
+  // Requirements are managed explicitly in admin; do not auto-create defaults.
 };
 
 const loadRequirementsByBadgeIds = async (badgeIds) => {
@@ -1396,6 +1345,7 @@ const buildMyBadges = async (accountId) => {
       `
         SELECT DISTINCT ON (cb.nbadge)
           cb.nbadge,
+          b.b_nome,
           a.area,
           n.nivel,
           b.imagem,
@@ -1429,6 +1379,7 @@ const buildMyBadges = async (accountId) => {
           p.nbadge,
           p.data_submissao,
           e.estado,
+          b.b_nome,
           b.imagem,
           b.pontos AS badge_pontos,
           t.tipo,
@@ -1544,7 +1495,8 @@ const buildMyBadges = async (accountId) => {
     items.push({
       id: `badge-${badgeId}`,
       badgeDbId: badgeId,
-      area: row.area || 'Badge',
+      name: row.b_nome || row.area || 'Badge',
+      area: row.area || row.b_nome || 'Badge',
       stateId: 'aprovado',
       status: 'obtido',
       levelKey: isSpecial ? null : template.levelKey,
@@ -1589,7 +1541,8 @@ const buildMyBadges = async (accountId) => {
       id: `badge-${badgeId}`,
       badgeDbId: badgeId,
       requestId,
-      area: row.area || 'Badge',
+      name: row.b_nome || row.area || 'Badge',
+      area: row.area || row.b_nome || 'Badge',
       stateId: mapPedidoEstadoToMyBadgeState(row.estado),
       status: mappedStatus,
       levelKey: isSpecial ? null : template.levelKey,
@@ -1652,7 +1605,7 @@ const buildMyRequests = async (accountId) => {
 
     return {
       id: Number(row.npedido),
-      badge: row.area || row.b_nome || 'Badge',
+      badge: row.b_nome || row.area || 'Badge',
       level,
       date: formatShortDate(row.data_submissao),
       status: mapPedidoEstadoToMyRequestStatus(row.estado),
@@ -1838,6 +1791,7 @@ const buildBadgeSuggestions = async (accountId, limit = 3) => {
       `
         SELECT DISTINCT ON (b.nbadge)
           b.nbadge,
+          b.b_nome,
           a.narea,
           a.area,
           n.nivel
@@ -1935,7 +1889,7 @@ const buildBadgeSuggestions = async (accountId, limit = 3) => {
     const template = resolveBadgeTemplate(matchedRow.nivel);
     suggestedBadgeIds.add(Number(matchedRow.nbadge));
     suggestions.push({
-      title: matchedRow.area || area.area || 'Area',
+      title: matchedRow.b_nome || matchedRow.area || area.area || 'Badge',
       subtitleKey: template.levelKey,
       accent: suggestionAccentPalette[index % suggestionAccentPalette.length],
       badgeDbId: Number(matchedRow.nbadge),
@@ -1969,7 +1923,7 @@ const buildBadgeSuggestions = async (accountId, limit = 3) => {
         const template = resolveBadgeTemplate(row.nivel);
         suggestedBadgeIds.add(badgeId);
         suggestions.push({
-          title: row.area || area.area || 'Area',
+          title: row.b_nome || row.area || area.area || 'Badge',
           subtitleKey: template.levelKey,
           accent: suggestionAccentPalette[suggestions.length % suggestionAccentPalette.length],
           badgeDbId: badgeId,
@@ -2406,15 +2360,7 @@ export const consultorModel = {
         return specialRequirements;
       }
 
-      return [
-        {
-          id: `special-${parsedBadgeId}-missing-1`,
-          title: 'Trigger especial',
-          description: 'Nenhuma trigger especial definida para este badge.',
-          files: 0,
-          attachments: [],
-        },
-      ];
+      return [];
     }
 
     const rows = await sequelize.query(

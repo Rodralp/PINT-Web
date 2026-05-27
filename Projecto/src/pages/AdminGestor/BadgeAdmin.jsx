@@ -42,6 +42,12 @@ const buildRequirement = (seed = {}) => ({
   value: seed.value !== undefined && seed.value !== null ? String(seed.value) : '',
 });
 
+const buildStandardRequirement = (seed = {}) => ({
+  id: seed.id || `req-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  title: seed.title || seed.requisito || '',
+  description: seed.description || seed.r_descricao || '',
+});
+
 const resolveLevelMeta = (levelKey) =>
   badgeLevels.find((level) => level.levelKey === levelKey) || badgeLevels[0];
 
@@ -139,11 +145,15 @@ const buildFormState = (badge, isCreate) => {
     ? badge.specialRequirements.map((req) => buildRequirement(req))
     : [buildRequirement()];
 
+  const requirements = Array.isArray(badge?.requirements) && badge.requirements.length > 0
+    ? badge.requirements.map((req) => buildStandardRequirement(req))
+    : [buildStandardRequirement()];
+
   return {
     id: badge?.id || (isCreate ? '' : badge?.id || ''),
     badgeDbId: badge?.badgeDbId || null,
     levelId: parseNumericId(badge?.levelId),
-    name: badge?.area || badge?.name || '',
+    name: badge?.name || badge?.area || '',
     description: badge?.description || '',
     type: isSpecial ? SPECIAL_BADGE_TYPE : STANDARD_BADGE_TYPE,
     badgeTypeId: isSpecial ? '' : levelMeta.levelKey,
@@ -151,6 +161,7 @@ const buildFormState = (badge, isCreate) => {
     badgeImage,
     date: badge?.date || formatDateLabel(),
     specialRequirements,
+    requirements,
   };
 };
 
@@ -312,6 +323,7 @@ function BadgeAdmin() {
           specialRequirements: current.specialRequirements.length > 0
             ? current.specialRequirements
             : [buildRequirement()],
+          requirements: current.requirements,
         };
       }
 
@@ -329,6 +341,9 @@ function BadgeAdmin() {
         badgeImage: current.badgeImage && !current.badgeImage.startsWith('/badges/')
           ? current.badgeImage
           : badgeTypeMeta.badgeImage,
+        requirements: current.requirements && current.requirements.length > 0
+          ? current.requirements
+          : [buildStandardRequirement()],
       };
     });
   };
@@ -415,6 +430,29 @@ function BadgeAdmin() {
     }));
   };
 
+  const updateStandardRequirement = (id, patch) => {
+    setForm((current) => ({
+      ...current,
+      requirements: current.requirements.map((req) =>
+        req.id === id ? { ...req, ...patch } : req,
+      ),
+    }));
+  };
+
+  const addStandardRequirement = () => {
+    setForm((current) => ({
+      ...current,
+      requirements: [...current.requirements, buildStandardRequirement()],
+    }));
+  };
+
+  const removeStandardRequirement = (id) => {
+    setForm((current) => ({
+      ...current,
+      requirements: current.requirements.filter((req) => req.id !== id),
+    }));
+  };
+
   const isRequirementTypeDisabled = (typeId, currentRequirementId) =>
     form.specialRequirements.some((requirement) => requirement.id !== currentRequirementId && requirement.type === typeId);
 
@@ -441,6 +479,15 @@ function BadgeAdmin() {
       const validSpecial = form.specialRequirements.filter((req) => Number(req.value) > 0);
       if (validSpecial.length === 0) {
         nextErrors.specialRequirements = 'Defina pelo menos um trigger com valor.';
+      }
+    }
+
+    if (!isSpecial) {
+      const validRequirements = form.requirements.filter(
+        (req) => String(req.title || '').trim() && String(req.description || '').trim(),
+      );
+      if (validRequirements.length === 0) {
+        nextErrors.requirements = 'Adicione pelo menos um requisito válido.';
       }
     }
 
@@ -478,6 +525,15 @@ function BadgeAdmin() {
         .filter((requirement) => Number.isInteger(requirement.value) && requirement.value > 0)
       : [];
 
+    const requirementsPayload = isSpecial
+      ? []
+      : form.requirements
+        .map((requirement) => ({
+          title: String(requirement.title || '').trim(),
+          description: String(requirement.description || '').trim(),
+        }))
+        .filter((requirement) => requirement.title && requirement.description);
+
     const payload = {
       name: trimmedName,
       description: trimmedDescription,
@@ -487,6 +543,7 @@ function BadgeAdmin() {
       typeId: isSpecial ? SPECIAL_BADGE_TYPE : form.badgeTypeId,
       badgeImage: form.badgeImage || null,
       specialRequirements: specialRequirementsPayload,
+      requirements: requirementsPayload,
     };
 
     try {
@@ -689,6 +746,51 @@ function BadgeAdmin() {
 
               {formErrors.specialRequirements && (
                 <span className="badge-admin-error">{formErrors.specialRequirements}</span>
+              )}
+            </div>
+          )}
+        </section>
+
+        <section className="badge-admin-card">
+          <div className="badge-admin-section-title">Requisitos do badge</div>
+          {isSpecial ? (
+            <p className="badge-admin-muted">
+              Este badge especial não utiliza requisitos de candidatura.
+            </p>
+          ) : (
+            <div className="badge-admin-reqs">
+              {form.requirements.map((req) => (
+                <div key={req.id} className="badge-admin-req-row standard">
+                  <input
+                    type="text"
+                    value={req.title}
+                    onChange={(event) => updateStandardRequirement(req.id, { title: event.target.value })}
+                    placeholder="Título do requisito"
+                  />
+                  <textarea
+                    rows={2}
+                    value={req.description}
+                    onChange={(event) => updateStandardRequirement(req.id, { description: event.target.value })}
+                    placeholder="Descrição do requisito"
+                  />
+                  <button
+                    type="button"
+                    className="badge-admin-btn icon"
+                    onClick={() => removeStandardRequirement(req.id)}
+                    aria-label="Remover requisito"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+
+              <button type="button" className="badge-admin-btn ghost" onClick={addStandardRequirement}>
+                <Plus size={16} />
+                Adicionar requisito
+              </button>
+
+              {formErrors.requirements && (
+                <span className="badge-admin-error">{formErrors.requirements}</span>
               )}
             </div>
           )}

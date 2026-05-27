@@ -8,6 +8,7 @@ import './css/BadgePublica.css';
 
 const defaultBadgeDetails = {
   id: 'badge-public-default',
+  name: 'LowCode (Outsystems)',
   area: 'LowCode (Outsystems)',
   levelKey: 'badge_level_knowledge_lead',
   points: 300,
@@ -18,6 +19,7 @@ const defaultBadgeDetails = {
 const fallbackBadges = [
   {
     id: 'cloud-junior',
+    name: 'Cloud Architecture',
     area: 'Cloud Architecture',
     levelKey: 'badge_level_junior',
     points: 100,
@@ -26,6 +28,7 @@ const fallbackBadges = [
   },
   {
     id: 'cloud-intermediate',
+    name: 'Cloud Architecture',
     area: 'Cloud Architecture',
     levelKey: 'badge_level_intermediate',
     points: 150,
@@ -34,6 +37,7 @@ const fallbackBadges = [
   },
   {
     id: 'cloud-senior',
+    name: 'Cloud Architecture',
     area: 'Cloud Architecture',
     levelKey: 'badge_level_senior',
     points: 200,
@@ -42,6 +46,7 @@ const fallbackBadges = [
   },
   {
     id: 'lowcode-specialist',
+    name: 'LowCode (Outsystems)',
     area: 'LowCode (Outsystems)',
     levelKey: 'badge_level_specialist',
     points: 250,
@@ -50,6 +55,7 @@ const fallbackBadges = [
   },
   {
     id: 'lowcode-lead',
+    name: 'LowCode (Outsystems)',
     area: 'LowCode (Outsystems)',
     levelKey: 'badge_level_knowledge_lead',
     points: 300,
@@ -57,49 +63,6 @@ const fallbackBadges = [
     date: '12 Jan 2026',
   },
 ];
-
-const requirementsByArea = {
-  'lowcode (outsystems)': [
-    {
-      id: 'e1',
-      title: 'E1 - Implementar conectividade hibrida',
-      description: 'Evidenciar a integracao entre sistemas internos e cloud, incluindo regras de seguranca e monitorizacao.',
-      image: '/badges/J%C3%BAnior.png',
-    },
-    {
-      id: 'e2',
-      title: 'E2 - Monitorizar infraestrutura hibrida',
-      description: 'Demonstrar metricas, alertas e dashboards que garantem observabilidade ponta a ponta dos servicos.',
-      image: '/badges/Interm%C3%A9dio.png',
-    },
-    {
-      id: 'e3',
-      title: 'E3 - Implementar disaster recovery',
-      description: 'Apresentar estrategia de continuidade com testes de recuperacao, redundancia e tempos de reposicao.',
-      image: '/badges/S%C3%A9nior.png',
-    },
-  ],
-  'cloud architecture': [
-    {
-      id: 'e1',
-      title: 'E1 - Configurar redes seguras multi-regiao',
-      description: 'Definir topologia de rede, segmentacao e politicas de acesso seguras em varias regioes cloud.',
-      image: '/badges/J%C3%BAnior.png',
-    },
-    {
-      id: 'e2',
-      title: 'E2 - Implementar observabilidade de workloads cloud',
-      description: 'Implementar recolha de logs, metricas e tracing para suportar diagnostico continuo em producao.',
-      image: '/badges/Interm%C3%A9dio.png',
-    },
-    {
-      id: 'e3',
-      title: 'E3 - Definir estrategia de resiliencia e backup',
-      description: 'Estabelecer politicas de backup, recuperacao e validacao periodica de resiliencia para servicos criticos.',
-      image: '/badges/S%C3%A9nior.png',
-    },
-  ],
-};
 
 const resolveBadgeDbId = (routeBadgeId, badgeState) => {
   const direct = Number(badgeState?.badgeDbId);
@@ -165,6 +128,8 @@ function BadgePublica() {
     [badgeId, badge],
   );
 
+  const badgeTitle = badge.name || badge.area || 'Badge';
+
   useEffect(() => {
     let isMounted = true;
 
@@ -225,9 +190,11 @@ function BadgePublica() {
     if (dynamicRequirements && Array.isArray(dynamicRequirements) && dynamicRequirements.length > 0) {
       return dynamicRequirements;
     }
-    const areaKey = (badge.area || '').trim().toLowerCase();
-    return requirementsByArea[areaKey] || requirementsByArea['lowcode (outsystems)'];
-  }, [dynamicRequirements, badge.area]);
+    if (Array.isArray(badge.requirements) && badge.requirements.length > 0) {
+      return badge.requirements;
+    }
+    return [];
+  }, [dynamicRequirements, badge.requirements]);
 
   const handleGoBack = () => {
     navigate('/galeria-publica');
@@ -257,7 +224,7 @@ function BadgePublica() {
               </div>
 
               <div className="bp-hero-content">
-                <h2>{badge.area}</h2>
+                <h2>{badgeTitle}</h2>
                 <p>{t(badge.levelKey)}</p>
 
                 <div className="bp-hero-meta">
@@ -279,47 +246,50 @@ function BadgePublica() {
             </section>
 
             <p className="bp-breadcrumb">
-              Jornada Tecnica {'>'} Application Operations {'>'} {badge.area} {'>'} {t(badge.levelKey)}
+              Jornada Tecnica {'>'} Application Operations {'>'} {badgeTitle} {'>'} {t(badge.levelKey)}
             </p>
 
             <section className="bp-requirements-card">
               <h3>Requisitos</h3>
+              {requirements.length === 0 ? (
+                <p className="bp-requirements-empty">Sem requisitos definidos para este badge.</p>
+              ) : (
+                <div className="bp-requirements-list">
+                  {requirements.map((requirement, index) => {
+                    const isOpen = openRequirementId === requirement.id;
+                    const ToggleIcon = isOpen ? EyeOff : Eye;
 
-              <div className="bp-requirements-list">
-                {requirements.map((requirement, index) => {
-                  const isOpen = openRequirementId === requirement.id;
-                  const ToggleIcon = isOpen ? EyeOff : Eye;
-
-                  return (
-                    <article key={`${badge.id}-${requirement.id}`} className={`bp-requirement-item ${isOpen ? 'is-open' : ''}`}>
-                      <div className="bp-requirement-head">
-                        <p>{requirement.title}</p>
-                        <button
-                          type="button"
-                          className="bp-requirement-view-btn"
-                          aria-label={isOpen ? `Ocultar requisito ${index + 1}` : `Ver requisito ${index + 1}`}
-                          title={isOpen ? 'Ocultar requisito' : 'Ver requisito'}
-                          aria-expanded={isOpen}
-                          onClick={() => toggleRequirement(requirement.id)}
-                        >
-                          <ToggleIcon size={19} />
-                        </button>
-                      </div>
-
-                      {isOpen && (
-                        <div className="bp-requirement-detail">
-                          <img
-                            src={requirement.image || badge.badgeImage}
-                            alt={`Ilustracao do requisito ${index + 1}`}
-                            className="bp-requirement-detail-image"
-                          />
-                          <p>{requirement.description}</p>
+                    return (
+                      <article key={`${badge.id}-${requirement.id}`} className={`bp-requirement-item ${isOpen ? 'is-open' : ''}`}>
+                        <div className="bp-requirement-head">
+                          <p>{requirement.title}</p>
+                          <button
+                            type="button"
+                            className="bp-requirement-view-btn"
+                            aria-label={isOpen ? `Ocultar requisito ${index + 1}` : `Ver requisito ${index + 1}`}
+                            title={isOpen ? 'Ocultar requisito' : 'Ver requisito'}
+                            aria-expanded={isOpen}
+                            onClick={() => toggleRequirement(requirement.id)}
+                          >
+                            <ToggleIcon size={19} />
+                          </button>
                         </div>
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
+
+                        {isOpen && (
+                          <div className="bp-requirement-detail">
+                            <img
+                              src={requirement.image || badge.badgeImage}
+                              alt={`Ilustracao do requisito ${index + 1}`}
+                              className="bp-requirement-detail-image"
+                            />
+                            <p>{requirement.description}</p>
+                          </div>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           </div>
         </section>
