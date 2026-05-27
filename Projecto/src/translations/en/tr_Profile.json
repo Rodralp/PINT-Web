@@ -6,5 +6,7 @@
 
     "profile_activity_title" : "Recent Activities",
     "profile_skills" : "Skills",
-    "profile_certifications" : "Certifications"
+    "profile_certifications" : "Certifications",
+    "profile_skills_empty" : "No skills available.",
+    "profile_certifications_empty" : "No certifications available."
 }

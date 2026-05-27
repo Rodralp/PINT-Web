@@ -123,27 +123,35 @@ function PerfilPublico() {
 		];
 	}, [consultor, t]);
 
-		const skillsItems = useMemo(() => {
-			if (Array.isArray(consultor.serviceLineStats) && consultor.serviceLineStats.length > 0) {
-				return consultor.serviceLineStats.slice(0, 3).map((s) => ({
-					title: s.serviceLine || s.name,
-					levelKey: 'badge_level_specialist',
-					meta: `${s.badges} badges`,
-				}));
-			}
+	const hasServiceLineStats = Array.isArray(consultor.serviceLineStats)
+		&& consultor.serviceLineStats.length > 0;
 
-			return [
-				{ title: consultor.serviceLine, levelKey: 'badge_level_specialist', meta: `${consultor.points} pts` },
-				{ title: 'JavaScript', levelKey: 'badge_level_senior' },
-				{ title: 'React', levelKey: 'badge_level_intermediate' },
-			];
-		}, [consultor.serviceLineStats, consultor.serviceLine, consultor.points]);
+	const skillsItems = useMemo(() => {
+		if (!Array.isArray(consultor.skillsItems)) {
+			return [];
+		}
 
-	const certificationsItems = useMemo(() => ([
-		{ title: consultor.serviceLine, levelKey: 'badge_level_knowledge_lead' },
-		{ title: 'Cloud Architecture', levelKey: 'badge_level_specialist' },
-		{ title: 'LowCode (Outsystems)', levelKey: 'badge_level_senior' },
-	]), [consultor.serviceLine]);
+		return consultor.skillsItems
+			.map((item) => ({
+				title: item.title || item.name || '',
+				levelKey: item.levelKey || item.subtitleKey || '',
+				meta: item.meta || item.subtitle || '',
+			}))
+			.filter((item) => item.title);
+	}, [consultor.skillsItems]);
+
+	const certificationsItems = useMemo(() => {
+		if (!Array.isArray(consultor.certificationsItems)) {
+			return [];
+		}
+
+		return consultor.certificationsItems
+			.map((item) => ({
+				title: item.title || item.name || '',
+				levelKey: item.levelKey || item.subtitleKey || '',
+			}))
+			.filter((item) => item.title);
+	}, [consultor.certificationsItems]);
 
 	const activityItems = useMemo(() => {
 		if (Array.isArray(consultor.activityItems) && consultor.activityItems.length > 0) {
@@ -220,7 +228,7 @@ function PerfilPublico() {
 									<h3>{t('profile_skills')}</h3>
 								</div>
 
-								{Array.isArray(consultor.serviceLineStats) && consultor.serviceLineStats.length > 0 ? (
+								{hasServiceLineStats ? (
 									<div className="pp-service-line-stats">
 										{(() => {
 											const maxBadges = Math.max(...consultor.serviceLineStats.map((s) => s.badges || 0), 1);
@@ -246,21 +254,25 @@ function PerfilPublico() {
 									})()}
 									</div>
 									) : (
-										<div className="pp-list">
-											{skillsItems.map(({ title, levelKey, meta }) => (
-												<article key={`${title}-${levelKey}`} className="pp-list-item">
-													<div className="pp-list-badge">
-														<Award size={18} strokeWidth={2} />
-													</div>
-													<div className="pp-list-content">
-														<strong>{title}</strong>
-														<span>
-														  {t(levelKey)}{meta ? ` · ${meta}` : ''}
-														</span>
-													</div>
-												</article>
-											))}
-										</div>
+										skillsItems.length > 0 ? (
+											<div className="pp-list">
+												{skillsItems.map(({ title, levelKey, meta }) => (
+													<article key={`${title}-${levelKey}`} className="pp-list-item">
+														<div className="pp-list-badge">
+															<Award size={18} strokeWidth={2} />
+														</div>
+														<div className="pp-list-content">
+															<strong>{title}</strong>
+															<span>
+															  {t(levelKey)}{meta ? ` · ${meta}` : ''}
+															</span>
+														</div>
+													</article>
+												))}
+											</div>
+										) : (
+											<p className="pp-service-line-empty">{t('profile_skills_empty')}</p>
+										)
 									)}
 							</section>
 
@@ -269,19 +281,23 @@ function PerfilPublico() {
 									<h3>{t('profile_certifications')}</h3>
 								</div>
 
-								<div className="pp-list">
-									{certificationsItems.map(({ title, levelKey }) => (
-										<article key={`${title}-${levelKey}`} className="pp-list-item">
-											<div className="pp-list-badge">
-												<Trophy size={18} strokeWidth={2} />
-											</div>
-											<div className="pp-list-content">
-												<strong>{title}</strong>
-												<span>{t(levelKey)}</span>
-											</div>
-										</article>
-									))}
-								</div>
+								{certificationsItems.length > 0 ? (
+									<div className="pp-list">
+										{certificationsItems.map(({ title, levelKey }) => (
+											<article key={`${title}-${levelKey}`} className="pp-list-item">
+												<div className="pp-list-badge">
+													<Trophy size={18} strokeWidth={2} />
+												</div>
+												<div className="pp-list-content">
+													<strong>{title}</strong>
+													<span>{t(levelKey)}</span>
+												</div>
+											</article>
+										))}
+									</div>
+								) : (
+									<p className="pp-service-line-empty">{t('profile_certifications_empty')}</p>
+								)}
 							</section>
 						</div>
 					</div>

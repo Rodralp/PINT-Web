@@ -6,5 +6,7 @@
     
     "profile_activity_title" : "Actividades recientes",
     "profile_skills" : "Habilidades",
-    "profile_certifications" : "Certificaciones"
+    "profile_certifications" : "Certificaciones",
+    "profile_skills_empty" : "Sin habilidades registradas.",
+    "profile_certifications_empty" : "Sin certificaciones registradas."
 }
