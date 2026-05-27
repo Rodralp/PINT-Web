@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getMyServiceLine,
+  getRankingConsultoresSLL,
   getHistoricoAreasSLL,
   getHistoricoBadgesSLL,
   getHistoricoConsultoresSLL,
@@ -12,6 +13,7 @@ import {
 const router = Router();
 
 router.get('/minha-service-line', getMyServiceLine);
+router.get('/ranking', getRankingConsultoresSLL);
 router.get('/historico/areas', getHistoricoAreasSLL);
 router.get('/historico/badges', getHistoricoBadgesSLL);
 router.get('/historico/consultores', getHistoricoConsultoresSLL);

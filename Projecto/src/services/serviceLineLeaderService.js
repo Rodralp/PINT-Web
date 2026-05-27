@@ -20,6 +20,11 @@ export async function fetchHistoricoConsultoresSLL(accountId) {
   return response.data;
 }
 
+export async function fetchRankingConsultoresSLL(accountId) {
+  const response = await apiClient.get(`/service-line-leader/ranking?accountId=${encodeURIComponent(accountId)}`);
+  return response.data;
+}
+
 export async function fetchDetalhesConsultorSLL(accountId, consultorId) {
   const response = await apiClient.get(`/service-line-leader/historico/consultor?accountId=${encodeURIComponent(accountId)}&consultorId=${encodeURIComponent(consultorId)}`);
   return response.data;

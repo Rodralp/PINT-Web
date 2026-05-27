@@ -558,14 +558,11 @@ export const dashboardModel = {
       sequelize.query(
         `
           SELECT
-            DATE(p.data_submissao) AS activity_date,
-            COUNT(DISTINCT p.npedido) AS activity_count
-          FROM pedidos AS p
-          LEFT JOIN estado AS e
-            ON e.nestado = p.estado
-          WHERE p.nutilizador = :accountId
-            AND LOWER(COALESCE(e.estado, '')) = 'aprovado'
-          GROUP BY DATE(p.data_submissao)
+            DATE(cb.data_obtencao) AS activity_date,
+            COUNT(DISTINCT cb.nbadge) AS activity_count
+          FROM c_obtem_b AS cb
+          WHERE cb.nutilizador = :accountId
+          GROUP BY DATE(cb.data_obtencao)
           ORDER BY activity_date ASC
         `,
         {
