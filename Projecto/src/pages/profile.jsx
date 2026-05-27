@@ -199,7 +199,7 @@ function Profile() {
               </div>
             </div>
             <div className="profile-btn-space">
-              <button className="profile-home-btn" onClick={() => navigate('/')}>
+              <button className="profile-home-btn" onClick={() => navigate(`/galeria-publica/consultor/${encodeURIComponent(loginData?.id)}`)}>
                 {t('profile_pub')}
               </button>
               <button className="profile-edit-btn">

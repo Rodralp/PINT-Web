@@ -230,11 +230,6 @@ function BadgePublica() {
   }, [dynamicRequirements, badge.area]);
 
   const handleGoBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
     navigate('/galeria-publica');
   };
 

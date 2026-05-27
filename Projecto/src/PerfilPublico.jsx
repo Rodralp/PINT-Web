@@ -158,11 +158,6 @@ function PerfilPublico() {
 	}, [consultor.activityItems, consultor.badges, consultor.points, consultor.serviceLine]);
 
 	const handleGoBack = () => {
-		if (window.history.length > 1) {
-			navigate(-1);
-			return;
-		}
-
 		navigate('/galeria-publica');
 	};
 
