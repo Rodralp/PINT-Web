@@ -164,6 +164,36 @@ const formatLongDate = (value) => {
 
 const buildAvatar = (seed) => `https://i.pravatar.cc/120?u=${encodeURIComponent(String(seed || 'user').toLowerCase())}`;
 
+const getServiceLineIdForBadge = async (badgeId) => {
+  const parsedBadgeId = Number(badgeId);
+  if (!Number.isInteger(parsedBadgeId) || parsedBadgeId <= 0) {
+    return null;
+  }
+
+  const [row] = await sequelize.query(
+    `
+      SELECT
+        COALESCE(bsl.nsline, a.nsline) AS service_line_id
+      FROM badge AS b
+      LEFT JOIN b_pertence_sl AS bsl
+        ON bsl.nbadge = b.nbadge
+      LEFT JOIN b_pertence_a AS bpa
+        ON bpa.nbadge = b.nbadge
+      LEFT JOIN area AS a
+        ON a.narea = bpa.narea
+      WHERE b.nbadge = :badgeId
+      LIMIT 1
+    `,
+    {
+      replacements: { badgeId: parsedBadgeId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  const serviceLineId = Number(row?.service_line_id);
+  return Number.isInteger(serviceLineId) && serviceLineId > 0 ? serviceLineId : null;
+};
+
 const deleteEvidenceFiles = async (fileNames) => {
   const uniqueNames = [...new Set((Array.isArray(fileNames) ? fileNames : [])
     .map((name) => path.basename(String(name || '').trim()))
@@ -1064,6 +1094,25 @@ const applyDecision = async ({ role, actorUtilizadorId, request, decision, comme
   } catch (error) {
     await transaction.rollback();
     throw error;
+  }
+
+  if (shouldObtainBadge) {
+    try {
+      const serviceLineId = await getServiceLineIdForBadge(request.nbadge);
+      const badgeName = request.badge_nome || request.area_nome || 'Badge';
+      const consultorName = request.consultor_nome || 'Consultor';
+
+      await communicationModel.dispatchEventNotification({
+        eventKey: 'Recebe badge',
+        actorAccountId: actorUtilizadorId,
+        title: 'Badge atribuida',
+        message: `O consultor ${consultorName} recebeu a badge ${badgeName}.`,
+        consultorIds: [consultorId],
+        serviceLineId,
+      });
+    } catch (error) {
+      console.error('Failed to notify badge delivery.', error);
+    }
   }
 
   if (shouldObtainBadge) {

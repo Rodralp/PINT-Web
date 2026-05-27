@@ -4,7 +4,7 @@ import { QueryTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
 
 const uploadsDir = path.resolve(globalThis.process?.cwd?.() || '.', 'server', 'uploads');
-const allowedLogTypes = new Set(['mensagem', 'aviso', 'importante']);
+const allowedLogTypes = new Set(['mensagem', 'aviso', 'importante', 'evento']);
 
 const normalizeRoles = (rolesValue) => {
   const rawRoles = Array.isArray(rolesValue)
@@ -658,7 +658,7 @@ export const communicationModel = {
     actorAccountId,
     title,
     message,
-    type = 'aviso',
+    type = 'evento',
     priority = 2,
     consultorIds = [],
     serviceLineId = null,
@@ -774,6 +774,7 @@ export const communicationModel = {
         JOIN logs l ON l.nlog = n.nlog
         LEFT JOIN utilizador u ON u.nutilizador = l.nutilizador
         WHERE n.nutilizador = :accountId
+          AND LOWER(l.tipo_log) IN ('mensagem', 'aviso', 'importante')
         ORDER BY l.data_log DESC, l.nlog DESC
       `,
       {
@@ -854,6 +855,7 @@ export const communicationModel = {
           l.nlog AS log_id,
           l.titulo,
           l.resumo,
+          l.mensagem,
           l.tipo_log,
           l.data_log,
           u.nome AS author_name
@@ -875,6 +877,7 @@ export const communicationModel = {
       isRead: Boolean(row.lida),
       title: row.titulo || 'Notificacao',
       summary: row.resumo || '',
+      message: row.mensagem || '',
       type: normalizeLogType(row.tipo_log),
       date: row.data_log,
       author: row.author_name || 'Sistema',
