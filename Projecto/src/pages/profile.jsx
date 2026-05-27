@@ -104,6 +104,11 @@ function Profile() {
 
   const [profileAvatar, setProfileAvatar] = useState(initialAvatar);
 
+  // States para modals "Ver Mais"
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
+  const [isCertificationsModalOpen, setIsCertificationsModalOpen] = useState(false);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -226,7 +231,10 @@ function Profile() {
           <section className="dashboard-card dashboard-panel-card">
             <div className="dashboard-panel-header">
               <h2>{t('profile_activity_title', 'Recent Activity')}</h2>
-              <a href="#ver-todos-activity" onClick={(event) => event.preventDefault()}>
+              <a href="#ver-todos-activity" onClick={(event) => {
+                event.preventDefault();
+                setIsActivityModalOpen(true);
+              }}>
                 {t('dashboard_view_all')} <ArrowRight size={16} />
               </a>
             </div>
@@ -253,7 +261,10 @@ function Profile() {
           <section className="dashboard-card dashboard-panel-card">
             <div className="dashboard-panel-header">
               <h2>{t('profile_skills')}</h2>
-              <a href="#ver-todos-skills" onClick={(event) => event.preventDefault()}>
+              <a href="#ver-todos-skills" onClick={(event) => {
+                event.preventDefault();
+                setIsSkillsModalOpen(true);
+              }}>
                 {t('dashboard_view_all')} <ArrowRight size={16} />
               </a>
             </div>
@@ -299,7 +310,10 @@ function Profile() {
           <section className="dashboard-card dashboard-panel-card">
             <div className="dashboard-panel-header">
               <h2>{t('profile_certifications')}</h2>
-              <a href="#ver-todos-certificacoes" onClick={(event) => event.preventDefault()}>
+              <a href="#ver-todos-certificacoes" onClick={(event) => {
+                event.preventDefault();
+                setIsCertificationsModalOpen(true);
+              }}>
                 {t('dashboard_view_all')} <ArrowRight size={16} />
               </a>
             </div>
@@ -321,6 +335,127 @@ function Profile() {
           </section>
         </div>
       </div>
+
+      {/* Modal: Ver Todos os Atividades */}
+      {isActivityModalOpen && (
+        <div className="reminder-modal-overlay" onClick={() => setIsActivityModalOpen(false)}>
+          <div className="reminder-modal" onClick={(event) => event.stopPropagation()}>
+            <h2>{t('profile_activity_title', 'Recent Activity')}</h2>
+
+            <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '8px' }}>
+              <div className="dashboard-list-compact">
+                {activityItems.map((activity, index) => {
+                  const ActivityIcon = (typeof activity.icon === 'string' ? activityIconMap[activity.icon.toLowerCase()] : activity.icon) || Award;
+                  const activityColor = activity.color || 'gold';
+                  return (
+                    <div key={index} className="dashboard-list-item-compact">
+                      <div className={`dashboard-list-badge accent-${activityColor}`}>
+                        <ActivityIcon size={18} strokeWidth={2} />
+                      </div>
+                      <div className="dashboard-list-content">
+                        <strong>{activity.description}</strong>
+                        <span>{activity.date}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="reminder-modal-actions">
+              <button type="button" className="reminder-cancel-btn" onClick={() => setIsActivityModalOpen(false)}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Ver Todas as Habilidades */}
+      {isSkillsModalOpen && (
+        <div className="reminder-modal-overlay" onClick={() => setIsSkillsModalOpen(false)}>
+          <div className="reminder-modal" onClick={(event) => event.stopPropagation()}>
+            <h2>{t('profile_skills')}</h2>
+
+            <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '8px' }}>
+              <div className="dashboard-list">
+                {Array.isArray(serviceLineStats) && serviceLineStats.length > 0 ? (
+                  (() => {
+                    const maxBadges = Math.max(...serviceLineStats.map((s) => s.badges || 0), 1);
+                    return serviceLineStats.map((stat) => {
+                      const percentage = ((stat.badges || 0) / maxBadges) * 100;
+                      return (
+                        <article key={`sl-${stat.serviceLine}`} className="pp-service-line-item">
+                          <div className="pp-service-line-header">
+                            <strong>{stat.serviceLine}</strong>
+                            <span className="pp-service-line-meta">
+                              {stat.badges} {t('badges')} · {stat.points} {t('points')}
+                            </span>
+                          </div>
+                          <div className="pp-progress-bar-bg">
+                            <div style={{ width: `${percentage}%` }} className="pp-progress-bar-fill" />
+                          </div>
+                        </article>
+                      );
+                    });
+                  })()
+                ) : (
+                  skillsItems.map(({ title, subtitleKey, accent }) => (
+                    <article key={`${title}-${subtitleKey}`} className="dashboard-list-item">
+                      <div className={`dashboard-list-badge accent-${accent}`}>
+                        <Award size={18} strokeWidth={2} />
+                      </div>
+                      <div className="dashboard-list-content">
+                        <strong>{title}</strong>
+                        <span>{t(subtitleKey)}</span>
+                      </div>
+                      <ChevronsRight className="dashboard-item-chevron" size={18} />
+                    </article>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="reminder-modal-actions">
+              <button type="button" className="reminder-cancel-btn" onClick={() => setIsSkillsModalOpen(false)}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Ver Todas as Certificações */}
+      {isCertificationsModalOpen && (
+        <div className="reminder-modal-overlay" onClick={() => setIsCertificationsModalOpen(false)}>
+          <div className="reminder-modal" onClick={(event) => event.stopPropagation()}>
+            <h2>{t('profile_certifications')}</h2>
+
+            <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '8px' }}>
+              <div className="dashboard-list">
+                {certificationsItems.map(({ title, subtitleKey, accent }) => (
+                  <article key={`${title}-${subtitleKey}`} className="dashboard-list-item">
+                    <div className={`dashboard-list-badge accent-${accent}`}>
+                      <GraduationCap size={18} strokeWidth={2} />
+                    </div>
+                    <div className="dashboard-list-content">
+                      <strong>{title}</strong>
+                      <span>{t(subtitleKey)}</span>
+                    </div>
+                    <ChevronsRight className="dashboard-item-chevron" size={18} />
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <div className="reminder-modal-actions">
+              <button type="button" className="reminder-cancel-btn" onClick={() => setIsCertificationsModalOpen(false)}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
