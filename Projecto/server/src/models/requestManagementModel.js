@@ -1115,6 +1115,40 @@ const applyDecision = async ({ role, actorUtilizadorId, request, decision, comme
     }
   }
 
+  const shouldNotifyApproval = targetEstadoNome === workflowState.aprovado;
+  const shouldNotifyRejection = targetEstadoNome === workflowState.rejeitado && decisionKey === 'rejeitar';
+  if (shouldNotifyApproval || shouldNotifyRejection) {
+    try {
+      const serviceLineId = await getServiceLineIdForBadge(request.nbadge);
+      const badgeName = request.badge_nome || request.area_nome || 'Badge';
+      const consultorName = request.consultor_nome || 'Consultor';
+
+      if (shouldNotifyApproval) {
+        await communicationModel.dispatchEventNotification({
+          eventKey: 'Pedido aprovado',
+          actorAccountId: actorUtilizadorId,
+          title: 'Pedido aprovado',
+          message: `O pedido da badge ${badgeName} para ${consultorName} foi aprovado.`,
+          consultorIds: [consultorId],
+          serviceLineId,
+        });
+      }
+
+      if (shouldNotifyRejection) {
+        await communicationModel.dispatchEventNotification({
+          eventKey: 'Pedido rejeitado',
+          actorAccountId: actorUtilizadorId,
+          title: 'Pedido rejeitado',
+          message: `O pedido da badge ${badgeName} para ${consultorName} foi rejeitado.`,
+          consultorIds: [consultorId],
+          serviceLineId,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to notify request decision.', error);
+    }
+  }
+
   if (shouldObtainBadge) {
     try {
       await syncSpecialBadgesForConsultor(consultorId);

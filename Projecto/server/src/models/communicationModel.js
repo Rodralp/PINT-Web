@@ -55,6 +55,8 @@ const normalizeRecipientIds = (ids) => {
     .filter((entry) => Number.isInteger(entry) && entry > 0))];
 };
 
+const normalizeEventKey = (value) => String(value ?? '').trim().toLowerCase();
+
 const eventNotificationDefaults = [
   {
     event: 'Novo registo',
@@ -146,6 +148,24 @@ const eventNotificationDefaults = [
     email: false,
     webApp: true,
   },
+  {
+    event: 'Pedido aprovado',
+    admin: true,
+    sll: true,
+    tl: true,
+    consultor: true,
+    email: true,
+    webApp: true,
+  },
+  {
+    event: 'Pedido rejeitado',
+    admin: true,
+    sll: true,
+    tl: true,
+    consultor: true,
+    email: true,
+    webApp: true,
+  },
 ];
 
 const userNotificationDefaults = [
@@ -232,16 +252,20 @@ const loadUserNotificationDefaults = async (transaction) => {
 };
 
 const ensureEventNotificationDefaults = async (transaction) => {
-  const [row] = await sequelize.query(
-    'SELECT COUNT(*) AS total FROM config_notificacao',
+  const rows = await sequelize.query(
+    'SELECT evento FROM config_notificacao',
     { type: QueryTypes.SELECT, transaction },
   );
-
-  if (Number(row?.total) > 0) {
-    return;
-  }
+  const existingEvents = new Set(
+    (rows || []).map((row) => normalizeEventKey(row?.evento)),
+  );
 
   for (const item of eventNotificationDefaults) {
+    const eventKey = normalizeEventKey(item.event);
+    if (existingEvents.has(eventKey)) {
+      continue;
+    }
+
     await sequelize.query(
       `
         INSERT INTO config_notificacao (evento, admin, sll, tl, consultor, email, web_app)
@@ -261,6 +285,8 @@ const ensureEventNotificationDefaults = async (transaction) => {
         transaction,
       },
     );
+
+    existingEvents.add(eventKey);
   }
 };
 

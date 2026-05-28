@@ -92,6 +92,24 @@ const defaultNotificationRows = [
     email: false,
     webApp: true,
   },
+  {
+    event: 'Pedido aprovado',
+    admin: true,
+    sll: true,
+    tl: true,
+    consultor: true,
+    email: true,
+    webApp: true,
+  },
+  {
+    event: 'Pedido rejeitado',
+    admin: true,
+    sll: true,
+    tl: true,
+    consultor: true,
+    email: true,
+    webApp: true,
+  },
 ];
 
 const defaultRgpdTopics = [
@@ -173,6 +191,8 @@ const normalizeBoolean = (value) => {
 
 const normalizeText = (value) => String(value ?? '').trim();
 
+const normalizeEventKey = (value) => normalizeText(value).toLowerCase();
+
 const normalizeBody = (value) => String(value ?? '').replace(/\r\n/g, '\n');
 
 const normalizeOptions = (value) => {
@@ -188,16 +208,20 @@ const normalizeOptions = (value) => {
 };
 
 const ensureNotificationDefaults = async (transaction) => {
-  const [row] = await sequelize.query(
-    'SELECT COUNT(*) AS total FROM config_notificacao',
+  const rows = await sequelize.query(
+    'SELECT evento FROM config_notificacao',
     { type: QueryTypes.SELECT, transaction },
   );
-
-  if (Number(row?.total) > 0) {
-    return;
-  }
+  const existingEvents = new Set(
+    (rows || []).map((row) => normalizeEventKey(row?.evento)),
+  );
 
   for (const item of defaultNotificationRows) {
+    const eventKey = normalizeEventKey(item.event);
+    if (existingEvents.has(eventKey)) {
+      continue;
+    }
+
     await sequelize.query(
       `
         INSERT INTO config_notificacao (evento, admin, sll, tl, consultor, email, web_app)
@@ -217,6 +241,8 @@ const ensureNotificationDefaults = async (transaction) => {
         transaction,
       },
     );
+
+    existingEvents.add(eventKey);
   }
 };
 

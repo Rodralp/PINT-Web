@@ -116,6 +116,26 @@ const initialNotificationRows = [
     email: false,
     webApp: true,
   },
+  {
+    id: 11,
+    event: 'Pedido aprovado',
+    admin: true,
+    sll: true,
+    tl: true,
+    consultor: true,
+    email: true,
+    webApp: true,
+  },
+  {
+    id: 12,
+    event: 'Pedido rejeitado',
+    admin: true,
+    sll: true,
+    tl: true,
+    consultor: true,
+    email: true,
+    webApp: true,
+  },
 ];
 
 const rgpdTopics = [
