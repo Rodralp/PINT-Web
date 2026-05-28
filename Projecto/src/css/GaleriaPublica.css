@@ -147,63 +147,46 @@
   color: #0b3a6e;
 }
 
-.gp-badge-image-wrap {
-  height: 84px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.gp-consultor-grid {
+  align-items: stretch;
 }
 
-.gp-badge-image {
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
+.gp-consultor-card {
+  min-height: 226px;
 }
 
-.gp-rank {
-  width: fit-content;
-  font-size: 0.84rem;
-  color: #0b3a6e;
-  background: #d9e9fb;
-  border-radius: 999px;
-  padding: 4px 8px;
+.gp-consultor-avatar-frame {
+  margin-bottom: 12px;
 }
 
-.gp-consultor-stats {
-  display: flex;
-  gap: 8px;
+.gp-consultor-avatar {
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  border: 3px solid #e7eef8;
+  box-shadow: none;
+}
+
+.gp-consultor-name {
+  width: 100%;
+  font-weight: 700;
+  color: #344054;
+}
+
+.gp-consultor-email {
+  width: 100%;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gp-consultor-footer {
+  width: 100%;
   margin-top: auto;
-}
-
-.gp-consultor-stats span {
-  margin: 0;
-  background: #e6f1ff;
-  border-radius: 8px;
-  padding: 6px 8px;
-  font-size: 0.85rem;
-}
-
-.gp-service-lines {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.gp-service-line-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.88rem;
-}
-
-.gp-sl-name {
-  color: var(--gp-text);
-  font-weight: 600;
-}
-
-.gp-sl-meta {
-  color: var(--gp-muted);
-  font-size: 0.8rem;
+  padding-top: 8px;
 }
 
 @media (max-width: 768px) {
