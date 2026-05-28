@@ -64,6 +64,7 @@ const normalizeStandardRequirements = (requirements) => {
   for (const requirement of requirements) {
     const title = String(requirement?.title || requirement?.requisito || '').trim();
     const description = String(requirement?.description || requirement?.r_descricao || '').trim();
+    const image = normalizeBadgeImage(requirement?.image || requirement?.imagem);
 
     if (!title || !description) {
       continue;
@@ -72,6 +73,7 @@ const normalizeStandardRequirements = (requirements) => {
     normalized.push({
       title: title.slice(0, 50),
       description: description.slice(0, 255),
+      image,
     });
   }
 
@@ -340,7 +342,7 @@ const loadBadgeTriggers = async (badgeId, transaction) => {
 const loadBadgeRequirements = async (badgeId, transaction) => {
   const rows = await sequelize.query(
     `
-      SELECT nreq, requisito, r_descricao
+      SELECT nreq, requisito, r_descricao, imagem
       FROM requisitos
       WHERE nbadge = :badgeId
       ORDER BY nreq ASC
@@ -356,6 +358,7 @@ const loadBadgeRequirements = async (badgeId, transaction) => {
     id: `req-${Number(row.nreq)}`,
     title: row.requisito || 'Requisito',
     description: row.r_descricao || '',
+    image: row.imagem || null,
   }));
 };
 
@@ -374,13 +377,14 @@ const replaceBadgeRequirements = async (badgeId, requirements, transaction) => {
   for (const requirement of normalizedRequirements) {
     await sequelize.query(
       `
-        INSERT INTO requisitos (requisito, r_descricao, nbadge)
-        VALUES (:title, :description, :badgeId)
+        INSERT INTO requisitos (requisito, r_descricao, imagem, nbadge)
+        VALUES (:title, :description, :image, :badgeId)
       `,
       {
         replacements: {
           title: requirement.title,
           description: requirement.description,
+          image: requirement.image,
           badgeId: Number(badgeId),
         },
         type: QueryTypes.INSERT,

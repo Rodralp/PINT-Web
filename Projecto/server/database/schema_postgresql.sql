@@ -21,9 +21,13 @@ CREATE TABLE IF NOT EXISTS service_line (
     nsline INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     sline VARCHAR(25) NOT NULL,
     sl_desc VARCHAR(255) NOT NULL,
+    imagem TEXT,
     nlpath INTEGER NOT NULL REFERENCES learning_path(nlpath),
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
+
+ALTER TABLE service_line
+    ADD COLUMN IF NOT EXISTS imagem TEXT;
 
 ALTER TABLE service_line
     ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
@@ -145,8 +149,12 @@ CREATE TABLE IF NOT EXISTS requisitos (
     nreq INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     requisito VARCHAR(50) NOT NULL,
     r_descricao VARCHAR(255) NOT NULL,
+    imagem TEXT,
     nbadge INTEGER NOT NULL REFERENCES badge(nbadge)
 );
+
+ALTER TABLE requisitos
+    ADD COLUMN IF NOT EXISTS imagem TEXT;
 
 CREATE TABLE IF NOT EXISTS badge_trigger (
     nbadge INTEGER NOT NULL REFERENCES badge(nbadge) ON DELETE CASCADE,

@@ -368,7 +368,7 @@ function BadgeDetalhe() {
         files: Number.isInteger(filesCount) && filesCount >= 0
           ? filesCount
           : showFileCounters ? 0 : null,
-        image: badge.badgeImage,
+        image: item?.image || item?.imagem || badge.badgeImage,
       };
     });
   }, [badge.requirements, badge.levelKey, badgeStatus, badge.badgeImage, hasBadgeId, isSpecialBadge, dynamicRequirements]);

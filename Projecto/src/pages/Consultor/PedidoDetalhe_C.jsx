@@ -152,7 +152,7 @@ function PedidoDetalheC() {
                     {openRequirementId === item.id && (
                       <div className="tm-order-requirement-detail">
                         <div className="tm-order-requirement-detail-media">
-                          <img src={request.badgeImage} alt={request.badge} className="tm-order-requirement-detail-image" />
+                          <img src={item.image || request.badgeImage} alt={request.badge} className="tm-order-requirement-detail-image" />
                         </div>
                         <p>
                           {item.description ||

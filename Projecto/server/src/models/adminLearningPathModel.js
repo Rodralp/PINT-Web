@@ -41,7 +41,7 @@ const buildLearningPathTree = (rows) => {
         name: row.sline,
         description: row.sl_desc,
         isActive: Boolean(row.sl_is_active),
-        image: '/LP_BG.png',
+        image: row.sl_image || '/LP_BG.png',
         areas: [],
       };
 
@@ -109,6 +109,7 @@ export const adminLearningPathModel = {
           sl.nsline,
           sl.sline,
           sl.sl_desc,
+          sl.imagem AS sl_image,
           sl.is_active AS sl_is_active,
           a.narea,
           a.area,
@@ -173,15 +174,15 @@ export const adminLearningPathModel = {
     return row || null;
   },
 
-  async createServiceLine({ learningPathId, name, description }) {
+  async createServiceLine({ learningPathId, name, description, image }) {
     const [row] = await sequelize.query(
       `
-        INSERT INTO service_line (sline, sl_desc, nlpath)
-        VALUES (:name, :description, :learningPathId)
-        RETURNING nsline, sline, sl_desc, nlpath, is_active
+        INSERT INTO service_line (sline, sl_desc, imagem, nlpath)
+        VALUES (:name, :description, :image, :learningPathId)
+        RETURNING nsline, sline, sl_desc, imagem, nlpath, is_active
       `,
       {
-        replacements: { name, description, learningPathId },
+        replacements: { name, description, image, learningPathId },
         type: QueryTypes.SELECT,
       },
     );
@@ -189,17 +190,18 @@ export const adminLearningPathModel = {
     return row || null;
   },
 
-  async updateServiceLine({ serviceLineId, name, description }) {
+  async updateServiceLine({ serviceLineId, name, description, image }) {
     const [row] = await sequelize.query(
       `
         UPDATE service_line
         SET sline = :name,
-            sl_desc = :description
+            sl_desc = :description,
+            imagem = :image
         WHERE nsline = :serviceLineId
-        RETURNING nsline, sline, sl_desc, nlpath, is_active
+        RETURNING nsline, sline, sl_desc, imagem, nlpath, is_active
       `,
       {
-        replacements: { serviceLineId, name, description },
+        replacements: { serviceLineId, name, description, image },
         type: QueryTypes.SELECT,
       },
     );
@@ -358,7 +360,7 @@ export const adminLearningPathModel = {
           UPDATE service_line
           SET is_active = :isActive
           WHERE nsline = :serviceLineId
-          RETURNING nsline, sline, sl_desc, nlpath, is_active
+          RETURNING nsline, sline, sl_desc, imagem, nlpath, is_active
         `,
         {
           replacements: { serviceLineId, isActive: targetStatus },

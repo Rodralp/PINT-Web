@@ -1,11 +1,22 @@
 import { adminLearningPathService } from '../services/adminLearningPathService.js';
 
+const MAX_IMAGE_LENGTH = 2_500_000;
+
 const parseEntityId = (value) => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 };
 
 const normalizeText = (value) => String(value || '').trim();
+
+const parseImage = (value) => {
+  const normalized = String(value || '').trim();
+  if (!normalized || normalized.length > MAX_IMAGE_LENGTH) {
+    return null;
+  }
+
+  return normalized;
+};
 
 const parseIsActive = (value) => {
   if (typeof value === 'boolean') {
@@ -39,6 +50,7 @@ const toServiceLineResponse = (row) => ({
   id: Number(row?.nsline),
   name: row?.sline,
   description: row?.sl_desc,
+  image: row?.imagem || null,
   learningPathId: Number(row?.nlpath),
   isActive: Boolean(row?.is_active),
 });
@@ -117,6 +129,7 @@ export const createServiceLine = async (req, res) => {
   const learningPathId = parseEntityId(req.params?.learningPathId);
   const name = normalizeText(req.body?.name);
   const description = normalizeText(req.body?.description);
+  const image = parseImage(req.body?.image || req.body?.imagem);
 
   if (!learningPathId) {
     res.status(400).json({ message: 'Learning path id is required.' });
@@ -136,7 +149,7 @@ export const createServiceLine = async (req, res) => {
       return;
     }
 
-    const row = await adminLearningPathService.createServiceLine({ learningPathId, name, description });
+    const row = await adminLearningPathService.createServiceLine({ learningPathId, name, description, image });
     res.status(201).json(toServiceLineResponse(row));
   } catch (error) {
     res.status(500).json({ message: error?.message || 'Failed to create service line.' });
@@ -147,6 +160,7 @@ export const updateServiceLine = async (req, res) => {
   const serviceLineId = parseEntityId(req.params?.serviceLineId);
   const name = normalizeText(req.body?.name);
   const description = normalizeText(req.body?.description);
+  const image = parseImage(req.body?.image || req.body?.imagem);
 
   if (!serviceLineId) {
     res.status(400).json({ message: 'Service line id is required.' });
@@ -159,7 +173,7 @@ export const updateServiceLine = async (req, res) => {
   }
 
   try {
-    const row = await adminLearningPathService.updateServiceLine({ serviceLineId, name, description });
+    const row = await adminLearningPathService.updateServiceLine({ serviceLineId, name, description, image });
 
     if (!row) {
       res.status(404).json({ message: 'Service line not found.' });

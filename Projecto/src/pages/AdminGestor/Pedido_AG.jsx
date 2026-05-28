@@ -275,7 +275,7 @@ function PedidoAG() {
                       <div className="ag-order-requirement-detail">
                         <div className="ag-order-requirement-detail-media">
                           <img
-                            src={request.badgeImage}
+                            src={item.image || request.badgeImage}
                             alt={request.badge}
                             className="ag-order-requirement-detail-image"
                           />

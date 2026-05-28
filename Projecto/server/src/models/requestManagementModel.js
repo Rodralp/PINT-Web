@@ -422,7 +422,7 @@ const buildRequirements = async (pedidoId, badgeId, levelName) => {
   const [requirementsRows, evidenceRows] = await Promise.all([
     sequelize.query(
       `
-        SELECT nreq, requisito, r_descricao
+        SELECT nreq, requisito, r_descricao, imagem
         FROM requisitos
         WHERE nbadge = :badgeId
         ORDER BY nreq ASC
@@ -487,6 +487,7 @@ const buildRequirements = async (pedidoId, badgeId, levelName) => {
         id: `req-${requirementId}`,
         title: row.requisito,
         description: row.r_descricao,
+        image: row.imagem || null,
         files,
         attachments,
       });

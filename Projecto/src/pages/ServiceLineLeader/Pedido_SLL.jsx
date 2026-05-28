@@ -277,7 +277,7 @@ function PedidoSLL() {
                         <div className="sll-order-requirement-detail">
                           <div className="sll-order-requirement-detail-media">
                             <img
-                              src={request.badgeImage}
+                              src={item.image || request.badgeImage}
                               alt={request.badge}
                               className="sll-order-requirement-detail-image"
                             />

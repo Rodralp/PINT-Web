@@ -720,6 +720,37 @@
   color: #4b5563;
 }
 
+.lp-admin-modal-image-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.lp-admin-modal-image-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lp-admin-modal-image-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  border: 1px solid #d9e3f0;
+  background: #f8fafc;
+  object-fit: cover;
+}
+
+.lp-admin-modal-image-field small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+}
+
 .lp-admin-modal-form input,
 .lp-admin-modal-form textarea {
   border: 1px solid #d9e3f0;

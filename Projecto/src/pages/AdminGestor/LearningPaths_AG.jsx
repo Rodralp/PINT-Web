@@ -30,6 +30,7 @@ const SIDEBAR_WIDTH_STORAGE_KEY = 'lp-admin-explorer-sidebar-width';
 const SIDEBAR_DEFAULT_WIDTH = 300;
 const SIDEBAR_MIN_WIDTH = 240;
 const SIDEBAR_MAX_WIDTH = 560;
+const MAX_EDITOR_IMAGE_SIZE_BYTES = 1_500_000;
 
 const clampSidebarWidth = (value) => Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, value));
 
@@ -58,6 +59,7 @@ const buildEditorForm = (type, entity) => {
       return {
         name: entity?.name || '',
         description: entity?.description || '',
+        image: entity?.image || '/LP_BG.png',
       };
     case 'area':
       return {
@@ -72,6 +74,13 @@ const buildEditorForm = (type, entity) => {
       return {};
   }
 };
+
+const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(String(reader.result || ''));
+  reader.onerror = () => reject(new Error('Nao foi possivel ler o ficheiro de imagem.'));
+  reader.readAsDataURL(file);
+});
 
 const getEditorEntity = (paths, editor) => {
   if (!editor) {
@@ -370,6 +379,46 @@ function LearningPathsAG() {
     setEditorError('');
   };
 
+  const handleEditorImageFileChange = async (event) => {
+    const input = event.target;
+    const selectedFile = input.files?.[0];
+    if (!selectedFile) {
+      return;
+    }
+
+    if (!String(selectedFile.type || '').startsWith('image/')) {
+      setEditorError('Escolha um ficheiro de imagem valido.');
+      input.value = '';
+      return;
+    }
+
+    if (selectedFile.size > MAX_EDITOR_IMAGE_SIZE_BYTES) {
+      setEditorError('A imagem e demasiado grande (maximo 1.5MB).');
+      input.value = '';
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(selectedFile);
+      setEditorForm((current) => ({
+        ...current,
+        image: dataUrl,
+      }));
+      setEditorError('');
+    } catch (error) {
+      setEditorError(error?.message || 'Nao foi possivel carregar a imagem.');
+    } finally {
+      input.value = '';
+    }
+  };
+
+  const clearEditorImage = () => {
+    setEditorForm((current) => ({
+      ...current,
+      image: '/LP_BG.png',
+    }));
+  };
+
   const handleSaveEditor = async () => {
     if (!editor || !editorForm || isSaving) {
       return;
@@ -444,6 +493,7 @@ function LearningPathsAG() {
           const created = await createAdminServiceLine(numericPathId, {
             name: trimmedName,
             description: trimmedDescription,
+            image: editorForm.image || null,
           });
           const newServiceLineId = buildEntityId('service-line', created.id);
           const nextExpandedPaths = Array.from(new Set([...expandedPathIds, pathId]));
@@ -466,6 +516,7 @@ function LearningPathsAG() {
         await updateAdminServiceLine(serviceLineId, {
           name: trimmedName,
           description: trimmedDescription,
+          image: editorForm.image || null,
         });
         await loadLearningPaths({ pathId, serviceLineId: editor.serviceLineId, expandedPathIds });
         closeEditor();
@@ -1168,6 +1219,24 @@ function LearningPathsAG() {
                         }
                       />
                     </label>
+                  )}
+
+                  {editor.type === 'serviceLine' && (
+                    <div className="lp-admin-modal-image-field">
+                      <span>Imagem da Service Line</span>
+                      <input type="file" accept="image/*" onChange={handleEditorImageFileChange} />
+                      <div className="lp-admin-modal-image-preview-row">
+                        <img
+                          src={editorForm?.image || '/LP_BG.png'}
+                          alt="Preview Service Line"
+                          className="lp-admin-modal-image-preview"
+                        />
+                        <button type="button" className="lp-admin-btn ghost" onClick={clearEditorImage}>
+                          Repor imagem padrao
+                        </button>
+                      </div>
+                      <small>Formatos suportados: png, jpg, svg, etc. (maximo 1.5MB).</small>
+                    </div>
                   )}
 
                   {editor.type === 'level' && (

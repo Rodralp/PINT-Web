@@ -52,6 +52,7 @@ export const serviceLineLeaderModel = {
           sl.nsline,
           sl.sline,
           sl.sl_desc,
+          sl.imagem AS sl_image,
           lp.nlpath,
           lp.lpath,
           lp.lp_desc
@@ -145,7 +146,7 @@ export const serviceLineLeaderModel = {
         id: `service-line-${serviceLineRow.nsline}`,
         name: serviceLineRow.sline,
         description: serviceLineRow.sl_desc,
-        image: '/LP_BG.png',
+        image: serviceLineRow.sl_image || '/LP_BG.png',
         learningPath: {
           id: `learning-path-${serviceLineRow.nlpath}`,
           name: serviceLineRow.lpath,

@@ -718,7 +718,7 @@ const loadRequirementsByBadgeIds = async (badgeIds) => {
 
   const rows = await sequelize.query(
     `
-      SELECT nbadge, nreq, requisito, r_descricao
+      SELECT nbadge, nreq, requisito, r_descricao, imagem
       FROM requisitos
       WHERE nbadge IN (:badgeIds)
       ORDER BY nbadge ASC, nreq ASC
@@ -739,6 +739,7 @@ const loadRequirementsByBadgeIds = async (badgeIds) => {
       id: `req-${Number(row.nreq)}`,
       title: row.requisito || 'Requisito',
       description: row.r_descricao || 'Texto de suporte do requisito associado a candidatura.',
+      image: row.imagem || null,
       files: 0,
       attachments: [],
     });
@@ -1163,6 +1164,7 @@ const buildLearningPaths = async (accountId) => {
         sl.nsline,
         sl.sline,
         sl.sl_desc,
+        sl.imagem AS sl_image,
         a.narea,
         a.area,
         a.a_desc,
@@ -1282,7 +1284,7 @@ const buildLearningPaths = async (accountId) => {
         id: serviceLineId,
         name: row.sline,
         description: row.sl_desc,
-        image: '/LP_BG.png',
+        image: row.sl_image || '/LP_BG.png',
         areas: [],
       };
 
@@ -2365,7 +2367,7 @@ export const consultorModel = {
 
     const rows = await sequelize.query(
       `
-        SELECT nreq, requisito, r_descricao
+        SELECT nreq, requisito, r_descricao, imagem
         FROM requisitos
         WHERE nbadge = :badgeId
         ORDER BY nreq ASC
@@ -2380,6 +2382,7 @@ export const consultorModel = {
       id: `req-${Number(row.nreq)}`,
       title: row.requisito || 'Requisito',
       description: row.r_descricao || 'Texto de suporte do requisito associado a candidatura.',
+      image: row.imagem || null,
       files: 0,
       attachments: [],
     }));

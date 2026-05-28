@@ -114,12 +114,13 @@ const parseStandardRequirements = (value) => {
     .map((item) => {
       const title = normalizeText(item?.title || item?.requisito, 50);
       const description = normalizeText(item?.description || item?.r_descricao, 255);
+      const image = parseBadgeImage(item?.image || item?.imagem);
 
       if (!title || !description) {
         return null;
       }
 
-      return { title, description };
+      return { title, description, image };
     })
     .filter(Boolean);
 };

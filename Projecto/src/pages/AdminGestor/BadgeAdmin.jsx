@@ -46,6 +46,7 @@ const buildStandardRequirement = (seed = {}) => ({
   id: seed.id || `req-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   title: seed.title || seed.requisito || '',
   description: seed.description || seed.r_descricao || '',
+  image: seed.image || seed.imagem || seed.r_imagem || '',
 });
 
 const resolveLevelMeta = (levelKey) =>
@@ -439,6 +440,40 @@ function BadgeAdmin() {
     }));
   };
 
+  const handleStandardRequirementImageFileChange = (id) => async (event) => {
+    const input = event.target;
+    const selectedFile = input.files?.[0];
+    if (!selectedFile) {
+      return;
+    }
+
+    if (!String(selectedFile.type || '').startsWith('image/')) {
+      setStatusMessage('Escolha um ficheiro de imagem valido.');
+      input.value = '';
+      return;
+    }
+
+    if (selectedFile.size > MAX_BADGE_IMAGE_SIZE_BYTES) {
+      setStatusMessage('A imagem e demasiado grande (maximo 1.5MB).');
+      input.value = '';
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(selectedFile);
+      updateStandardRequirement(id, { image: dataUrl });
+      setStatusMessage('');
+    } catch (error) {
+      setStatusMessage(error?.message || 'Nao foi possivel carregar a imagem.');
+    } finally {
+      input.value = '';
+    }
+  };
+
+  const clearStandardRequirementImage = (id) => {
+    updateStandardRequirement(id, { image: '' });
+  };
+
   const addStandardRequirement = () => {
     setForm((current) => ({
       ...current,
@@ -531,6 +566,7 @@ function BadgeAdmin() {
         .map((requirement) => ({
           title: String(requirement.title || '').trim(),
           description: String(requirement.description || '').trim(),
+          image: requirement.image || null,
         }))
         .filter((requirement) => requirement.title && requirement.description);
 
@@ -773,6 +809,33 @@ function BadgeAdmin() {
                     onChange={(event) => updateStandardRequirement(req.id, { description: event.target.value })}
                     placeholder="Descrição do requisito"
                   />
+                  <div className="badge-admin-req-image-field">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleStandardRequirementImageFileChange(req.id)}
+                      aria-label="Imagem do requisito"
+                    />
+                    {req.image ? (
+                      <div className="badge-admin-req-image-preview-row">
+                        <img
+                          className="badge-admin-req-image-preview"
+                          src={req.image}
+                          alt="Preview requisito"
+                        />
+                        <button
+                          type="button"
+                          className="badge-admin-btn ghost"
+                          onClick={() => clearStandardRequirementImage(req.id)}
+                        >
+                          <XCircle size={16} />
+                          Remover
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="badge-admin-help-text">Imagem opcional</span>
+                    )}
+                  </div>
                   <button
                     type="button"
                     className="badge-admin-btn icon"
