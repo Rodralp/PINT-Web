@@ -5,6 +5,7 @@ const badgeFrameByLevel = {
   badge_level_intermediate: '/badges/Interm%C3%A9dio.png',
   badge_level_senior: '/badges/S%C3%A9nior.png',
   badge_level_specialist: '/badges/Especialista.png',
+  special: '/badges/Especial.png',
   badge_level_knowledge_lead: '/badges/L%C3%ADder%20de%20Conhecimento.png',
 };
 
@@ -47,6 +48,10 @@ const resolveBadgeFrameImage = ({ levelKey, typeId, levelLabel }) => {
 
   if (normalized.includes('especialista') || normalized.includes('specialist')) {
     return badgeFrameByLevel.badge_level_specialist;
+  }
+
+  if (normalized.includes('especial') || normalized.includes('special')) {
+    return badgeFrameByLevel.special;
   }
 
   if (normalized.includes('lider') || normalized.includes('lead')) {
@@ -92,8 +97,8 @@ function BadgeImage({
       aria-hidden={alt ? undefined : true}
     >
       <span className="badge-image-composite-stage" aria-hidden="true">
-        <img className="badge-image-composite-frame" src={resolvedFrameSrc} alt="" />
         <img className="badge-image-composite-inner" src={resolvedImageSrc} alt="" />
+        <img className="badge-image-composite-frame" src={resolvedFrameSrc} alt="" />
       </span>
     </span>
   );

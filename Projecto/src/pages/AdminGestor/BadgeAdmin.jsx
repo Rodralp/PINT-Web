@@ -141,7 +141,7 @@ const buildFormState = (badge, isCreate) => {
       ? 0
       : levelMeta.points;
 
-  const badgeImage = badge?.badgeImage || (isSpecial ? '/badges/default.png' : levelMeta.badgeImage);
+  const badgeImage = badge?.badgeImage || (isSpecial ? '/badges/Especial.png' : levelMeta.badgeImage);
 
   const specialRequirements = Array.isArray(badge?.specialRequirements) && badge.specialRequirements.length > 0
     ? badge.specialRequirements.map((req) => buildRequirement(req))
@@ -405,7 +405,7 @@ function BadgeAdmin() {
   const clearCustomImage = () => {
     setForm((current) => ({
       ...current,
-      badgeImage: isSpecial ? '/badges/default.png' : selectedBadgeTypeMeta.badgeImage,
+      badgeImage: isSpecial ? '/badges/Especial.png' : selectedBadgeTypeMeta.badgeImage,
     }));
   };
 

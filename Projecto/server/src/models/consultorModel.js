@@ -1026,6 +1026,44 @@ const buildProfileData = async (accountId) => {
     points: Number(r.points) || 0,
   }));
 
+  // Build a lightweight certifications list from recently obtained badges
+  const certRows = await sequelize.query(
+    `
+      SELECT DISTINCT ON (cb.nbadge)
+        cb.nbadge,
+        b.b_nome,
+        n.nivel,
+        t.tipo
+      FROM c_obtem_b AS cb
+      INNER JOIN badge AS b
+        ON b.nbadge = cb.nbadge
+      LEFT JOIN nivel_contem_b AS ncb
+        ON ncb.nbadge = b.nbadge
+      LEFT JOIN nivel AS n
+        ON n.nnivel = ncb.nnivel
+      LEFT JOIN tipo AS t
+        ON t.ntipo = b.ntipo
+      WHERE cb.nutilizador = :accountId
+      ORDER BY cb.nbadge, cb.data_obtencao DESC
+      LIMIT 5
+    `,
+    {
+      replacements: { accountId: parsedAccountId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  const certificationsItems = (certRows || []).map((r) => {
+    const template = typeof resolveBadgeTemplate === 'function'
+      ? resolveBadgeTemplate(r.nivel, 0, r.tipo)
+      : { levelKey: 'badge_level_specialist' };
+
+    return {
+      title: r.b_nome || r.nivel || 'Badge',
+      levelKey: template.levelKey || 'badge_level_specialist',
+    };
+  });
+
   // Fetch request count for this user
   const requestCountRows = await sequelize.query(
     `
@@ -1145,6 +1183,7 @@ const buildProfileData = async (accountId) => {
       accent: 'yellow',
     })),
     activityItems: activityItems.length > 0 ? activityItems : clone(profileData.activityItems),
+    certificationsItems: certificationsItems.length > 0 ? certificationsItems : clone(profileData.certificationsItems || []),
     user: {
       id: Number(row.id),
       name: row.nome,
