@@ -6,6 +6,7 @@ import Navbar from './components/Navbar';
 import BadgeImage from './components/BadgeImage';
 import { fetchCatalogBadges, fetchRankingConsultores } from './services/consultorService';
 import './css/GaleriaPublica.css';
+import './css/Consultor/CatalogoBadges_C.css';
 
 const fallbackBadges = [
   { id: 'cloud-junior', name: 'Cloud Architecture', area: 'Cloud Architecture', levelKey: 'badge_level_junior', levelLabel: 'Junior', points: 100, badgeImage: '/badges/J%C3%BAnior.png', date: '12 Jan 2026' },
@@ -304,36 +305,32 @@ function GaleriaPublica() {
               ))}
             </div>
           ) : (
-            <section className="gp-grid" aria-label={t('public_gallery_consultores')}>
-              {filteredConsultores.map((consultor, index) => (
+            <section className="catalog-grid gp-consultor-grid" aria-label={t('public_gallery_consultores')}>
+              {filteredConsultores.map((consultor) => (
                 <article
                   key={consultor.id}
-                  className="gp-card gp-consultor-card"
+                  className="catalog-card gp-consultor-card"
                   role="button"
                   tabIndex={0}
                   onClick={() => handleOpenConsultorProfile(consultor)}
                   onKeyDown={(event) => handleConsultorCardKeyDown(event, consultor)}
                 >
-                  <strong className="gp-rank">#{index + 1}</strong>
-                  <h2>{consultor.name}</h2>
-                  <p>{consultor.email}</p>
-                  
-                  {Array.isArray(consultor.serviceLineStats) && consultor.serviceLineStats.length > 0 ? (
-                    <div className="gp-service-lines">
-                      {consultor.serviceLineStats.slice(0, 2).map((stat) => (
-                        <div key={`sl-${stat.serviceLine}`} className="gp-service-line-item">
-                          <span className="gp-sl-name">{stat.serviceLine}</span>
-                          <span className="gp-sl-meta">{stat.badges} badges</span>
-                        </div>
-                      ))}
+                  <div className="catalog-badge-frame gp-consultor-avatar-frame" aria-hidden="true">
+                    <img className="gp-consultor-avatar" src={consultor.avatar} alt="" />
+                  </div>
+
+                  <div className="catalog-card-title gp-consultor-name">{consultor.name}</div>
+                  <div className="catalog-card-level gp-consultor-email">{consultor.email}</div>
+
+                  <div className="catalog-card-meta gp-consultor-footer">
+                    <div className="catalog-meta-row">
+                      <Trophy size={14} />
+                      <span>{consultor.points} pts</span>
                     </div>
-                  ) : (
-                    <p>{consultor.serviceLine}</p>
-                  )}
-                  
-                  <div className="gp-consultor-stats">
-                    <span>{`${consultor.points} pts`}</span>
-                    <span>{`${consultor.badges} badges`}</span>
+                    <div className="catalog-meta-row">
+                      <Clock3 size={14} />
+                      <span>{consultor.badges} badges</span>
+                    </div>
                   </div>
                 </article>
               ))}
