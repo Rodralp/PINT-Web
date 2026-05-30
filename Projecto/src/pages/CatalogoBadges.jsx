@@ -3,6 +3,7 @@ import { Clock3, Filter, Search, SlidersHorizontal, Trophy, ChevronLeft, Chevron
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../components/Layout';
+import BadgeImage from '../components/BadgeImage';
 import { fetchCatalogBadges } from '../services/consultorService';
 import '../css/Consultor/CatalogoBadges_C.css';
 
@@ -361,7 +362,15 @@ function CatalogoBadges() {
                   onKeyDown={(event) => handleCardKeyDown(event, item)}
                 >
                   <div className="catalog-badge-frame">
-                    <img className="catalog-badge-image" src={item.badgeImage} alt={levelLabel} />
+                    <BadgeImage
+                      className="catalog-badge-image"
+                      src={item.badgeImage}
+                      alt={levelLabel}
+                      frameSrc={item.badgeFrameImage}
+                      levelKey={item.levelKey}
+                      typeId={item.typeId}
+                      levelLabel={levelLabel}
+                    />
                   </div>
 
                   <div className="catalog-card-title">{badgeTitle}</div>

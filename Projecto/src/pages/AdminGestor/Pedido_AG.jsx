@@ -18,6 +18,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
+import BadgeImage from '../../components/BadgeImage';
 import '../../css/Shared/GestaoPedidosDetalhe.css';
 import {
   fetchManagedRequestById,
@@ -212,7 +213,14 @@ function PedidoAG() {
           <div className="ag-order-hero-main">
             <div className="ag-order-hero-card">
               <div className="ag-order-badge-frame">
-                <img src={request.badgeImage} alt={request.badge} className="ag-order-badge-image" />
+                <BadgeImage
+                  className="ag-order-badge-image"
+                  src={request.badgeImage}
+                  alt={request.badge}
+                  frameSrc={request.badgeFrameImage}
+                  levelKey={request.levelKey}
+                  levelLabel={request.levelLabel}
+                />
               </div>
 
               <div className="ag-order-hero-content">

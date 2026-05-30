@@ -3,6 +3,7 @@ import { ArrowLeft, Clock3, Eye, EyeOff, FileText, Trophy } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from './components/Navbar';
+import BadgeImage from './components/BadgeImage';
 import { fetchCatalogBadges, fetchBadgeRequirements } from './services/consultorService';
 import './css/BadgePublica.css';
 
@@ -129,6 +130,8 @@ function BadgePublica() {
   );
 
   const badgeTitle = badge.name || badge.area || 'Badge';
+  const isSpecialBadge = Boolean(badge?.isSpecial) || badge?.typeId === 'special' || !badge?.levelKey;
+  const levelLabel = isSpecialBadge ? 'Especial' : t(badge.levelKey || '');
 
   useEffect(() => {
     let isMounted = true;
@@ -220,12 +223,20 @@ function BadgePublica() {
 
             <section className="bp-hero-card" aria-label={`Detalhes do badge ${badgeId || ''}`}>
               <div className="bp-hero-media">
-                <img src={badge.badgeImage} alt={t(badge.levelKey)} className="bp-hero-image" />
+                <BadgeImage
+                  className="bp-hero-image"
+                  src={badge.badgeImage}
+                  alt={levelLabel}
+                  frameSrc={badge.badgeFrameImage}
+                  levelKey={badge.levelKey}
+                  typeId={badge.typeId}
+                  levelLabel={levelLabel}
+                />
               </div>
 
               <div className="bp-hero-content">
                 <h2>{badgeTitle}</h2>
-                <p>{t(badge.levelKey)}</p>
+                <p>{levelLabel}</p>
 
                 <div className="bp-hero-meta">
                   <span>
@@ -246,7 +257,7 @@ function BadgePublica() {
             </section>
 
             <p className="bp-breadcrumb">
-              Jornada Tecnica {'>'} Application Operations {'>'} {badgeTitle} {'>'} {t(badge.levelKey)}
+              Jornada Tecnica {'>'} Application Operations {'>'} {badgeTitle} {'>'} {levelLabel}
             </p>
 
             <section className="bp-requirements-card">

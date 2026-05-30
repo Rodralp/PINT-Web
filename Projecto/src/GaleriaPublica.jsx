@@ -3,6 +3,7 @@ import { Clock3, Search, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import BadgeImage from './components/BadgeImage';
 import { fetchCatalogBadges, fetchRankingConsultores } from './services/consultorService';
 import './css/GaleriaPublica.css';
 
@@ -52,16 +53,25 @@ const normalizeBadges = (items) => {
     return fallbackBadges;
   }
 
-  return items.map((item, index) => ({
-    id: item.id || `${item.area || 'badge'}-${index}`,
-    name: item.name || item.title || item.area || 'Badge',
-    area: item.area || 'Area Tecnica',
-    levelKey: resolveBadgeLevelKey(item),
-    levelLabel: resolveBadgeLevel(item),
-    points: Number(item.points) || 0,
-    badgeImage: item.badgeImage || '/badges/Interm%C3%A9dio.png',
-    date: item.date || '12 Jan 2026',
-  }));
+  return items.map((item, index) => {
+    const isSpecial = Boolean(item.isSpecial) || item.typeId === 'special';
+    const levelKey = isSpecial ? null : resolveBadgeLevelKey(item);
+    const levelLabel = isSpecial ? 'Especial' : resolveBadgeLevel({ ...item, levelKey });
+
+    return {
+      id: item.id || `${item.area || 'badge'}-${index}`,
+      name: item.name || item.title || item.area || 'Badge',
+      area: item.area || 'Area Tecnica',
+      levelKey,
+      levelLabel,
+      typeId: item.typeId || levelKey,
+      isSpecial,
+      points: Number(item.points) || 0,
+      badgeImage: item.badgeImage || '/badges/Interm%C3%A9dio.png',
+      badgeFrameImage: item.badgeFrameImage || null,
+      date: item.date || '12 Jan 2026',
+    };
+  });
 };
 
 const normalizeConsultores = (items) => {
@@ -266,11 +276,19 @@ function GaleriaPublica() {
                   onKeyDown={(event) => handleCardKeyDown(event, item)}
                 >
                   <div className="catalog-badge-frame">
-                    <img className="catalog-badge-image" src={item.badgeImage} alt={t(item.levelKey)} />
+                    <BadgeImage
+                      className="catalog-badge-image"
+                      src={item.badgeImage}
+                      alt={item.levelKey ? t(item.levelKey) : item.levelLabel}
+                      frameSrc={item.badgeFrameImage}
+                      levelKey={item.levelKey}
+                      typeId={item.typeId}
+                      levelLabel={item.levelLabel}
+                    />
                   </div>
 
                   <div className="catalog-card-title">{item.name || item.area || 'Badge'}</div>
-                  <div className="catalog-card-level">{t(item.levelKey)}</div>
+                  <div className="catalog-card-level">{item.levelKey ? t(item.levelKey) : item.levelLabel}</div>
 
                   <div className="catalog-card-meta">
                     <div className="catalog-meta-row">

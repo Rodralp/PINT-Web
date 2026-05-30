@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, Plus, Save, Trash2, XCircle } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
+import BadgeImage from '../../components/BadgeImage';
 import { fetchAdminLearningPaths } from '../../services/adminLearningPathService';
 import { createAdminBadge, fetchAdminBadge, updateAdminBadge } from '../../services/adminBadgeService';
 import '../../css/AdminGestor/BadgeAdmin.css';
@@ -709,7 +710,14 @@ function BadgeAdmin() {
               <span>Imagem do badge (ficheiro)</span>
               <input type="file" accept="image/*" onChange={handleImageFileChange} />
               <div className="badge-admin-image-preview-wrap">
-                <img className="badge-admin-image-preview" src={form.badgeImage} alt="Preview badge" />
+                <BadgeImage
+                  className="badge-admin-image-preview"
+                  src={form.badgeImage}
+                  alt="Preview badge"
+                  frameSrc={isSpecial ? false : selectedBadgeTypeMeta.badgeImage}
+                  levelKey={form.badgeTypeId}
+                  levelLabel={selectedBadgeTypeMeta.label}
+                />
                 <button type="button" className="badge-admin-btn ghost" onClick={clearCustomImage}>
                   <XCircle size={16} />
                   Repor imagem padrão

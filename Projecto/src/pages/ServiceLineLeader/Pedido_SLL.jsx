@@ -18,6 +18,7 @@ import {
   SendHorizontal,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
+import BadgeImage from '../../components/BadgeImage';
 import '../../css/Shared/GestaoPedidosDetalhe.css';
 import {
   fetchManagedRequestById,
@@ -213,7 +214,14 @@ function PedidoSLL() {
           <div className="sll-order-hero-main">
             <div className="sll-order-hero-card">
               <div className="sll-order-badge-frame">
-                <img src={request.badgeImage} alt={request.badge} className="sll-order-badge-image" />
+                <BadgeImage
+                  className="sll-order-badge-image"
+                  src={request.badgeImage}
+                  alt={request.badge}
+                  frameSrc={request.badgeFrameImage}
+                  levelKey={request.levelKey}
+                  levelLabel={request.levelLabel}
+                />
               </div>
 
               <div className="sll-order-hero-content">

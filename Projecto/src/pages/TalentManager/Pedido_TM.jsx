@@ -17,6 +17,7 @@ import {
   SquareCheckBig,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
+import BadgeImage from '../../components/BadgeImage';
 import '../../css/Shared/GestaoPedidosDetalhe.css';
 import {
   fetchManagedRequestById,
@@ -214,7 +215,14 @@ function PedidoTM() {
           <div className="tm-order-hero-main">
             <div className="tm-order-hero-card">
               <div className="tm-order-badge-frame">
-                <img src={request.badgeImage} alt={request.badge} className="tm-order-badge-image" />
+                <BadgeImage
+                  className="tm-order-badge-image"
+                  src={request.badgeImage}
+                  alt={request.badge}
+                  frameSrc={request.badgeFrameImage}
+                  levelKey={request.levelKey}
+                  levelLabel={request.levelLabel}
+                />
               </div>
 
               <div className="tm-order-hero-content">

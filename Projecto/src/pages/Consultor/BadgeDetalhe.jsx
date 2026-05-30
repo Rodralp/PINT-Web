@@ -18,6 +18,7 @@ import {
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
+import BadgeImage from '../../components/BadgeImage';
 import {
   fetchBadgeRequirements,
   fetchMyBadges,
@@ -558,7 +559,15 @@ function BadgeDetalhe() {
 
         <section className="badge-hero-card" aria-label={`Detalhes do badge ${badgeId || ''}`}>
           <div className="badge-hero-media">
-            <img src={badge.badgeImage} alt={levelLabel} className="badge-hero-image" />
+            <BadgeImage
+              className="badge-hero-image"
+              src={badge.badgeImage}
+              alt={levelLabel}
+              frameSrc={badge.badgeFrameImage}
+              levelKey={badge.levelKey}
+              typeId={badge.typeId}
+              levelLabel={levelLabel}
+            />
           </div>
 
           <div className="badge-hero-content">

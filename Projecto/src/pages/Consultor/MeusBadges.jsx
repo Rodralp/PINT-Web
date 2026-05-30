@@ -3,6 +3,7 @@ import { CheckCircle2, Clock3, Filter, SearchCheck, Search, SlidersHorizontal, T
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
+import BadgeImage from '../../components/BadgeImage';
 import { fetchMyBadges } from '../../services/consultorService';
 import '../../css/Consultor/CatalogoBadges_C.css';
 
@@ -350,7 +351,15 @@ function MeusBadges() {
                   }}
                 >
                   <div className="catalog-badge-frame">
-                    <img className="catalog-badge-image" src={item.badgeImage} alt={levelLabel} />
+                    <BadgeImage
+                      className="catalog-badge-image"
+                      src={item.badgeImage}
+                      alt={levelLabel}
+                      frameSrc={item.badgeFrameImage}
+                      levelKey={item.levelKey}
+                      typeId={item.typeId}
+                      levelLabel={levelLabel}
+                    />
                   </div>
 
                   <div className="catalog-card-title">{item.name || item.area || 'Badge'}</div>
