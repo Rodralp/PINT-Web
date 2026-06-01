@@ -164,6 +164,7 @@ const buildFormState = (badge, isCreate) => {
     date: badge?.date || formatDateLabel(),
     specialRequirements,
     requirements,
+    validade: badge?.validade || '',
   };
 };
 
@@ -581,6 +582,7 @@ function BadgeAdmin() {
       badgeImage: form.badgeImage || null,
       specialRequirements: specialRequirementsPayload,
       requirements: requirementsPayload,
+      validade: form.validade || null,
     };
 
     try {
@@ -704,6 +706,18 @@ function BadgeAdmin() {
                 onChange={handleFieldChange('points')}
               />
               {formErrors.points && <span className="badge-admin-error">{formErrors.points}</span>}
+            </label>
+
+            <label className="badge-admin-field">
+              <span>Data de expiração (opcional)</span>
+              <input
+                type="date"
+                value={form.validade || ''}
+                onChange={handleFieldChange('validade')}
+              />
+              <span className="badge-admin-help-text">
+                Se definida, a badge irá expirar nesta data. Deixe vazio para badge sem expiração.
+              </span>
             </label>
 
             <div className="badge-admin-field">

@@ -166,6 +166,15 @@ const eventNotificationDefaults = [
     email: true,
     webApp: true,
   },
+  {
+    event: 'Badge a expirar',
+    admin: false,
+    sll: false,
+    tl: false,
+    consultor: true,
+    email: true,
+    webApp: true,
+  },
 ];
 
 const userNotificationDefaults = [
@@ -1081,6 +1090,59 @@ export const communicationModel = {
       const mergedSettings = { ...defaults, ...overrides };
 
       return { settings: mergedSettings, defaults };
+    });
+  },
+
+  async dispatchBadgeExpiringNotification(userId, badgeName, daysUntilExpiration) {
+    return sequelize.transaction(async (transaction) => {
+      const eventKey = 'Badge a expirar';
+      const config = await fetchEventNotificationConfig(eventKey, transaction);
+
+      if (!config || !config.consultor) {
+        return null;
+      }
+
+      const logTitle = `Badge a expirar em ${daysUntilExpiration} dias`;
+      const logMessage = `A sua badge "${badgeName}" irá expirar em ${daysUntilExpiration} dias. Certifique-se de que utilizou os seus benefícios antes da data de expiração.`;
+      const logSummary = `Badge "${badgeName}" expira em ${daysUntilExpiration} dias.`;
+
+      const logId = await insertLogEntry({
+        actorId: userId,
+        title: logTitle,
+        message: logMessage,
+        type: 'aviso',
+        priority: 2,
+        transaction,
+      });
+
+      if (!logId) {
+        return null;
+      }
+
+      const inAppRecipients = [];
+
+      if (config.webApp) {
+        const hasInAppEnabled = await filterRecipientsByInAppPreference([userId], transaction);
+        if (hasInAppEnabled.length > 0) {
+          await sequelize.query(
+            `
+              INSERT INTO notificacao (nutilizador, nlog, lida)
+              VALUES (:recipientId, :logId, FALSE)
+            `,
+            {
+              replacements: {
+                recipientId: userId,
+                logId,
+              },
+              type: QueryTypes.INSERT,
+              transaction,
+            },
+          );
+          inAppRecipients.push(userId);
+        }
+      }
+
+      return { logId, recipients: inAppRecipients };
     });
   },
 };

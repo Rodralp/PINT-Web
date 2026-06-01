@@ -50,7 +50,23 @@ const badgeStates = [
   },
 ];
 
-const ITEMS_PER_PAGE = 10;
+const getColumnsCount = () => {
+  const width = window.innerWidth;
+  if (width > 1400) return 5;
+  if (width > 1200) return 4;
+  if (width > 900) return 3;
+  return 2;
+};
+
+const getExpirationStatus = (validade) => {
+  if (!validade) return null;
+  const today = new Date();
+  const expDate = new Date(validade);
+  const daysUntil = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+  if (daysUntil <= 0) return { status: 'expired', label: 'Expirada', days: daysUntil };
+  if (daysUntil <= 30) return { status: 'expiring', label: `Expira em ${daysUntil} dias`, days: daysUntil };
+  return null;
+};
 
 function MeusBadges() {
   const navigate = useNavigate();
@@ -64,9 +80,20 @@ function MeusBadges() {
   const [sortBy, setSortBy] = useState(defaultSort);
   const [badgeItems, setBadgeItems] = useState([]);
   const [statusMessage, setStatusMessage] = useState('');
+  const [columnsCount, setColumnsCount] = useState(getColumnsCount);
   
   const filterDropdownRef = useRef(null);
   const sortDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setColumnsCount(getColumnsCount());
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const itemsPerPage = columnsCount * 2;
 
   const badgeStateMap = useMemo(
     () => badgeStates.reduce((acc, item) => ({ ...acc, [item.id]: item }), {}),
@@ -150,7 +177,7 @@ function MeusBadges() {
     });
   }, [badgeItems, activeFilter, searchTerm, badgeStateMap, t]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredBadges.length / ITEMS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(filteredBadges.length / itemsPerPage));
 
   const sortedBadges = useMemo(() => {
     return [...filteredBadges].sort((a, b) => {
@@ -171,10 +198,10 @@ function MeusBadges() {
   }, [filteredBadges, sortBy]);
 
   const pagedBadges = useMemo(() => {
-    const start = (page - 1) * ITEMS_PER_PAGE;
-    const end = start + ITEMS_PER_PAGE;
+    const start = (page - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
     return sortedBadges.slice(start, end);
-  }, [sortedBadges, page]);
+  }, [sortedBadges, page, itemsPerPage]);
 
   const onSearchChange = (event) => {
     setSearchTerm(event.target.value);
@@ -332,10 +359,11 @@ function MeusBadges() {
 
           <div className="catalog-grid">
             {pagedBadges.map((item) => {
-              const isSpecial = Boolean(item?.isSpecial) || item?.typeId === 'special';
+              const isSpecial = Boolean(item?.isSpecial) || item?.typeId === 'special' || !item.levelKey;
               const levelLabel = isSpecial ? 'Especial' : t(item.levelKey || '');
               const currentState = badgeStateMap[item.stateId] || badgeStateMap.aprovado;
               const { Icon } = currentState;
+              const expirationInfo = getExpirationStatus(item.validade);
 
               return (
                 <article
@@ -350,6 +378,26 @@ function MeusBadges() {
                     borderColor: currentState.border,
                   }}
                 >
+                  {expirationInfo && expirationInfo.status === 'expiring' && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      background: 'rgba(251, 191, 36, 0.9)',
+                      color: '#92400e',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      zIndex: 1,
+                    }}>
+                      <Clock3 size={12} />
+                      {expirationInfo.label}
+                    </div>
+                  )}
                   <div className="catalog-badge-frame">
                     <BadgeImage
                       className="catalog-badge-image"
@@ -370,10 +418,35 @@ function MeusBadges() {
                       <Trophy size={14} />
                       <span>{item.points} {t('points')}</span>
                     </div>
-                    <div className="catalog-meta-row">
-                      <Clock3 size={14} />
-                      <span>{item.date}</span>
-                    </div>
+                    {item.status === 'obtido' && (
+                      <div className="catalog-meta-row">
+                        <CheckCircle2 size={14} />
+                        <span>Obtida: {item.date}</span>
+                      </div>
+                    )}
+                    {item.status === 'rejeitado' && (
+                      <div className="catalog-meta-row">
+                        <AlertTriangle size={14} />
+                        <span>Rejeitado: {item.date}</span>
+                      </div>
+                    )}
+                    {item.status !== 'obtido' && item.status !== 'rejeitado' && (
+                      <div className="catalog-meta-row">
+                        <TimerReset size={14} />
+                        <span>Pedido: {item.date}</span>
+                      </div>
+                    )}
+                    {item.validade && (
+                      <div className="catalog-meta-row">
+                        <Clock3 size={14} />
+                        <span>
+                          {expirationInfo?.status === 'expired'
+                            ? 'Expirada'
+                            : `Expira: ${new Date(item.validade).toLocaleDateString('pt-PT')}`
+                          }
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <button
@@ -385,8 +458,9 @@ function MeusBadges() {
                       handleOpenBadgeDetails(item);
                     }}
                     style={{
-                      marginTop: '10px',
-                      marginLeft: 'auto',
+                      position: 'absolute',
+                      bottom: '8px',
+                      right: '10px',
                       width: '34px',
                       height: '34px',
                       borderRadius: '8px',

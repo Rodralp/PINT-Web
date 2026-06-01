@@ -29,7 +29,23 @@ const badgeTypes = [
   { id: SPECIAL_BADGE_TYPE, label: 'Especial' },
 ];
 
-const ITEMS_PER_PAGE = 10;
+const getColumnsCount = () => {
+  const width = window.innerWidth;
+  if (width > 1400) return 5;
+  if (width > 1200) return 4;
+  if (width > 900) return 3;
+  return 2;
+};
+
+const getExpirationStatus = (validade) => {
+  if (!validade) return null;
+  const today = new Date();
+  const expDate = new Date(validade);
+  const daysUntil = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+  if (daysUntil <= 0) return { status: 'expired', label: 'Expirada', days: daysUntil };
+  if (daysUntil <= 30) return { status: 'expiring', label: `Expira em ${daysUntil} dias`, days: daysUntil };
+  return null;
+};
 
 const normalizeBadgeItem = (item) => {
   const typeId = item.typeId || item.levelKey || (item.isSpecial ? SPECIAL_BADGE_TYPE : null);
@@ -71,6 +87,17 @@ function CatalogoBadges() {
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const filterDropdownRef = useRef(null);
   const sortDropdownRef = useRef(null);
+  const [columnsCount, setColumnsCount] = useState(getColumnsCount);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setColumnsCount(getColumnsCount());
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const itemsPerPage = columnsCount * 2;
 
   useEffect(() => {
     let isMounted = true;
@@ -206,14 +233,14 @@ function CatalogoBadges() {
     });
   }, [filteredBadges, sortBy]);
 
-  const totalPages = Math.max(1, Math.ceil(sortedBadges.length / ITEMS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(sortedBadges.length / itemsPerPage));
   const [page, setPage] = useState(1);
 
   const pagedBadges = useMemo(() => {
-    const start = (page - 1) * ITEMS_PER_PAGE;
-    const end = start + ITEMS_PER_PAGE;
+    const start = (page - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
     return sortedBadges.slice(start, end);
-  }, [sortedBadges, page]);
+  }, [sortedBadges, page, itemsPerPage]);
 
   useEffect(() => {
     setPage(1);
@@ -351,6 +378,7 @@ function CatalogoBadges() {
               const badgeTitle = item.name || item.title || item.area || 'Badge';
               const levelLabel = item.isSpecial ? 'Especial' : t(item.levelKey || '');
               const badgeDate = item.date || '--';
+              const expirationInfo = getExpirationStatus(item.validade);
 
               return (
                 <article
@@ -361,6 +389,27 @@ function CatalogoBadges() {
                   onClick={() => handleOpenBadgeDetails(item)}
                   onKeyDown={(event) => handleCardKeyDown(event, item)}
                 >
+                  {expirationInfo && expirationInfo.status === 'expiring' && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      background: 'rgba(251, 191, 36, 0.9)',
+                      color: '#92400e',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      zIndex: 1,
+                    }}>
+                      <Clock3 size={12} />
+                      {expirationInfo.label}
+                    </div>
+                  )}
+
                   <div className="catalog-badge-frame">
                     <BadgeImage
                       className="catalog-badge-image"
@@ -381,9 +430,19 @@ function CatalogoBadges() {
                       <Trophy size={14} />
                       <span>{item.points} {t('points')}</span>
                     </div>
-                    <div className="catalog-meta-row">
+                    <div className="catalog-meta-row" style={{
+                      color: expirationInfo?.status === 'expiring' ? '#b45309' : expirationInfo?.status === 'expired' ? '#dc2626' : '#6b7280',
+                    }}>
                       <Clock3 size={14} />
-                      <span>{badgeDate}</span>
+                      <span>
+                        {item.validade
+                          ? (expirationInfo?.status === 'expired'
+                            ? 'Expirada'
+                            : `Expira: ${new Date(item.validade).toLocaleDateString('pt-PT')}`
+                          )
+                          : badgeDate
+                        }
+                      </span>
                     </div>
                   </div>
                 </article>

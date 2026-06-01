@@ -20,6 +20,7 @@ import {
   updateReminder,
   uploadEvidence,
   getBadgeRequirements,
+  getExpiringSoonBadgesForUser,
 } from '../controllers/consultorController.js';
 
 const router = Router();
@@ -66,5 +67,6 @@ router.delete('/lembretes/:id', deleteReminder);
 router.post('/pedidos/:pedidoId/evidencias', upload.array('files'), uploadEvidence);
 router.get('/profile', getProfileData);
 router.get('/badge/:badgeId/requirements', getBadgeRequirements);
+router.get('/expiring-soon', getExpiringSoonBadgesForUser);
 
 export default router;

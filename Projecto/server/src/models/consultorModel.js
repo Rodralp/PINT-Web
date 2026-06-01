@@ -1,6 +1,8 @@
 import { QueryTypes } from 'sequelize';
 import { Reminder } from './sql/Reminder.js';
 import { sequelize } from '../config/database.js';
+import { adminBadgeModel } from './adminBadgeModel.js';
+import { communicationModel } from './communicationModel.js';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const pedidoEstados = Object.freeze({
@@ -698,6 +700,47 @@ const autoRejectExpiredRequests = async () => {
   );
 };
 
+const EXPIRATION_NOTIFICATION_THRESHOLD_DAYS = 30;
+
+const sendExpirationNotifications = async (utilizadorId) => {
+  try {
+    const expiringBadges = await adminBadgeModel.getExpiringSoonBadgesForUser(utilizadorId, EXPIRATION_NOTIFICATION_THRESHOLD_DAYS);
+
+    for (const badge of expiringBadges) {
+      const validade = new Date(badge.validade);
+      const today = new Date();
+      const daysUntilExpiration = Math.ceil((validade - today) / (1000 * 60 * 60 * 24));
+
+      if (daysUntilExpiration > 0 && daysUntilExpiration <= EXPIRATION_NOTIFICATION_THRESHOLD_DAYS) {
+        const notificationKey = `badge_expiring_${badge.nbadge}_${utilizadorId}`;
+        const [existing] = await sequelize.query(
+          `
+            SELECT 1
+            FROM logs
+            WHERE titulo LIKE :pattern
+              AND nutilizador = :utilizadorId
+              AND data_log = CURRENT_DATE
+            LIMIT 1
+          `,
+          {
+            replacements: {
+              pattern: `%Badge a expirar%${badge.b_nome}%`,
+              utilizadorId,
+            },
+            type: QueryTypes.SELECT,
+          },
+        );
+
+        if (!existing) {
+          await communicationModel.dispatchBadgeExpiringNotification(utilizadorId, badge.b_nome, daysUntilExpiration);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error sending expiration notifications:', error);
+  }
+};
+
 const normalizeBadgeIds = (badgeIds) => [...new Set(
   (Array.isArray(badgeIds) ? badgeIds : [])
     .map((value) => Number(value))
@@ -1194,6 +1237,7 @@ const buildProfileData = async (accountId) => {
 
 const buildLearningPaths = async (accountId) => {
   await autoRejectExpiredRequests();
+  await adminBadgeModel.checkAndExpireBadges();
   const rows = await sequelize.query(
     `
       SELECT
@@ -1222,7 +1266,10 @@ const buildLearningPaths = async (accountId) => {
        AND n.is_active = TRUE
       LEFT JOIN nivel_contem_b AS nb
         ON nb.nnivel = n.nnivel
+      LEFT JOIN badge AS b
+        ON b.nbadge = nb.nbadge
       WHERE lp.is_active = TRUE
+        AND (b.nbadge IS NULL OR b.validade IS NULL OR b.validade > CURRENT_DATE)
       ORDER BY lp.nlpath ASC, sl.nsline ASC, a.narea ASC, n.nnivel ASC
     `,
     { type: QueryTypes.SELECT },
@@ -1375,11 +1422,24 @@ const buildLearningPaths = async (accountId) => {
 };
 
 const buildMyBadges = async (accountId) => {
-  await autoRejectExpiredRequests();
+  try {
+    await autoRejectExpiredRequests();
+  } catch (error) {
+    console.error('Error auto-rejecting expired requests:', error);
+  }
+
+  try {
+    await adminBadgeModel.checkAndExpireBadges();
+  } catch (error) {
+    console.error('Error checking expired badges:', error);
+  }
+
   const utilizadorId = await getUtilizadorIdByAccountId(accountId);
   if (!utilizadorId) {
     return [];
   }
+
+  await sendExpirationNotifications(utilizadorId);
 
   const [obtainedRows, requestRows] = await Promise.all([
     sequelize.query(
@@ -1393,7 +1453,8 @@ const buildMyBadges = async (accountId) => {
           t.tipo,
           cb.pontos_obtidos,
           cb.data_obtencao,
-          cb.nutilizador
+          cb.nutilizador,
+          b.validade
         FROM c_obtem_b AS cb
         INNER JOIN badge AS b
           ON b.nbadge = cb.nbadge
@@ -1406,6 +1467,7 @@ const buildMyBadges = async (accountId) => {
         LEFT JOIN area AS a
           ON a.narea = n.narea
         WHERE cb.nutilizador = :utilizadorId
+          AND (b.validade IS NULL OR b.validade > CURRENT_DATE)
         ORDER BY cb.nbadge
       `,
       {
@@ -1425,7 +1487,8 @@ const buildMyBadges = async (accountId) => {
           b.pontos AS badge_pontos,
           t.tipo,
           a.area,
-          n.nivel
+          n.nivel,
+          b.validade
         FROM pedidos AS p
         INNER JOIN estado AS e
           ON e.nestado = p.estado
@@ -1440,6 +1503,7 @@ const buildMyBadges = async (accountId) => {
         LEFT JOIN area AS a
           ON a.narea = n.narea
         WHERE p.nutilizador = :utilizadorId
+          AND (b.validade IS NULL OR b.validade > CURRENT_DATE)
         ORDER BY p.nbadge, p.data_submissao DESC, p.npedido DESC
       `,
       {
@@ -1544,6 +1608,7 @@ const buildMyBadges = async (accountId) => {
       points: Number(row.pontos_obtidos) || template.points,
       badgeImage: resolveBadgeImage(row.imagem, template.badgeImage, isSpecial),
       date: formatDate(row.data_obtencao),
+      validade: row.validade || null,
     });
   }
 
@@ -1585,13 +1650,14 @@ const buildMyBadges = async (accountId) => {
       name: row.b_nome || row.area || 'Badge',
       area: row.area || row.b_nome || 'Badge',
       stateId: mapPedidoEstadoToMyBadgeState(row.estado),
-      status: mappedStatus,
+      status: mapPedidoEstadoToMyRequestStatus(row.estado),
       levelKey: isSpecial ? null : template.levelKey,
       points: Number(row.badge_pontos) > 0 ? Number(row.badge_pontos) : template.points,
       badgeImage: resolveBadgeImage(row.imagem, template.badgeImage, isSpecial),
       date: formatDate(row.data_submissao),
       requirements: badgeRequirements,
       evidence: badgeRequirements,
+      validade: row.validade || null,
     });
   }
 
@@ -1600,6 +1666,7 @@ const buildMyBadges = async (accountId) => {
 
 const buildMyRequests = async (accountId) => {
   await autoRejectExpiredRequests();
+  await adminBadgeModel.checkAndExpireBadges();
   const utilizadorId = await getUtilizadorIdByAccountId(accountId);
   if (!utilizadorId) {
     return [];
@@ -1612,6 +1679,7 @@ const buildMyRequests = async (accountId) => {
         p.data_submissao,
         e.estado,
         b.b_nome,
+        b.validade,
         meta.area,
         meta.nivel
       FROM pedidos AS p
@@ -1633,6 +1701,7 @@ const buildMyRequests = async (accountId) => {
       ) AS meta
         ON meta.nbadge = p.nbadge
       WHERE p.nutilizador = :utilizadorId
+        AND (b.validade IS NULL OR b.validade > CURRENT_DATE)
       ORDER BY p.data_submissao DESC, p.npedido DESC
     `,
     {
@@ -1650,6 +1719,7 @@ const buildMyRequests = async (accountId) => {
       level,
       date: formatShortDate(row.data_submissao),
       status: mapPedidoEstadoToMyRequestStatus(row.estado),
+      validade: row.validade || null,
     };
   });
 };
@@ -1814,6 +1884,7 @@ const saveUserPreferences = async (accountId, areaIds) => {
 
 const buildBadgeSuggestions = async (accountId, limit = 3) => {
   await autoRejectExpiredRequests();
+  await adminBadgeModel.checkAndExpireBadges();
   const safeLimit = Number.isInteger(Number(limit)) && Number(limit) > 0 ? Number(limit) : 3;
   const utilizadorId = await getUtilizadorIdByAccountId(accountId);
   if (!utilizadorId) {
@@ -1844,6 +1915,7 @@ const buildBadgeSuggestions = async (accountId, limit = 3) => {
         INNER JOIN badge AS b
           ON b.nbadge = ncb.nbadge
         WHERE a.narea IN (:areaIds)
+          AND (b.validade IS NULL OR b.validade > CURRENT_DATE)
         ORDER BY b.nbadge ASC
       `,
       {
@@ -1978,6 +2050,7 @@ const buildBadgeSuggestions = async (accountId, limit = 3) => {
 
 const requestBadgeAcquisition = async (accountId, badgeId) => {
   await autoRejectExpiredRequests();
+  await adminBadgeModel.checkAndExpireBadges();
   const parsedBadgeId = Number(badgeId);
   if (!Number.isInteger(parsedBadgeId) || parsedBadgeId <= 0) {
     const error = new Error('Invalid badge id.');
@@ -1994,7 +2067,7 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
 
   const [badgeExists] = await sequelize.query(
     `
-      SELECT nbadge
+      SELECT nbadge, validade
       FROM badge
       WHERE nbadge = :badgeId
       LIMIT 1
@@ -2008,6 +2081,12 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
   if (!badgeExists) {
     const error = new Error('Badge not found.');
     error.statusCode = 404;
+    throw error;
+  }
+
+  if (badgeExists.validade && new Date(badgeExists.validade) <= new Date()) {
+    const error = new Error('Esta badge já expirou e não pode ser solicitada.');
+    error.statusCode = 410;
     throw error;
   }
 
@@ -2220,6 +2299,7 @@ const saveEvidences = async (accountId, pedidoId, nreq, fileMeta) => {
 
 export const consultorModel = {
   async getCatalogBadges() {
+    await adminBadgeModel.checkAndExpireBadges();
     const rawBadges = await sequelize.query(
       `
         SELECT
@@ -2228,6 +2308,7 @@ export const consultorModel = {
           b.b_descricao,
           b.pontos,
           b.imagem,
+          b.validade,
           t.tipo AS tipo,
           n.nnivel,
           a.area,
@@ -2244,6 +2325,7 @@ export const consultorModel = {
           ON n.narea = a.narea
         LEFT JOIN service_line AS sl
           ON a.nsline = sl.nsline
+        WHERE b.validade IS NULL OR b.validade > CURRENT_DATE
         ORDER BY b.nbadge ASC
       `,
       { type: QueryTypes.SELECT }
@@ -2271,6 +2353,7 @@ export const consultorModel = {
         badgeImage: resolveBadgeImage(row.imagem, template.badgeImage, isSpecial),
         learningPathName: 'Jornada Técnica',
         serviceLineName: row.sline || 'Application Operations',
+        validade: row.validade || null,
       };
     });
 

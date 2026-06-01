@@ -1,4 +1,5 @@
 import { consultorService } from '../services/consultorService.js';
+import { adminBadgeModel } from '../models/adminBadgeModel.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -294,5 +295,22 @@ export const getBadgeRequirements = async (req, res) => {
     res.status(200).json(data || []);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch badge requirements.', error: error.message });
+  }
+};
+
+export const getExpiringSoonBadgesForUser = async (req, res) => {
+  const accountId = parseAccountId(req.query?.accountId);
+
+  if (!accountId) {
+    res.status(400).json({ message: 'Account id is required.' });
+    return;
+  }
+
+  try {
+    const days = Number(req.query?.days) || 30;
+    const badges = await adminBadgeModel.getExpiringSoonBadgesForUser(accountId, days);
+    res.status(200).json(badges);
+  } catch (error) {
+    res.status(500).json({ message: error?.message || 'Failed to fetch expiring badges.' });
   }
 };

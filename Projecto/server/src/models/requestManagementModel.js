@@ -4,6 +4,7 @@ import path from 'node:path';
 import { sequelize } from '../config/database.js';
 import { syncSpecialBadgesForConsultor } from './consultorModel.js';
 import { communicationModel } from './communicationModel.js';
+import { adminBadgeModel } from './adminBadgeModel.js';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const uploadsDir = path.resolve(globalThis.process?.cwd?.() || '.', 'server', 'uploads');
@@ -542,6 +543,7 @@ const buildRoleJoin = (role) => {
 
 const fetchRequestRows = async ({ role, actorUtilizadorId, requestId = null }) => {
   await autoRejectExpiredRequests();
+  await adminBadgeModel.checkAndExpireBadges();
   const roleJoin = buildRoleJoin(role);
   const roleStatusClause = buildRoleStatusClause(role);
   const whereClause = requestId
@@ -597,6 +599,7 @@ const fetchRequestRows = async ({ role, actorUtilizadorId, requestId = null }) =
         ON cb.nutilizador = p.nutilizador
        AND cb.nbadge = p.nbadge
       ${whereClause}
+        AND (b.validade IS NULL OR b.validade > CURRENT_DATE)
       LIMIT 1
     `
     : `
@@ -647,6 +650,7 @@ const fetchRequestRows = async ({ role, actorUtilizadorId, requestId = null }) =
         ON cb.nutilizador = p.nutilizador
        AND cb.nbadge = p.nbadge
       ${whereClause}
+        AND (b.validade IS NULL OR b.validade > CURRENT_DATE)
       ORDER BY p.data_submissao DESC, p.npedido DESC
     `;
 
@@ -894,6 +898,8 @@ const upsertRequestMotivo = async ({ requestId, actorUtilizadorId, description, 
 };
 
 const applyDecision = async ({ role, actorUtilizadorId, request, decision, comment }) => {
+  await adminBadgeModel.checkAndExpireBadges();
+
   const decisionKey = String(decision || '').trim().toLowerCase().replace(/-/g, '_');
   const currentEstado = normalizeEstadoName(request.estado_nome);
   const allowedDecisionsByRole = {

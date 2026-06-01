@@ -1,5 +1,6 @@
 import { adminBadgeService } from '../services/adminBadgeService.js';
 import { adminLearningPathService } from '../services/adminLearningPathService.js';
+import { adminBadgeModel } from '../models/adminBadgeModel.js';
 
 const specialTriggerTypes = new Set(['badge_count', 'ranking_position', 'streak_days']);
 const MAX_BADGE_IMAGE_LENGTH = 2_500_000;
@@ -139,6 +140,7 @@ const toBadgeResponse = (row) => ({
   typeId: row.typeKey || null,
   specialRequirements: Array.isArray(row.specialRequirements) ? row.specialRequirements : [],
   requirements: Array.isArray(row.requirements) ? row.requirements : [],
+  validade: row.validade || null,
 });
 
 export const getBadge = async (req, res) => {
@@ -172,6 +174,7 @@ export const createBadge = async (req, res) => {
   const badgeImage = parseBadgeImage(req.body?.badgeImage);
   const specialRequirements = parseSpecialRequirements(req.body?.specialRequirements);
   const requirements = parseStandardRequirements(req.body?.requirements);
+  const validade = req.body?.validade || null;
 
   if (!name) {
     res.status(400).json({ message: 'Name is required.' });
@@ -220,6 +223,7 @@ export const createBadge = async (req, res) => {
       badgeImage,
       specialRequirements,
       requirements,
+      validade,
     });
 
     if (!row) {
@@ -244,6 +248,7 @@ export const updateBadge = async (req, res) => {
   const badgeImage = parseBadgeImage(req.body?.badgeImage);
   const specialRequirements = parseSpecialRequirements(req.body?.specialRequirements);
   const requirements = parseStandardRequirements(req.body?.requirements);
+  const validade = req.body?.validade || null;
 
   if (!badgeId) {
     res.status(400).json({ message: 'Badge id is required.' });
@@ -298,6 +303,7 @@ export const updateBadge = async (req, res) => {
       badgeImage,
       specialRequirements,
       requirements,
+      validade,
     });
 
     if (!row) {
@@ -308,5 +314,15 @@ export const updateBadge = async (req, res) => {
     res.status(200).json(toBadgeResponse(row));
   } catch (error) {
     res.status(500).json({ message: error?.message || 'Failed to update badge.' });
+  }
+};
+
+export const getExpiringSoonBadges = async (req, res) => {
+  try {
+    const days = Number(req.query.days) || 30;
+    const badges = await adminBadgeModel.getExpiringSoonBadges(days);
+    res.status(200).json(badges);
+  } catch (error) {
+    res.status(500).json({ message: error?.message || 'Failed to fetch expiring badges.' });
   }
 };

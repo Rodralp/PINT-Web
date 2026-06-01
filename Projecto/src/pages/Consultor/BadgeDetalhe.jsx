@@ -577,7 +577,7 @@ function BadgeDetalhe() {
             <div className="badge-hero-meta">
               <span>
                 <Clock3 size={16} />
-                <strong>Expira</strong>
+                <strong>Obtida</strong>
                 {badge.date}
               </span>
 
@@ -590,6 +590,14 @@ function BadgeDetalhe() {
                 <FileText size={16} />
                 {requirements.length} requisitos
               </span>
+
+              {badge.validade && (
+                <span>
+                  <Clock3 size={16} />
+                  <strong>Expira em</strong>
+                  {new Date(badge.validade).toLocaleDateString('pt-PT')}
+                </span>
+              )}
             </div>
 
             {hasStatusBanner && statusMeta && (
