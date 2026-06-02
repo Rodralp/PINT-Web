@@ -104,7 +104,7 @@ function CatalogoBadges() {
 
     const loadCatalog = async () => {
       try {
-        const data = await fetchCatalogBadges();
+        const data = await fetchCatalogBadges(isAdminRoute);
         if (!isMounted) {
           return;
         }
@@ -173,7 +173,9 @@ function CatalogoBadges() {
     }
   };
 
-  const filters = useMemo(() => badgeTypes, []);
+  const filters = useMemo(() => {
+    return [...badgeTypes, { id: 'expiring_soon', label: 'Perto de expirar' }];
+  }, []);
 
   const sortOptions = useMemo(() => [
     { id: 'points_desc', label: 'Pontos (Maior para Menor)' },
@@ -209,9 +211,15 @@ function CatalogoBadges() {
         normalizedSearch.length === 0
         || badgeTitle.includes(normalizedSearch)
         || translatedLevel.includes(normalizedSearch);
-      const filterMatch = activeFilter === 'todos' || item.typeId === activeFilter;
+      const filterMatch = activeFilter === 'todos' || activeFilter === 'expiring_soon' || item.typeId === activeFilter;
 
-      return searchMatch && filterMatch;
+      let expirationMatch = true;
+      if (activeFilter === 'expiring_soon') {
+        const expStatus = getExpirationStatus(item.validade);
+        expirationMatch = expStatus !== null && (expStatus.status === 'expiring' || expStatus.status === 'expired');
+      }
+
+      return searchMatch && filterMatch && expirationMatch;
     });
   }, [badgeItems, activeFilter, searchTerm, t]);
 

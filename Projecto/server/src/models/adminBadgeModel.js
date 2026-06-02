@@ -1,5 +1,6 @@
 import { QueryTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
+import { communicationModel } from './communicationModel.js';
 
 const SPECIAL_BADGE_TYPE_NAME = 'Especial';
 const SPECIAL_BADGE_TYPE_KEY = 'special';
@@ -807,7 +808,19 @@ export const adminBadgeModel = {
 
   async checkAndExpireBadges() {
     try {
-      return await sequelize.transaction(async (transaction) => {
+      const expiredBadgesResult = await sequelize.transaction(async (transaction) => {
+        const now = await sequelize.query(
+          `SELECT NOW() AS now, CURRENT_DATE AS today`,
+          { type: QueryTypes.SELECT, transaction }
+        );
+        console.log('[checkAndExpireBadges] Server time:', now?.[0]);
+
+        const allBadgesWithValidade = await sequelize.query(
+          `SELECT nbadge, b_nome, validade FROM badge WHERE validade IS NOT NULL`,
+          { type: QueryTypes.SELECT, transaction }
+        );
+        console.log('[checkAndExpireBadges] All badges with validade:', JSON.stringify(allBadgesWithValidade));
+
         const expiredBadges = await sequelize.query(
           `
             SELECT nbadge, b_nome, validade
@@ -821,12 +834,15 @@ export const adminBadgeModel = {
           },
         );
 
+        console.log('[checkAndExpireBadges] Expired badges found:', expiredBadges?.length || 0);
+
         if (!expiredBadges || expiredBadges.length === 0) {
-          return { expired: 0, rejeitados: 0, niveisDesativados: 0 };
+          return { expired: 0, rejeitados: 0, niveisDesativados: 0, processedBadges: [] };
         }
 
         let totalRejeitados = 0;
         let totalNiveisDesativados = 0;
+        const processedBadges = [];
 
         const rejeitadoId = await ensureEstadoId('rejeitado');
         const aprovadoId = await ensureEstadoId('aprovado');
@@ -882,17 +898,43 @@ export const adminBadgeModel = {
           if (nivelDesativado) {
             totalNiveisDesativados++;
           }
+
+          processedBadges.push({ id: badgeId, name: badge.b_nome });
         }
 
         return {
           expired: expiredBadges.length,
           rejeitados: totalRejeitados,
           niveisDesativados: totalNiveisDesativados,
+          processedBadges,
         };
       });
+
+      for (const badge of expiredBadgesResult.processedBadges) {
+        console.log('[checkAndExpireBadges] Dispatching notification for badge:', badge.id, badge.name);
+        try {
+          const result = await communicationModel.dispatchBadgeExpiredNotification(badge.id, badge.name);
+          console.log('[checkAndExpireBadges] Notification result:', result);
+        } catch (notifError) {
+          console.error('Error dispatching badge expired notification:', notifError);
+        }
+      }
+
+      return {
+        expired: expiredBadgesResult.expired,
+        rejeitados: expiredBadgesResult.rejeitados,
+        niveisDesativados: expiredBadgesResult.niveisDesativados,
+      };
     } catch (error) {
       console.error('Error in checkAndExpireBadges:', error);
       return { expired: 0, rejeitados: 0, niveisDesativados: 0 };
+    }
+
+    try {
+      const { consultorModel } = await import('./consultorModel.js');
+      await consultorModel.sendAllExpirationNotifications();
+    } catch (expiringError) {
+      console.error('Error sending expiring notifications:', expiringError);
     }
   },
 

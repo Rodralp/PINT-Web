@@ -86,24 +86,6 @@ const eventNotificationDefaults = [
     webApp: true,
   },
   {
-    event: 'Notificacao teste',
-    admin: true,
-    sll: false,
-    tl: false,
-    consultor: false,
-    email: true,
-    webApp: true,
-  },
-  {
-    event: 'Manutencao do Site / App',
-    admin: true,
-    sll: true,
-    tl: true,
-    consultor: true,
-    email: true,
-    webApp: true,
-  },
-  {
     event: 'Mudanca de credenciais',
     admin: false,
     sll: true,
@@ -111,42 +93,6 @@ const eventNotificationDefaults = [
     consultor: false,
     email: true,
     webApp: false,
-  },
-  {
-    event: 'Expiracao de sessao',
-    admin: false,
-    sll: false,
-    tl: true,
-    consultor: false,
-    email: false,
-    webApp: true,
-  },
-  {
-    event: 'Alerta de seguranca',
-    admin: true,
-    sll: false,
-    tl: true,
-    consultor: false,
-    email: true,
-    webApp: false,
-  },
-  {
-    event: 'Nova politica aplicada',
-    admin: false,
-    sll: false,
-    tl: false,
-    consultor: true,
-    email: true,
-    webApp: true,
-  },
-  {
-    event: 'Relatorio semanal pronto',
-    admin: false,
-    sll: false,
-    tl: false,
-    consultor: true,
-    email: false,
-    webApp: true,
   },
   {
     event: 'Pedido aprovado',
@@ -173,6 +119,15 @@ const eventNotificationDefaults = [
     tl: false,
     consultor: true,
     email: true,
+    webApp: true,
+  },
+  {
+    event: 'Badge expirada',
+    admin: true,
+    sll: true,
+    tl: true,
+    consultor: true,
+    email: false,
     webApp: true,
   },
 ];
@@ -268,6 +223,19 @@ const ensureEventNotificationDefaults = async (transaction) => {
   const existingEvents = new Set(
     (rows || []).map((row) => normalizeEventKey(row?.evento)),
   );
+
+  const validEvents = new Set(
+    eventNotificationDefaults.map((item) => normalizeEventKey(item.event)),
+  );
+
+  for (const existingEvent of existingEvents) {
+    if (!validEvents.has(existingEvent)) {
+      await sequelize.query(
+        'DELETE FROM config_notificacao WHERE LOWER(evento) = :evento',
+        { replacements: { evento: existingEvent }, type: QueryTypes.DELETE, transaction },
+      );
+    }
+  }
 
   for (const item of eventNotificationDefaults) {
     const eventKey = normalizeEventKey(item.event);
@@ -1093,12 +1061,101 @@ export const communicationModel = {
     });
   },
 
+  async dispatchBadgeExpiredNotification(badgeId, badgeName) {
+    return sequelize.transaction(async (transaction) => {
+      const eventKey = 'Badge expirada';
+      const config = await fetchEventNotificationConfig(eventKey, transaction);
+      console.log('[dispatchBadgeExpiredNotification] config:', config);
+      if (!config) {
+        console.log('[dispatchBadgeExpiredNotification] No config found, returning null');
+        return null;
+      }
+
+      const recipientSet = new Set();
+
+      if (config.admin) {
+        const adminIds = await listActiveUserIdsByRole('admin-gestor', transaction);
+        console.log('[dispatchBadgeExpiredNotification] admin ids:', adminIds);
+        adminIds.forEach((id) => recipientSet.add(id));
+      }
+
+      if (config.tl) {
+        const tmIds = await listActiveUserIdsByRole('talent-manager', transaction);
+        console.log('[dispatchBadgeExpiredNotification] tm ids:', tmIds);
+        tmIds.forEach((id) => recipientSet.add(id));
+      }
+
+      if (config.sll) {
+        const serviceLineRows = await sequelize.query(
+          `SELECT DISTINCT nsline FROM b_pertence_sl WHERE nbadge = :badgeId`,
+          { replacements: { badgeId }, type: QueryTypes.SELECT, transaction }
+        );
+        console.log('[dispatchBadgeExpiredNotification] service lines:', serviceLineRows);
+        for (const row of serviceLineRows) {
+          const sllIds = await listSllIdsByServiceLine(row.nsline, transaction);
+          console.log('[dispatchBadgeExpiredNotification] sll ids for sl', row.nsline, ':', sllIds);
+          sllIds.forEach((id) => recipientSet.add(id));
+        }
+      }
+
+      if (config.consultor) {
+        const consultorRows = await sequelize.query(
+          `
+            SELECT DISTINCT nutilizador AS id FROM c_obtem_b WHERE nbadge = :badgeId
+            UNION
+            SELECT DISTINCT nutilizador AS id FROM pedidos WHERE nbadge = :badgeId
+          `,
+          { replacements: { badgeId }, type: QueryTypes.SELECT, transaction }
+        );
+        const consultorIds = consultorRows.map((r) => Number(r.id)).filter((id) => Number.isInteger(id) && id > 0);
+        console.log('[dispatchBadgeExpiredNotification] consultor ids:', consultorIds);
+        if (consultorIds.length > 0) {
+          const activeConsultors = await listActiveUserIdsByIds(consultorIds, transaction);
+          activeConsultors.forEach((id) => recipientSet.add(id));
+        }
+      }
+
+      const recipients = Array.from(recipientSet);
+      console.log('[dispatchBadgeExpiredNotification] final recipients:', recipients);
+      if (recipients.length === 0) {
+        return { logId: null, recipients: [] };
+      }
+
+      const logTitle = `Badge "${badgeName}" expirou`;
+      const logMessage = `A badge "${badgeName}" expirou. As candidaturas pendentes foram rejeitadas automaticamente.`;
+      const logId = await insertLogEntry({
+        actorId: recipients[0],
+        title: logTitle,
+        message: logMessage,
+        type: 'aviso',
+        priority: 2,
+        transaction,
+      });
+
+      if (!logId || !config.webApp) {
+        return { logId, recipients: [] };
+      }
+
+      const inAppRecipients = await filterRecipientsByInAppPreference(recipients, transaction);
+      for (const recipientId of inAppRecipients) {
+        await sequelize.query(
+          `INSERT INTO notificacao (nutilizador, nlog, lida) VALUES (:recipientId, :logId, FALSE)`,
+          { replacements: { recipientId, logId }, type: QueryTypes.INSERT, transaction }
+        );
+      }
+
+      return { logId, recipients: inAppRecipients };
+    });
+  },
+
   async dispatchBadgeExpiringNotification(userId, badgeName, daysUntilExpiration) {
     return sequelize.transaction(async (transaction) => {
       const eventKey = 'Badge a expirar';
       const config = await fetchEventNotificationConfig(eventKey, transaction);
+      console.log('[dispatchBadgeExpiringNotification] config:', config);
 
       if (!config || !config.consultor) {
+        console.log('[dispatchBadgeExpiringNotification] No config or consultor not enabled, returning null');
         return null;
       }
 

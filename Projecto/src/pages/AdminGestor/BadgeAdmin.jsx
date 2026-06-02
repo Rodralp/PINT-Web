@@ -533,6 +533,15 @@ function BadgeAdmin() {
       nextErrors.points = 'Os pontos não podem ser negativos.';
     }
 
+    if (form.validade) {
+      const minDate = new Date();
+      minDate.setDate(minDate.getDate() + 7);
+      const validadeDate = new Date(form.validade);
+      if (validadeDate < minDate) {
+        nextErrors.validade = 'A data de expiração deve ser pelo menos 7 dias no futuro.';
+      }
+    }
+
     setFormErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -715,6 +724,7 @@ function BadgeAdmin() {
                 value={form.validade || ''}
                 onChange={handleFieldChange('validade')}
               />
+              {formErrors.validade && <span className="badge-admin-error">{formErrors.validade}</span>}
               <span className="badge-admin-help-text">
                 Se definida, a badge irá expirar nesta data. Deixe vazio para badge sem expiração.
               </span>

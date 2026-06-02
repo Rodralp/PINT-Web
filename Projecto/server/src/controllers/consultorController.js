@@ -8,9 +8,10 @@ const parseAccountId = (value) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 };
 
-export const getCatalogBadges = async (_req, res) => {
+export const getCatalogBadges = async (req, res) => {
   try {
-    const data = await consultorService.getCatalogBadges();
+    const includeExpired = req.query.includeExpired === 'true';
+    const data = await consultorService.getCatalogBadges(includeExpired);
     res.status(200).json(data);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch catalog badges.', error: error.message });

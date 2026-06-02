@@ -30,24 +30,6 @@ const defaultNotificationRows = [
     webApp: true,
   },
   {
-    event: 'Notificacao teste',
-    admin: true,
-    sll: false,
-    tl: false,
-    consultor: false,
-    email: true,
-    webApp: true,
-  },
-  {
-    event: 'Manutencao do Site / App',
-    admin: true,
-    sll: true,
-    tl: true,
-    consultor: true,
-    email: true,
-    webApp: true,
-  },
-  {
     event: 'Mudanca de credenciais',
     admin: false,
     sll: true,
@@ -55,42 +37,6 @@ const defaultNotificationRows = [
     consultor: false,
     email: true,
     webApp: false,
-  },
-  {
-    event: 'Expiracao de sessao',
-    admin: false,
-    sll: false,
-    tl: true,
-    consultor: false,
-    email: false,
-    webApp: true,
-  },
-  {
-    event: 'Alerta de seguranca',
-    admin: true,
-    sll: false,
-    tl: true,
-    consultor: false,
-    email: true,
-    webApp: false,
-  },
-  {
-    event: 'Nova politica aplicada',
-    admin: false,
-    sll: false,
-    tl: false,
-    consultor: true,
-    email: true,
-    webApp: true,
-  },
-  {
-    event: 'Relatorio semanal pronto',
-    admin: false,
-    sll: false,
-    tl: false,
-    consultor: true,
-    email: false,
-    webApp: true,
   },
   {
     event: 'Pedido aprovado',
@@ -108,6 +54,24 @@ const defaultNotificationRows = [
     tl: true,
     consultor: true,
     email: true,
+    webApp: true,
+  },
+  {
+    event: 'Badge a expirar',
+    admin: false,
+    sll: false,
+    tl: false,
+    consultor: true,
+    email: true,
+    webApp: true,
+  },
+  {
+    event: 'Badge expirada',
+    admin: true,
+    sll: true,
+    tl: true,
+    consultor: true,
+    email: false,
     webApp: true,
   },
 ];
@@ -215,6 +179,19 @@ const ensureNotificationDefaults = async (transaction) => {
   const existingEvents = new Set(
     (rows || []).map((row) => normalizeEventKey(row?.evento)),
   );
+
+  const validEvents = new Set(
+    defaultNotificationRows.map((item) => normalizeEventKey(item.event)),
+  );
+
+  for (const existingEvent of existingEvents) {
+    if (!validEvents.has(existingEvent)) {
+      await sequelize.query(
+        'DELETE FROM config_notificacao WHERE LOWER(evento) = :evento',
+        { replacements: { evento: existingEvent }, type: QueryTypes.DELETE, transaction },
+      );
+    }
+  }
 
   for (const item of defaultNotificationRows) {
     const eventKey = normalizeEventKey(item.event);

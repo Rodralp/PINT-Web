@@ -204,6 +204,16 @@ export const createBadge = async (req, res) => {
     return;
   }
 
+  if (validade) {
+    const minDate = new Date();
+    minDate.setDate(minDate.getDate() + 7);
+    const validadeDate = new Date(validade);
+    if (validadeDate < minDate) {
+      res.status(400).json({ message: 'A data de expiração deve ser pelo menos 7 dias no futuro.' });
+      return;
+    }
+  }
+
   if (!specialFlag) {
     const levelExists = await adminLearningPathService.hasLevel(levelId);
     if (!levelExists) {
@@ -281,6 +291,16 @@ export const updateBadge = async (req, res) => {
   if (specialFlag && specialRequirements.length === 0) {
     res.status(400).json({ message: 'At least one special trigger is required.' });
     return;
+  }
+
+  if (validade) {
+    const minDate = new Date();
+    minDate.setDate(minDate.getDate() + 7);
+    const validadeDate = new Date(validade);
+    if (validadeDate < minDate) {
+      res.status(400).json({ message: 'A data de expiração deve ser pelo menos 7 dias no futuro.' });
+      return;
+    }
   }
 
   if (!specialFlag) {

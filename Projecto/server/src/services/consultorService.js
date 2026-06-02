@@ -1,8 +1,8 @@
 import { consultorModel } from '../models/consultorModel.js';
 
 export const consultorService = {
-  async getCatalogBadges() {
-    return consultorModel.getCatalogBadges();
+  async getCatalogBadges(includeExpired) {
+    return consultorModel.getCatalogBadges(includeExpired);
   },
 
   getLearningPaths(accountId) {
