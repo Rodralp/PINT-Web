@@ -809,32 +809,23 @@ export const adminBadgeModel = {
   async checkAndExpireBadges() {
     try {
       const expiredBadgesResult = await sequelize.transaction(async (transaction) => {
-        const now = await sequelize.query(
-          `SELECT NOW() AS now, CURRENT_DATE AS today`,
-          { type: QueryTypes.SELECT, transaction }
-        );
-        console.log('[checkAndExpireBadges] Server time:', now?.[0]);
-
-        const allBadgesWithValidade = await sequelize.query(
-          `SELECT nbadge, b_nome, validade FROM badge WHERE validade IS NOT NULL`,
-          { type: QueryTypes.SELECT, transaction }
-        );
-        console.log('[checkAndExpireBadges] All badges with validade:', JSON.stringify(allBadgesWithValidade));
-
         const expiredBadges = await sequelize.query(
           `
-            SELECT nbadge, b_nome, validade
-            FROM badge
-            WHERE validade IS NOT NULL
-              AND validade <= CURRENT_DATE
+            SELECT b.nbadge, b.b_nome, b.validade
+            FROM badge b
+            WHERE b.validade IS NOT NULL
+              AND b.validade <= CURRENT_DATE
+              AND NOT EXISTS (
+                SELECT 1 FROM badge_expiracao_log bel
+                WHERE bel.nbadge = b.nbadge
+                  AND bel.data_expiracao = b.validade
+              )
           `,
           {
             type: QueryTypes.SELECT,
             transaction,
           },
         );
-
-        console.log('[checkAndExpireBadges] Expired badges found:', expiredBadges?.length || 0);
 
         if (!expiredBadges || expiredBadges.length === 0) {
           return { expired: 0, rejeitados: 0, niveisDesativados: 0, processedBadges: [] };
@@ -911,13 +902,18 @@ export const adminBadgeModel = {
       });
 
       for (const badge of expiredBadgesResult.processedBadges) {
-        console.log('[checkAndExpireBadges] Dispatching notification for badge:', badge.id, badge.name);
         try {
-          const result = await communicationModel.dispatchBadgeExpiredNotification(badge.id, badge.name);
-          console.log('[checkAndExpireBadges] Notification result:', result);
+          await communicationModel.dispatchBadgeExpiredNotification(badge.id, badge.name);
         } catch (notifError) {
           console.error('Error dispatching badge expired notification:', notifError);
         }
+      }
+
+      try {
+        const { consultorModel } = await import('./consultorModel.js');
+        await consultorModel.sendAllExpirationNotifications();
+      } catch (expiringError) {
+        console.error('Error sending expiring notifications:', expiringError);
       }
 
       return {
@@ -928,13 +924,6 @@ export const adminBadgeModel = {
     } catch (error) {
       console.error('Error in checkAndExpireBadges:', error);
       return { expired: 0, rejeitados: 0, niveisDesativados: 0 };
-    }
-
-    try {
-      const { consultorModel } = await import('./consultorModel.js');
-      await consultorModel.sendAllExpirationNotifications();
-    } catch (expiringError) {
-      console.error('Error sending expiring notifications:', expiringError);
     }
   },
 

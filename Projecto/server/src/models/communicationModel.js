@@ -114,11 +114,11 @@ const eventNotificationDefaults = [
   },
   {
     event: 'Badge a expirar',
-    admin: false,
-    sll: false,
-    tl: false,
+    admin: true,
+    sll: true,
+    tl: true,
     consultor: true,
-    email: true,
+    email: false,
     webApp: true,
   },
   {
@@ -240,6 +240,22 @@ const ensureEventNotificationDefaults = async (transaction) => {
   for (const item of eventNotificationDefaults) {
     const eventKey = normalizeEventKey(item.event);
     if (existingEvents.has(eventKey)) {
+      await sequelize.query(
+        `UPDATE config_notificacao SET admin = :admin, sll = :sll, tl = :tl, consultor = :consultor, email = :email, web_app = :webApp WHERE LOWER(evento) = :eventKey`,
+        {
+          replacements: {
+            admin: item.admin,
+            sll: item.sll,
+            tl: item.tl,
+            consultor: item.consultor,
+            email: item.email,
+            webApp: item.webApp,
+            eventKey,
+          },
+          type: QueryTypes.UPDATE,
+          transaction,
+        },
+      );
       continue;
     }
 
@@ -1065,9 +1081,7 @@ export const communicationModel = {
     return sequelize.transaction(async (transaction) => {
       const eventKey = 'Badge expirada';
       const config = await fetchEventNotificationConfig(eventKey, transaction);
-      console.log('[dispatchBadgeExpiredNotification] config:', config);
       if (!config) {
-        console.log('[dispatchBadgeExpiredNotification] No config found, returning null');
         return null;
       }
 
@@ -1075,13 +1089,11 @@ export const communicationModel = {
 
       if (config.admin) {
         const adminIds = await listActiveUserIdsByRole('admin-gestor', transaction);
-        console.log('[dispatchBadgeExpiredNotification] admin ids:', adminIds);
         adminIds.forEach((id) => recipientSet.add(id));
       }
 
       if (config.tl) {
         const tmIds = await listActiveUserIdsByRole('talent-manager', transaction);
-        console.log('[dispatchBadgeExpiredNotification] tm ids:', tmIds);
         tmIds.forEach((id) => recipientSet.add(id));
       }
 
@@ -1090,10 +1102,8 @@ export const communicationModel = {
           `SELECT DISTINCT nsline FROM b_pertence_sl WHERE nbadge = :badgeId`,
           { replacements: { badgeId }, type: QueryTypes.SELECT, transaction }
         );
-        console.log('[dispatchBadgeExpiredNotification] service lines:', serviceLineRows);
         for (const row of serviceLineRows) {
           const sllIds = await listSllIdsByServiceLine(row.nsline, transaction);
-          console.log('[dispatchBadgeExpiredNotification] sll ids for sl', row.nsline, ':', sllIds);
           sllIds.forEach((id) => recipientSet.add(id));
         }
       }
@@ -1108,7 +1118,6 @@ export const communicationModel = {
           { replacements: { badgeId }, type: QueryTypes.SELECT, transaction }
         );
         const consultorIds = consultorRows.map((r) => Number(r.id)).filter((id) => Number.isInteger(id) && id > 0);
-        console.log('[dispatchBadgeExpiredNotification] consultor ids:', consultorIds);
         if (consultorIds.length > 0) {
           const activeConsultors = await listActiveUserIdsByIds(consultorIds, transaction);
           activeConsultors.forEach((id) => recipientSet.add(id));
@@ -1116,7 +1125,6 @@ export const communicationModel = {
       }
 
       const recipients = Array.from(recipientSet);
-      console.log('[dispatchBadgeExpiredNotification] final recipients:', recipients);
       if (recipients.length === 0) {
         return { logId: null, recipients: [] };
       }
@@ -1127,7 +1135,7 @@ export const communicationModel = {
         actorId: recipients[0],
         title: logTitle,
         message: logMessage,
-        type: 'aviso',
+        type: 'evento',
         priority: 2,
         transaction,
       });
@@ -1148,55 +1156,42 @@ export const communicationModel = {
     });
   },
 
-  async dispatchBadgeExpiringNotification(userId, badgeName, daysUntilExpiration) {
+  async dispatchBadgeExpiringNotification(recipientIds, badgeName, daysUntilExpiration) {
     return sequelize.transaction(async (transaction) => {
       const eventKey = 'Badge a expirar';
       const config = await fetchEventNotificationConfig(eventKey, transaction);
-      console.log('[dispatchBadgeExpiringNotification] config:', config);
 
-      if (!config || !config.consultor) {
-        console.log('[dispatchBadgeExpiringNotification] No config or consultor not enabled, returning null');
+      if (!config) {
         return null;
       }
 
+      const recipients = Array.isArray(recipientIds) ? recipientIds : [recipientIds];
+      if (recipients.length === 0) {
+        return { logId: null, recipients: [] };
+      }
+
       const logTitle = `Badge a expirar em ${daysUntilExpiration} dias`;
-      const logMessage = `A sua badge "${badgeName}" irá expirar em ${daysUntilExpiration} dias. Certifique-se de que utilizou os seus benefícios antes da data de expiração.`;
-      const logSummary = `Badge "${badgeName}" expira em ${daysUntilExpiration} dias.`;
+      const logMessage = `A badge "${badgeName}" irá expirar em ${daysUntilExpiration} dias. Certifique-se de que utilizou os seus benefícios antes da data de expiração.`;
 
       const logId = await insertLogEntry({
-        actorId: userId,
+        actorId: recipients[0],
         title: logTitle,
         message: logMessage,
-        type: 'aviso',
+        type: 'evento',
         priority: 2,
         transaction,
       });
 
-      if (!logId) {
-        return null;
+      if (!logId || !config.webApp) {
+        return { logId, recipients: [] };
       }
 
-      const inAppRecipients = [];
-
-      if (config.webApp) {
-        const hasInAppEnabled = await filterRecipientsByInAppPreference([userId], transaction);
-        if (hasInAppEnabled.length > 0) {
-          await sequelize.query(
-            `
-              INSERT INTO notificacao (nutilizador, nlog, lida)
-              VALUES (:recipientId, :logId, FALSE)
-            `,
-            {
-              replacements: {
-                recipientId: userId,
-                logId,
-              },
-              type: QueryTypes.INSERT,
-              transaction,
-            },
-          );
-          inAppRecipients.push(userId);
-        }
+      const inAppRecipients = await filterRecipientsByInAppPreference(recipients, transaction);
+      for (const recipientId of inAppRecipients) {
+        await sequelize.query(
+          `INSERT INTO notificacao (nutilizador, nlog, lida) VALUES (:recipientId, :logId, FALSE)`,
+          { replacements: { recipientId, logId }, type: QueryTypes.INSERT, transaction }
+        );
       }
 
       return { logId, recipients: inAppRecipients };

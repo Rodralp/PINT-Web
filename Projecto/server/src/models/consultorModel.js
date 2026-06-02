@@ -702,66 +702,102 @@ const autoRejectExpiredRequests = async () => {
 
 const EXPIRATION_NOTIFICATION_THRESHOLD_DAYS = 30;
 
-const sendExpirationNotifications = async (utilizadorId) => {
+const sendAllExpirationNotifications = async () => {
   try {
-    const expiringBadges = await adminBadgeModel.getExpiringSoonBadgesForUser(utilizadorId, EXPIRATION_NOTIFICATION_THRESHOLD_DAYS);
-    console.log('[sendExpirationNotifications] Expiring badges for user', utilizadorId, ':', expiringBadges?.length || 0);
+    const expiringBadges = await adminBadgeModel.getExpiringSoonBadges(EXPIRATION_NOTIFICATION_THRESHOLD_DAYS);
+
+    if (!expiringBadges || expiringBadges.length === 0) {
+      return;
+    }
+
+    const notifiedSet = new Set();
 
     for (const badge of expiringBadges) {
       const validade = new Date(badge.validade);
       const today = new Date();
       const daysUntilExpiration = Math.ceil((validade - today) / (1000 * 60 * 60 * 24));
-      console.log('[sendExpirationNotifications] Badge:', badge.b_nome, 'daysUntilExpiration:', daysUntilExpiration);
 
-      if (daysUntilExpiration > 0 && daysUntilExpiration <= EXPIRATION_NOTIFICATION_THRESHOLD_DAYS) {
-        const [existing] = await sequelize.query(
-          `
-            SELECT 1
-            FROM notificacao n
-            JOIN logs l ON l.nlog = n.nlog
-            WHERE l.titulo LIKE :pattern
-              AND n.nutilizador = :utilizadorId
-            LIMIT 1
-          `,
-          {
-            replacements: {
-              pattern: `%Badge a expirar%${badge.b_nome}%`,
-              utilizadorId,
-            },
-            type: QueryTypes.SELECT,
-          },
-        );
+      if (daysUntilExpiration <= 0 || daysUntilExpiration > EXPIRATION_NOTIFICATION_THRESHOLD_DAYS) {
+        continue;
+      }
 
-        console.log('[sendExpirationNotifications] Already sent:', !!existing);
-        if (!existing) {
-          await communicationModel.dispatchBadgeExpiringNotification(utilizadorId, badge.b_nome, daysUntilExpiration);
+      const recipientSet = new Set();
+
+      const consultorRows = await sequelize.query(
+        `
+          SELECT DISTINCT nutilizador AS id FROM c_obtem_b WHERE nbadge = :badgeId
+          UNION
+          SELECT DISTINCT nutilizador AS id FROM pedidos WHERE nbadge = :badgeId
+        `,
+        {
+          replacements: { badgeId: badge.nbadge },
+          type: QueryTypes.SELECT,
+        },
+      );
+
+      for (const row of consultorRows) {
+        const id = Number(row.id);
+        if (Number.isInteger(id) && id > 0) {
+          recipientSet.add(id);
         }
       }
-    }
-  } catch (error) {
-    console.error('Error sending expiration notifications:', error);
-  }
-};
 
-const sendAllExpirationNotifications = async () => {
-  try {
-    const rows = await sequelize.query(
-      `
-        SELECT DISTINCT cb.nutilizador
-        FROM c_obtem_b cb
-        JOIN badge b ON b.nbadge = cb.nbadge
-        WHERE b.validade IS NOT NULL
-          AND b.validade > CURRENT_DATE
-          AND b.validade <= CURRENT_DATE + INTERVAL '1 day' * :days
-      `,
-      {
-        replacements: { days: EXPIRATION_NOTIFICATION_THRESHOLD_DAYS },
-        type: QueryTypes.SELECT,
-      },
-    );
+      const adminRows = await sequelize.query(
+        `SELECT nutilizador AS id FROM utilizador WHERE LOWER(status) = 'ativo' AND LOWER(permissoes) LIKE '%admin-gestor%'`,
+        { type: QueryTypes.SELECT },
+      );
+      for (const row of adminRows) {
+        const id = Number(row.id);
+        if (Number.isInteger(id) && id > 0) recipientSet.add(id);
+      }
 
-    for (const row of rows) {
-      await sendExpirationNotifications(row.nutilizador);
+      const tmRows = await sequelize.query(
+        `SELECT nutilizador AS id FROM utilizador WHERE LOWER(status) = 'ativo' AND LOWER(permissoes) LIKE '%talent-manager%'`,
+        { type: QueryTypes.SELECT },
+      );
+      for (const row of tmRows) {
+        const id = Number(row.id);
+        if (Number.isInteger(id) && id > 0) recipientSet.add(id);
+      }
+
+      const sllServiceLines = await sequelize.query(
+        `SELECT DISTINCT nsline FROM b_pertence_sl WHERE nbadge = :badgeId`,
+        { replacements: { badgeId: badge.nbadge }, type: QueryTypes.SELECT },
+      );
+      for (const slRow of sllServiceLines) {
+        const sllRows = await sequelize.query(
+          `
+            SELECT DISTINCT sl.nutilizador AS id
+            FROM sll_leader_sl sl
+            INNER JOIN utilizador u ON u.nutilizador = sl.nutilizador
+            WHERE sl.nsline = :nsline AND LOWER(u.status) = 'ativo'
+          `,
+          { replacements: { nsline: slRow.nsline }, type: QueryTypes.SELECT },
+        );
+        for (const row of sllRows) {
+          const id = Number(row.id);
+          if (Number.isInteger(id) && id > 0) recipientSet.add(id);
+        }
+      }
+
+      const recipients = Array.from(recipientSet);
+      if (recipients.length === 0) continue;
+
+      const dedupKey = `expiring:${badge.nbadge}:${daysUntilExpiration}`;
+      if (notifiedSet.has(dedupKey)) continue;
+      notifiedSet.add(dedupKey);
+
+      const [existing] = await sequelize.query(
+        `SELECT 1 FROM logs l WHERE l.titulo LIKE :pattern AND l.data_log = CURRENT_DATE LIMIT 1`,
+        {
+          replacements: { pattern: `%Badge a expirar em ${daysUntilExpiration} dias%${badge.b_nome}%` },
+          type: QueryTypes.SELECT,
+        },
+      );
+
+      if (!existing) {
+        await communicationModel.dispatchBadgeExpiringNotification(recipients, badge.b_nome, daysUntilExpiration);
+      }
     }
   } catch (error) {
     console.error('Error sending all expiration notifications:', error);
