@@ -7,16 +7,6 @@ import BadgeImage from '../components/BadgeImage';
 import { fetchCatalogBadges } from '../services/consultorService';
 import '../css/Consultor/CatalogoBadges_C.css';
 
-const badgeLevels = [
-  { levelKey: 'badge_level_junior', points: 100, badgeImage: '/badges/J%C3%BAnior.png' },
-  { levelKey: 'badge_level_intermediate', points: 150, badgeImage: '/badges/Interm%C3%A9dio.png' },
-  { levelKey: 'badge_level_senior', points: 200, badgeImage: '/badges/S%C3%A9nior.png' },
-  { levelKey: 'badge_level_specialist', points: 250, badgeImage: '/badges/Especialista.png' },
-  { levelKey: 'badge_level_knowledge_lead', points: 300, badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png' },
-];
-
-const badgeAreas = ['LowCode (Outsystems)', 'Cloud Architecture'];
-
 const SPECIAL_BADGE_TYPE = 'special';
 
 const badgeTypes = [
@@ -58,27 +48,13 @@ const normalizeBadgeItem = (item) => {
   };
 };
 
-const buildDefaultBadgeItems = () =>
-  badgeAreas.flatMap((area, areaIndex) =>
-    badgeLevels.map((level) => ({
-      id: `${area}-${level.levelKey}`,
-      name: area,
-      area,
-      levelKey: level.levelKey,
-      points: level.points,
-      badgeImage: level.badgeImage,
-      date: '12 Jan 2026',
-      typeId: level.levelKey,
-    })),
-  );
-
 function CatalogoBadges() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
   const isAdminRoute = location.pathname.includes('/admin-gestor') || location.pathname.includes('/dashboard/admin');
   const catalogPath = isAdminRoute ? '/admin-gestor/catalogo-badges' : '/consultor/catalogo-badges';
-  const [badgeItems, setBadgeItems] = useState(buildDefaultBadgeItems);
+  const [badgeItems, setBadgeItems] = useState([]);
   const [statusMessage, setStatusMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('todos');
@@ -109,16 +85,16 @@ function CatalogoBadges() {
           return;
         }
 
-        const nextItems = Array.isArray(data) && data.length > 0
-          ? data.map(normalizeBadgeItem)
-          : buildDefaultBadgeItems().map(normalizeBadgeItem);
-
-        if (nextItems.length > 0) {
-          setBadgeItems(nextItems);
+        if (Array.isArray(data) && data.length > 0) {
+          setBadgeItems(data.map(normalizeBadgeItem));
+          setStatusMessage('');
+        } else {
+          setBadgeItems([]);
           setStatusMessage('');
         }
       } catch {
         if (isMounted) {
+          setBadgeItems([]);
           setStatusMessage('');
         }
       }

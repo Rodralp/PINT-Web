@@ -78,11 +78,12 @@ function BadgeImage({
     resolvedFrameSrc &&
     resolvedImageSrc &&
     normalizeImageKey(resolvedImageSrc) !== normalizeImageKey(resolvedFrameSrc);
+  const isRoundFrame = normalizeImageKey(resolvedFrameSrc || '').includes('especial');
 
   if (!shouldCompose) {
     return (
       <img
-        className={className}
+        className={`${className}${isRoundFrame ? ' badge-image--round' : ''}`.trim()}
         src={resolvedImageSrc}
         alt={alt}
       />
@@ -91,7 +92,7 @@ function BadgeImage({
 
   return (
     <span
-      className={`badge-image-composite ${className}`.trim()}
+      className={`badge-image-composite${isRoundFrame ? ' badge-image-composite--round' : ''} ${className}`.trim()}
       role={alt ? 'img' : undefined}
       aria-label={alt || undefined}
       aria-hidden={alt ? undefined : true}

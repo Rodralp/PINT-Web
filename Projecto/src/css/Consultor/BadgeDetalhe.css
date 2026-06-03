@@ -58,7 +58,7 @@
 .badge-hero-image {
   width: 170px;
   height: 150px;
-  object-fit: contain;
+  line-height: 0;
 }
 
 .badge-hero-content {

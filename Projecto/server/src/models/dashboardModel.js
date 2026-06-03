@@ -498,28 +498,24 @@ const defaultConsultorStats = Object.freeze([
   {
     titleKey: 'dashboard_stat_badges_title',
     value: '0',
-    noteKey: 'dashboard_stat_badges_note',
     iconKey: 'award',
     tone: 'gold',
   },
   {
     titleKey: 'dashboard_stat_streak_title',
     value: '0',
-    noteKey: 'dashboard_stat_streak_note',
     iconKey: 'flame',
     tone: 'fire',
   },
   {
     titleKey: 'dashboard_stat_requests_title',
     value: '0',
-    noteKey: 'dashboard_stat_requests_note',
     iconKey: 'clock',
     tone: 'blue',
   },
   {
     titleKey: 'dashboard_stat_ranking_title',
     value: '#0',
-    noteKey: 'dashboard_stat_ranking_note',
     iconKey: 'crown',
     tone: 'rank',
   },
@@ -552,79 +548,84 @@ export const dashboardModel = {
       return clone(defaultConsultorDashboard);
     }
 
-    const profileData = await consultorModel.getProfileData(parsedAccountId);
+    try {
+      const profileData = await consultorModel.getProfileData(parsedAccountId);
 
-    const [timelineRows, inProgressRows, suggestionItems] = await Promise.all([
-      sequelize.query(
-        `
-          SELECT
-            DATE(cb.data_obtencao) AS activity_date,
-            COUNT(DISTINCT cb.nbadge) AS activity_count
-          FROM c_obtem_b AS cb
-          WHERE cb.nutilizador = :accountId
-          GROUP BY DATE(cb.data_obtencao)
-          ORDER BY activity_date ASC
-        `,
-        {
-          replacements: { accountId: parsedAccountId },
-          type: QueryTypes.SELECT,
-        },
-      ),
-      sequelize.query(
-        `
-          SELECT
-            p.npedido,
-            b.b_nome,
-            p.data_submissao,
-            COALESCE(e.estado, 'pendente') AS estado
-          FROM pedidos AS p
-          INNER JOIN badge AS b
-            ON b.nbadge = p.nbadge
-          LEFT JOIN estado AS e
-            ON e.nestado = p.estado
-          WHERE p.nutilizador = :accountId
-            AND LOWER(COALESCE(e.estado, '')) <> 'aprovado'
-          ORDER BY p.data_submissao DESC, p.npedido DESC
-          LIMIT 3
-        `,
-        {
-          replacements: { accountId: parsedAccountId },
-          type: QueryTypes.SELECT,
-        },
-      ),
-      consultorModel.getBadgeSuggestions(parsedAccountId, 3).catch(() => []),
-    ]);
+      const [timelineRows, inProgressRows, suggestionItems] = await Promise.all([
+        sequelize.query(
+          `
+            SELECT
+              DATE(cb.data_obtencao) AS activity_date,
+              COUNT(DISTINCT cb.nbadge) AS activity_count
+            FROM c_obtem_b AS cb
+            WHERE cb.nutilizador = :accountId
+            GROUP BY DATE(cb.data_obtencao)
+            ORDER BY activity_date ASC
+          `,
+          {
+            replacements: { accountId: parsedAccountId },
+            type: QueryTypes.SELECT,
+          },
+        ),
+        sequelize.query(
+          `
+            SELECT
+              p.npedido,
+              b.b_nome,
+              p.data_submissao,
+              COALESCE(e.estado, 'pendente') AS estado
+            FROM pedidos AS p
+            INNER JOIN badge AS b
+              ON b.nbadge = p.nbadge
+            LEFT JOIN estado AS e
+              ON e.nestado = p.estado
+            WHERE p.nutilizador = :accountId
+              AND LOWER(COALESCE(e.estado, '')) <> 'aprovado'
+            ORDER BY p.data_submissao DESC, p.npedido DESC
+            LIMIT 3
+          `,
+          {
+            replacements: { accountId: parsedAccountId },
+            type: QueryTypes.SELECT,
+          },
+        ),
+        consultorModel.getBadgeSuggestions(parsedAccountId, 3).catch(() => []),
+      ]);
 
-    const timelineValues = buildDailySeries(timelineRows, CONSULTOR_TIMELINE_DAYS);
+      const timelineValues = buildDailySeries(timelineRows, CONSULTOR_TIMELINE_DAYS);
 
-    const inProgressItems = (inProgressRows || []).map((row) => {
-      const estado = normalizeRequestState(row.estado);
+      const inProgressItems = (inProgressRows || []).map((row) => {
+        const estado = normalizeRequestState(row.estado);
+        return {
+          title: row.b_nome || 'Badge',
+          subtitle: mapRequestStateToSubtitle(estado),
+          accent: estado === 'aprovado' ? 'success' : estado === 'evidencias_insuficientes' ? 'amber' : 'warning',
+          iconKey: mapRequestStateToIconKey(estado),
+        };
+      });
+
+      const stats = Array.isArray(profileData?.stats) && profileData.stats.length > 0
+        ? profileData.stats
+        : clone(defaultConsultorDashboard.stats);
+
       return {
-        title: row.b_nome || 'Badge',
-        subtitle: mapRequestStateToSubtitle(estado),
-        accent: estado === 'aprovado' ? 'success' : estado === 'evidencias_insuficientes' ? 'amber' : 'warning',
-        iconKey: mapRequestStateToIconKey(estado),
+        timelineValues,
+        stats,
+        inProgressItems,
+        suggestionItems: Array.isArray(suggestionItems) ? suggestionItems : [],
+        recentActivities: Array.isArray(profileData.activityItems)
+          && profileData.activityItems.length > 0
+          ? profileData.activityItems.slice(0, 4).map((item, index) => ({
+            id: item.id || index + 1,
+            title: item.description,
+            timeframe: item.date,
+            iconKey: item.icon === 'award' ? 'award' : 'fileText',
+          }))
+          : [],
       };
-    });
-
-    const stats = Array.isArray(profileData?.stats) && profileData.stats.length > 0
-      ? profileData.stats
-      : clone(defaultConsultorDashboard.stats);
-
-    return {
-      timelineValues,
-      stats,
-      inProgressItems,
-      suggestionItems: Array.isArray(suggestionItems) ? suggestionItems : [],
-      recentActivities: Array.isArray(profileData.activityItems)
-        && profileData.activityItems.length > 0
-        ? profileData.activityItems.slice(0, 4).map((item, index) => ({
-          id: item.id || index + 1,
-          title: item.description,
-          timeframe: item.date,
-          iconKey: item.icon === 'award' ? 'award' : 'fileText',
-        }))
-        : [],
-    };
+    } catch (error) {
+      console.error('❌ getConsultorDashboardData error:', error.message);
+      return clone(defaultConsultorDashboard);
+    }
   },
 };

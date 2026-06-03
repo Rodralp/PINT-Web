@@ -72,22 +72,11 @@ const tabDefaults = {
   consultores: { filter: 'todos', sort: 'points_desc' },
 };
 
-const knownServiceLines = ['LowCode', 'Cloud', 'Data & AI', 'Cybersecurity'];
+const knownServiceLines = [];
 
-const serviceLineByEmail = {
-  'pedro.mendes@softinsa.pt': 'Cloud',
-  'maria.santos@softinsa.pt': 'Data & AI',
-  'ana.costa@softinsa.pt': 'LowCode',
-  'joaogomes1234@softinsa.pt': 'LowCode',
-};
+const serviceLineByEmail = {};
 
-const badgeLevels = [
-  { id: 'junior', label: 'Júnior', points: 100, badgeImage: '/badges/Júnior.png' },
-  { id: 'intermedio', label: 'Intermédio', points: 150, badgeImage: '/badges/Intermédio.png' },
-  { id: 'senior', label: 'Sénior', points: 200, badgeImage: '/badges/Sénior.png' },
-  { id: 'especialista', label: 'Especialista', points: 250, badgeImage: '/badges/Especialista.png' },
-  { id: 'lider', label: 'Líder de Conhecimento', points: 300, badgeImage: '/badges/Líder de Conhecimento.png' },
-];
+const badgeLevels = [];
 
 const requestStatusMeta = {
   enviado: { label: 'Enviados', className: 'sent' },

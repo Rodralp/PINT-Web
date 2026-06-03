@@ -18,25 +18,16 @@ import './css/PerfilPublico.css';
 import { fetchPublicProfile } from './services/consultorService';
 
 const defaultConsultor = {
-	id: '1',
-	name: 'Joao Gomes',
-	email: 'joaogomes1234@softinsa.pt',
-	serviceLine: 'Cloud',
-	points: 2450,
-	badges: 12,
+	id: '',
+	name: '',
+	email: '',
+	serviceLine: '',
+	points: 0,
+	badges: 0,
 	streakDays: 0,
-	location: 'Portugal',
-	joined: '2023',
+	location: '',
+	joined: '',
 };
-
-const fallbackConsultores = [
-	{ id: 1, name: 'Joao Gomes', email: 'joaogomes1234@softinsa.pt', serviceLine: 'Cloud', points: 2450, badges: 12, location: 'Portugal', joined: '2023' },
-	{ id: 2, name: 'Maria Santos', email: 'maria.santos@softinsa.pt', serviceLine: 'Data & AI', points: 2200, badges: 10, location: 'Portugal', joined: '2022' },
-	{ id: 3, name: 'Pedro Mendes', email: 'pedro.mendes@softinsa.pt', serviceLine: 'Cloud', points: 1950, badges: 9, location: 'Portugal', joined: '2024' },
-	{ id: 4, name: 'Ana Costa', email: 'ana.costa@softinsa.pt', serviceLine: 'LowCode', points: 1700, badges: 8, location: 'Portugal', joined: '2023' },
-	{ id: 5, name: 'Carlos Ferreira', email: 'carlos.ferreira@softinsa.pt', serviceLine: 'Cybersecurity', points: 1500, badges: 7, location: 'Portugal', joined: '2021' },
-	{ id: 6, name: 'Rita Oliveira', email: 'rita.oliveira@softinsa.pt', serviceLine: 'Data & AI', points: 1450, badges: 7, location: 'Portugal', joined: '2022' },
-];
 
 function PerfilPublico() {
 	const { consultorId } = useParams();
@@ -58,9 +49,7 @@ function PerfilPublico() {
 				return location.state.consultor;
 			}
 
-			const decodedId = decodeURIComponent(consultorId || '');
-			const matchedConsultor = fallbackConsultores.find((item) => String(item.id) === decodedId);
-			return matchedConsultor || defaultConsultor;
+			return defaultConsultor;
 		}, [consultorId, location.state, remoteConsultor]);
 
 		useEffect(() => {
@@ -116,10 +105,7 @@ function PerfilPublico() {
 		}, [consultorId]);
 
 	const profileStats = useMemo(() => {
-		const rankingPosition = consultor.ranking || (fallbackConsultores
-			.slice()
-			.sort((a, b) => b.points - a.points)
-			.findIndex((item) => String(item.id) === String(consultor.id)));
+		const rankingPosition = consultor.ranking || 0;
 
 		return [
 			{ id: 'badges', title: t('dashboard_stat_badges_title'), value: consultor.badges, icon: Award, tone: 'gold' },

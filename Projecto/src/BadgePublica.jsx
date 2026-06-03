@@ -9,61 +9,13 @@ import './css/BadgePublica.css';
 
 const defaultBadgeDetails = {
   id: 'badge-public-default',
-  name: 'LowCode (Outsystems)',
-  area: 'LowCode (Outsystems)',
-  levelKey: 'badge_level_knowledge_lead',
-  points: 300,
-  badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png',
-  date: '12 Jan 2026',
+  name: '',
+  area: '',
+  levelKey: '',
+  points: 0,
+  badgeImage: '',
+  date: '',
 };
-
-const fallbackBadges = [
-  {
-    id: 'cloud-junior',
-    name: 'Cloud Architecture',
-    area: 'Cloud Architecture',
-    levelKey: 'badge_level_junior',
-    points: 100,
-    badgeImage: '/badges/J%C3%BAnior.png',
-    date: '12 Jan 2026',
-  },
-  {
-    id: 'cloud-intermediate',
-    name: 'Cloud Architecture',
-    area: 'Cloud Architecture',
-    levelKey: 'badge_level_intermediate',
-    points: 150,
-    badgeImage: '/badges/Interm%C3%A9dio.png',
-    date: '12 Jan 2026',
-  },
-  {
-    id: 'cloud-senior',
-    name: 'Cloud Architecture',
-    area: 'Cloud Architecture',
-    levelKey: 'badge_level_senior',
-    points: 200,
-    badgeImage: '/badges/S%C3%A9nior.png',
-    date: '12 Jan 2026',
-  },
-  {
-    id: 'lowcode-specialist',
-    name: 'LowCode (Outsystems)',
-    area: 'LowCode (Outsystems)',
-    levelKey: 'badge_level_specialist',
-    points: 250,
-    badgeImage: '/badges/Especialista.png',
-    date: '12 Jan 2026',
-  },
-  {
-    id: 'lowcode-lead',
-    name: 'LowCode (Outsystems)',
-    area: 'LowCode (Outsystems)',
-    levelKey: 'badge_level_knowledge_lead',
-    points: 300,
-    badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png',
-    date: '12 Jan 2026',
-  },
-];
 
 const resolveBadgeDbId = (routeBadgeId, badgeState) => {
   const direct = Number(badgeState?.badgeDbId);
@@ -119,9 +71,7 @@ function BadgePublica() {
       return location.state.badge;
     }
 
-    const decodedId = decodeURIComponent(badgeId || '');
-    const matchedBadge = fallbackBadges.find((item) => item.id === decodedId);
-    return matchedBadge || defaultBadgeDetails;
+    return defaultBadgeDetails;
   }, [location.state, badgeId]);
 
   const resolvedBadgeDbId = useMemo(

@@ -798,10 +798,12 @@ const sendAllExpirationNotifications = async () => {
       if (notifiedSet.has(dedupKey)) continue;
       notifiedSet.add(dedupKey);
 
+      const logTitle = `Badge a expirar: ${badge.b_nome} (${daysUntilExpiration} dias)`;
+
       const [existing] = await sequelize.query(
-        `SELECT 1 FROM logs l WHERE l.titulo LIKE :pattern AND l.data_log = CURRENT_DATE LIMIT 1`,
+        `SELECT 1 FROM logs l WHERE l.titulo = :title AND l.nutilizador = :recipientId AND l.data_log = CURRENT_DATE LIMIT 1`,
         {
-          replacements: { pattern: `%Badge a expirar em ${daysUntilExpiration} dias%${badge.b_nome}%` },
+          replacements: { title: logTitle, recipientId: recipients[0] },
           type: QueryTypes.SELECT,
         },
       );
@@ -982,54 +984,38 @@ const buildRankingConsultores = async () => {
 };
 
 const profileData = {
-  location: 'Portugal',
-  joined: '2023',
-  timelineValues: [3, 2, 5, 4, 6, 3, 7, 5, 8, 4, 6, 9],
+  location: '',
+  joined: '',
+  timelineValues: Array.from({ length: 12 }, () => 0),
   stats: [
     {
       titleKey: 'dashboard_stat_badges_title',
-      value: '12',
-      noteKey: 'dashboard_stat_badges_note',
+      value: '0',
       iconKey: 'award',
       tone: 'gold',
     },
     {
       titleKey: 'dashboard_stat_streak_title',
       value: '0',
-      noteKey: 'dashboard_stat_streak_note',
       iconKey: 'flame',
       tone: 'fire',
     },
     {
       titleKey: 'dashboard_stat_requests_title',
-      value: '5',
-      noteKey: 'dashboard_stat_requests_note',
+      value: '0',
       iconKey: 'clock',
       tone: 'blue',
     },
     {
       titleKey: 'dashboard_stat_ranking_title',
-      value: '#15',
-      noteKey: 'dashboard_stat_ranking_note',
+      value: '#0',
       iconKey: 'crown',
       tone: 'rank',
     },
   ],
-  skillsItems: [
-    { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_specialist', accent: 'warning' },
-    { title: 'JavaScript', subtitleKey: 'badge_level_senior', accent: 'yellow' },
-    { title: 'React', subtitleKey: 'badge_level_intermediate', accent: 'info' },
-  ],
-  certificationsItems: [
-    { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_knowledge_lead', accent: 'success' },
-    { title: 'Cloud Architecture', subtitleKey: 'badge_level_specialist', accent: 'violet' },
-    { title: 'C++ Mastery', subtitleKey: 'badge_level_senior', accent: 'amber' },
-  ],
-  serviceLineStats: [
-    { serviceLine: 'Cloud', badges: 12, points: 2450 },
-    { serviceLine: 'Data & AI', badges: 10, points: 2200 },
-    { serviceLine: 'LowCode', badges: 8, points: 1700 },
-  ],
+  skillsItems: [],
+  certificationsItems: [],
+  serviceLineStats: [],
 };
 
 const buildProfileData = async (accountId) => {
@@ -1039,8 +1025,21 @@ const buildProfileData = async (accountId) => {
     return clone(profileData);
   }
 
-  await autoRejectExpiredRequests();
+  try {
+    await autoRejectExpiredRequests();
+  } catch (error) {
+    console.error('Error auto-rejecting expired requests:', error);
+  }
 
+  try {
+    return await _buildProfileDataInner(parsedAccountId);
+  } catch (error) {
+    console.error('❌ buildProfileData error, returning defaults:', error.message);
+    return clone(profileData);
+  }
+};
+
+const _buildProfileDataInner = async (parsedAccountId) => {
   const [row] = await sequelize.query(
     `
       WITH badge_scores AS (
@@ -1268,28 +1267,24 @@ const buildProfileData = async (accountId) => {
       {
         titleKey: 'dashboard_stat_badges_title',
         value: String(Number(row.badges) || 0),
-        noteKey: 'dashboard_stat_badges_note',
         iconKey: 'award',
         tone: 'gold',
       },
       {
         titleKey: 'dashboard_stat_streak_title',
         value: String(streakDays),
-        noteKey: 'dashboard_stat_streak_note',
         iconKey: 'flame',
         tone: 'fire',
       },
       {
         titleKey: 'dashboard_stat_requests_title',
         value: String(requestCount),
-        noteKey: 'dashboard_stat_requests_note',
         iconKey: 'clock',
         tone: 'blue',
       },
       {
         titleKey: 'dashboard_stat_ranking_title',
         value: `#${Number(row.ranking) || 0}`,
-        noteKey: 'dashboard_stat_ranking_note',
         iconKey: 'crown',
         tone: 'rank',
       },
@@ -1310,8 +1305,8 @@ const buildProfileData = async (accountId) => {
 };
 
 const buildLearningPaths = async (accountId) => {
-  await autoRejectExpiredRequests();
-  await adminBadgeModel.checkAndExpireBadges();
+  try { await autoRejectExpiredRequests(); } catch (e) { console.error('Error auto-rejecting expired requests:', e); }
+  try { await adminBadgeModel.checkAndExpireBadges(); } catch (e) { console.error('Error checking expired badges:', e); }
   const rows = await sequelize.query(
     `
       SELECT
@@ -1737,8 +1732,8 @@ const buildMyBadges = async (accountId) => {
 };
 
 const buildMyRequests = async (accountId) => {
-  await autoRejectExpiredRequests();
-  await adminBadgeModel.checkAndExpireBadges();
+  try { await autoRejectExpiredRequests(); } catch (e) { console.error('Error auto-rejecting expired requests:', e); }
+  try { await adminBadgeModel.checkAndExpireBadges(); } catch (e) { console.error('Error checking expired badges:', e); }
   const utilizadorId = await getUtilizadorIdByAccountId(accountId);
   if (!utilizadorId) {
     return [];
@@ -1955,8 +1950,8 @@ const saveUserPreferences = async (accountId, areaIds) => {
 };
 
 const buildBadgeSuggestions = async (accountId, limit = 3) => {
-  await autoRejectExpiredRequests();
-  await adminBadgeModel.checkAndExpireBadges();
+  try { await autoRejectExpiredRequests(); } catch (e) { console.error('Error auto-rejecting expired requests:', e); }
+  try { await adminBadgeModel.checkAndExpireBadges(); } catch (e) { console.error('Error checking expired badges:', e); }
   const safeLimit = Number.isInteger(Number(limit)) && Number(limit) > 0 ? Number(limit) : 3;
   const utilizadorId = await getUtilizadorIdByAccountId(accountId);
   if (!utilizadorId) {
@@ -2121,8 +2116,8 @@ const buildBadgeSuggestions = async (accountId, limit = 3) => {
 };
 
 const requestBadgeAcquisition = async (accountId, badgeId) => {
-  await autoRejectExpiredRequests();
-  await adminBadgeModel.checkAndExpireBadges();
+  try { await autoRejectExpiredRequests(); } catch (e) { console.error('Error auto-rejecting expired requests:', e); }
+  try { await adminBadgeModel.checkAndExpireBadges(); } catch (e) { console.error('Error checking expired badges:', e); }
   const parsedBadgeId = Number(badgeId);
   if (!Number.isInteger(parsedBadgeId) || parsedBadgeId <= 0) {
     const error = new Error('Invalid badge id.');
@@ -2401,7 +2396,7 @@ const saveEvidences = async (accountId, pedidoId, nreq, fileMeta) => {
 
 export const consultorModel = {
   async getCatalogBadges(includeExpired = false) {
-    await adminBadgeModel.checkAndExpireBadges();
+    try { await adminBadgeModel.checkAndExpireBadges(); } catch (e) { console.error('Error checking expired badges:', e); }
     const whereClause = includeExpired ? '' : 'WHERE b.validade IS NULL OR b.validade > CURRENT_DATE';
     const rawBadges = await sequelize.query(
       `

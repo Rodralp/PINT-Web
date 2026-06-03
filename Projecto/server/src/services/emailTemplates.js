@@ -59,7 +59,7 @@ export const emailTemplates = {
       <p>Ola <strong>${userName}</strong>,</p>
       <p>A sua conta foi aprovada e ja pode aceder a plataforma.</p>
       <p>
-        <a href="${(process.env.VITE_API_BASE_URL || '').replace('/api', '') || 'http://localhost:5173'}/entrar"
+        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/entrar"
            style="${buttonStyle}">
           Iniciar Sessao
         </a>

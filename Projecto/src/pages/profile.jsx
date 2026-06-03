@@ -29,7 +29,7 @@ import { fetchProfileData } from '../services/consultorService';
 import '../css/Consultor/Dashboard_C.css';
 import '../css/profile.css';
 
-const defaultTimelineValues = [3, 2, 5, 4, 6, 3, 7, 5, 8, 4, 6, 9];
+const defaultTimelineValues = Array.from({ length: 12 }, () => 0);
 
 const calculateVisibleTimelinePoints = (containerWidth, totalPoints) => {
   const minColumnWidth = 42;
@@ -58,31 +58,17 @@ const activityIconMap = {
 };
 
 const defaultProfileStats = [
-  { titleKey: 'dashboard_stat_badges_title', value: '12', noteKey: 'dashboard_stat_badges_note', icon: Award, tone: 'gold' },
-  { titleKey: 'dashboard_stat_streak_title', value: '0', noteKey: 'dashboard_stat_streak_note', icon: Flame, tone: 'fire' },
-  { titleKey: 'dashboard_stat_requests_title', value: '5', noteKey: 'dashboard_stat_requests_note', icon: Clock3, tone: 'blue' },
-  { titleKey: 'dashboard_stat_ranking_title', value: '#15', noteKey: 'dashboard_stat_ranking_note', icon: Crown, tone: 'rank' },
+  { titleKey: 'dashboard_stat_badges_title', value: '0', icon: Award, tone: 'gold' },
+  { titleKey: 'dashboard_stat_streak_title', value: '0', icon: Flame, tone: 'fire' },
+  { titleKey: 'dashboard_stat_requests_title', value: '0', icon: Clock3, tone: 'blue' },
+  { titleKey: 'dashboard_stat_ranking_title', value: '#-', icon: Crown, tone: 'rank' },
 ];
 
-const defaultSkillsItems = [
-  { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_specialist', accent: 'warning' },
-  { title: 'JavaScript', subtitleKey: 'badge_level_senior', accent: 'yellow' },
-  { title: 'React', subtitleKey: 'badge_level_intermediate', accent: 'info' },
-];
+const defaultSkillsItems = [];
 
-const defaultCertificationsItems = [
-  { title: 'LowCode (Outsystems)', subtitleKey: 'badge_level_knowledge_lead', accent: 'success' },
-  { title: 'Cloud Architecture', subtitleKey: 'badge_level_specialist', accent: 'violet' },
-  { title: 'C++ Mastery', subtitleKey: 'badge_level_senior', accent: 'amber' },
-];
+const defaultCertificationsItems = [];
 
-const defaultActivityItems = [
-  { type: 'rank', description: 'Rose to rank #14', date: '5 days ago', icon: TrendingUp, color: 'yellow' },
-  { type: 'skill', description: 'Added skill: JavaScript', date: '1 week ago', icon: Star, color: 'success' },
-  { type: 'achievement', description: 'Completed 10 skill assessments', date: '2 weeks ago', icon: Trophy, color: 'violet' },
-  { type: 'badge', description: 'Earned badge: React Senior', date: '3 weeks ago', icon: Award, color: 'info' },
-  { type: 'streak', description: 'Achieved 7-day streak', date: '1 month ago', icon: Zap, color: 'amber' },
-];
+const defaultActivityItems = [];
 
 function Profile() {
   const navigate = useNavigate();
@@ -223,7 +209,6 @@ function Profile() {
                     </span>
                     <strong>{item.value}</strong>
                   </div>
-                  <div className="dashboard-stat-note">{t(item.noteKey)}</div>
                 </section>
               );
             })}

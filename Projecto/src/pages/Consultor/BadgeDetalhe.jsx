@@ -29,78 +29,14 @@ import '../../css/Consultor/BadgeDetalhe.css';
 
 const defaultBadgeDetails = {
   id: 'badge-default',
-  area: 'LowCode (Outsystems)',
-  serviceLineName: 'Application Operations',
-  learningPathName: 'Jornada Técnica',
-  levelKey: 'badge_level_knowledge_lead',
-  points: 300,
-  badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png',
-  date: '12 Jan 2026',
+  area: '',
+  serviceLineName: '',
+  learningPathName: '',
+  levelKey: '',
+  points: 0,
+  badgeImage: '',
+  date: '',
 };
-
-const fallbackBadges = [
-  {
-    id: 'my-1',
-    area: 'LowCode (Outsystems)',
-    serviceLineName: 'Application Operations',
-    learningPathName: 'Jornada Técnica',
-    levelKey: 'badge_level_specialist',
-    points: 250,
-    badgeImage: '/badges/Especialista.png',
-    date: '12 Jan 2026',
-  },
-  {
-    id: 'my-2',
-    area: 'LowCode (Outsystems)',
-    serviceLineName: 'Application Operations',
-    learningPathName: 'Jornada Técnica',
-    levelKey: 'badge_level_senior',
-    points: 200,
-    badgeImage: '/badges/S%C3%A9nior.png',
-    date: '11 Jan 2026',
-  },
-  {
-    id: 'my-3',
-    area: 'LowCode (Outsystems)',
-    serviceLineName: 'Application Operations',
-    learningPathName: 'Jornada Técnica',
-    levelKey: 'badge_level_intermediate',
-    points: 150,
-    badgeImage: '/badges/Interm%C3%A9dio.png',
-    date: '10 Jan 2026',
-  },
-  {
-    id: 'my-4',
-    area: 'Cloud Architecture',
-    serviceLineName: 'Hybrid Cloud',
-    learningPathName: 'Jornada Técnica',
-    levelKey: 'badge_level_specialist',
-    points: 250,
-    badgeImage: '/badges/Especialista.png',
-    date: '09 Jan 2026',
-  },
-  {
-    id: 'my-5',
-    area: 'Cloud Architecture',
-    serviceLineName: 'Hybrid Cloud',
-    learningPathName: 'Jornada Técnica',
-    levelKey: 'badge_level_senior',
-    points: 200,
-    badgeImage: '/badges/S%C3%A9nior.png',
-    date: '08 Jan 2026',
-  },
-  {
-    id: 'my-6',
-    area: 'Cloud Architecture',
-    serviceLineName: 'Hybrid Cloud',
-    learningPathName: 'Jornada Técnica',
-    levelKey: 'badge_level_intermediate',
-    points: 150,
-    badgeImage: '/badges/Interm%C3%A9dio.png',
-    date: '07 Jan 2026',
-  },
-];
-
 
 const statusConfig = {
   candidatura_em_progresso: {
@@ -126,11 +62,6 @@ const statusConfig = {
 };
 
 const normalizeBadgeStatus = (badge) => {
-  const rawStatus = String(badge?.status || '').trim().toLowerCase();
-  if (rawStatus) {
-    return rawStatus;
-  }
-
   const stateId = String(badge?.stateId || '').trim().toLowerCase();
   if (stateId === 'aprovado') {
     return 'obtido';
@@ -146,6 +77,20 @@ const normalizeBadgeStatus = (badge) => {
 
   if (stateId === 'rejeitado') {
     return 'evidencias_insuficientes';
+  }
+
+  const rawStatus = String(badge?.status || '').trim().toLowerCase();
+  if (rawStatus === 'pendente-tm' || rawStatus === 'pendente-sll') {
+    return 'pendente';
+  }
+  if (rawStatus === 'candidatura_em_progresso') {
+    return 'candidatura_em_progresso';
+  }
+  if (rawStatus === 'rejeitado') {
+    return 'evidencias_insuficientes';
+  }
+  if (rawStatus === 'aprovado') {
+    return 'obtido';
   }
 
   return 'visualizar';
@@ -218,9 +163,7 @@ function BadgeDetalhe() {
       return location.state.badge;
     }
 
-    const decodedId = decodeURIComponent(badgeId || '');
-    const matchedBadge = fallbackBadges.find((item) => item.id === decodedId);
-    return matchedBadge || defaultBadgeDetails;
+    return defaultBadgeDetails;
   });
   const [badgeStatus, setBadgeStatus] = useState(() => normalizeBadgeStatus(badge));
   const hasBadgeId = Number.isInteger(Number(badge?.badgeDbId)) && Number(badge.badgeDbId) > 0;
@@ -238,9 +181,7 @@ function BadgeDetalhe() {
       return;
     }
 
-    const decodedId = decodeURIComponent(badgeId || '');
-    const matchedBadge = fallbackBadges.find((item) => item.id === decodedId);
-    setBadge(matchedBadge || defaultBadgeDetails);
+    setBadge(defaultBadgeDetails);
   }, [location.state?.badge, badgeId]);
 
   useEffect(() => {
@@ -408,8 +349,7 @@ function BadgeDetalhe() {
 
   const canRequestBadge =
     hasBadgeId &&
-    (badgeStatus === 'visualizar' || badgeStatus === 'evidencias_insuficientes') &&
-    !(openedFromCatalog && badgeStatus === 'visualizar');
+    (badgeStatus === 'visualizar' || badgeStatus === 'evidencias_insuficientes');
   const isProgressStatus = badgeStatus === 'candidatura_em_progresso';
   const canSubmitProgress = hasBadgeId && (canRequestBadge || isProgressStatus);
   const hasStatusBanner = badgeStatus !== 'visualizar';

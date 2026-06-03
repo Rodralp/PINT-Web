@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import '../../css/Shared/GestaoPedidosDetalhe.css';
-import { getConsultorRequestById } from '../../data/requests/consultorRequestsData';
 
 const statusMeta = {
   pendente: {
@@ -40,7 +39,7 @@ function PedidoDetalheC() {
   const [openRequirementId, setOpenRequirementId] = useState(null);
 
   const stateRequest = location.state?.request || null;
-  const request = getConsultorRequestById(pedidoId, stateRequest);
+  const request = stateRequest;
 
   const handleGoBack = () => {
     if (window.history.length > 1) {

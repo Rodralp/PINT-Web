@@ -58,10 +58,10 @@ const calculateVisibleTimelinePoints = (containerWidth, totalPoints) => {
 };
 
 const defaultDashboardStats = [
-  { titleKey: 'dashboard_stat_badges_title', value: '0', noteKey: 'dashboard_stat_badges_note', icon: Award, tone: 'gold' },
-  { titleKey: 'dashboard_stat_streak_title', value: '0', noteKey: 'dashboard_stat_streak_note', icon: Flame, tone: 'fire' },
-  { titleKey: 'dashboard_stat_requests_title', value: '0', noteKey: 'dashboard_stat_requests_note', icon: Clock3, tone: 'blue' },
-  { titleKey: 'dashboard_stat_ranking_title', value: '#0', noteKey: 'dashboard_stat_ranking_note', icon: Crown, tone: 'rank' },
+  { titleKey: 'dashboard_stat_badges_title', value: '0', icon: Award, tone: 'gold' },
+  { titleKey: 'dashboard_stat_streak_title', value: '0', icon: Flame, tone: 'fire' },
+  { titleKey: 'dashboard_stat_requests_title', value: '0', icon: Clock3, tone: 'blue' },
+  { titleKey: 'dashboard_stat_ranking_title', value: '#0', icon: Crown, tone: 'rank' },
 ];
 
 function DashboardC() {
@@ -241,7 +241,6 @@ function DashboardC() {
                   </span>
                     <strong>{item.value}</strong>
                 </div>
-                  <div className="dashboard-stat-note">{t(item.noteKey)}</div>
                 </section>
               );
             })}

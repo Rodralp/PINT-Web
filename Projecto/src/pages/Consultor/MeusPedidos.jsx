@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import { fetchMyRequests } from '../../services/consultorService';
-import { defaultMyRequests } from '../../data/requests/consultorRequestsData';
 import '../../css/Consultor/MeusPedidos.css';
 
 const statusConfig = {
@@ -50,7 +49,7 @@ const ITEMS_PER_PAGE = 10;
 
 function MeusPedidos() {
   const navigate = useNavigate();
-  const [allRequests, setAllRequests] = useState(defaultMyRequests);
+  const [allRequests, setAllRequests] = useState([]);
   const [activeFilters, setActiveFilters] = useState(filters.map((filter) => filter.id));
   const [page, setPage] = useState(1);
 
@@ -64,7 +63,9 @@ function MeusPedidos() {
           setAllRequests(data);
         }
       } catch {
-        // Mantem os dados locais quando a API nao estiver disponivel.
+        if (isMounted) {
+          setAllRequests([]);
+        }
       }
     };
 

@@ -1170,7 +1170,7 @@ export const communicationModel = {
         return { logId: null, recipients: [] };
       }
 
-      const logTitle = `Badge a expirar em ${daysUntilExpiration} dias`;
+      const logTitle = `Badge a expirar: ${badgeName} (${daysUntilExpiration} dias)`;
       const logMessage = `A badge "${badgeName}" irá expirar em ${daysUntilExpiration} dias. Certifique-se de que utilizou os seus benefícios antes da data de expiração.`;
 
       const logId = await insertLogEntry({

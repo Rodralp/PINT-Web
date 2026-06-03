@@ -8,23 +8,6 @@ import { fetchCatalogBadges, fetchRankingConsultores } from './services/consulto
 import './css/GaleriaPublica.css';
 import './css/Consultor/CatalogoBadges_C.css';
 
-const fallbackBadges = [
-  { id: 'cloud-junior', name: 'Cloud Architecture', area: 'Cloud Architecture', levelKey: 'badge_level_junior', levelLabel: 'Junior', points: 100, badgeImage: '/badges/J%C3%BAnior.png', date: '12 Jan 2026' },
-  { id: 'cloud-intermediate', name: 'Cloud Architecture', area: 'Cloud Architecture', levelKey: 'badge_level_intermediate', levelLabel: 'Intermedio', points: 150, badgeImage: '/badges/Interm%C3%A9dio.png', date: '12 Jan 2026' },
-  { id: 'cloud-senior', name: 'Cloud Architecture', area: 'Cloud Architecture', levelKey: 'badge_level_senior', levelLabel: 'Senior', points: 200, badgeImage: '/badges/S%C3%A9nior.png', date: '12 Jan 2026' },
-  { id: 'lowcode-specialist', name: 'LowCode (Outsystems)', area: 'LowCode (Outsystems)', levelKey: 'badge_level_specialist', levelLabel: 'Especialista', points: 250, badgeImage: '/badges/Especialista.png', date: '12 Jan 2026' },
-  { id: 'lowcode-lead', name: 'LowCode (Outsystems)', area: 'LowCode (Outsystems)', levelKey: 'badge_level_knowledge_lead', levelLabel: 'Lider de Conhecimento', points: 300, badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png', date: '12 Jan 2026' },
-];
-
-const fallbackConsultores = [
-  { id: 1, name: 'Joao Gomes', email: 'joaogomes1234@softinsa.pt', serviceLine: 'Cloud', points: 2450, badges: 12 },
-  { id: 2, name: 'Maria Santos', email: 'maria.santos@softinsa.pt', serviceLine: 'Data & AI', points: 2200, badges: 10 },
-  { id: 3, name: 'Pedro Mendes', email: 'pedro.mendes@softinsa.pt', serviceLine: 'Cloud', points: 1950, badges: 9 },
-  { id: 4, name: 'Ana Costa', email: 'ana.costa@softinsa.pt', serviceLine: 'LowCode', points: 1700, badges: 8 },
-  { id: 5, name: 'Carlos Ferreira', email: 'carlos.ferreira@softinsa.pt', serviceLine: 'Cybersecurity', points: 1500, badges: 7 },
-  { id: 6, name: 'Rita Oliveira', email: 'rita.oliveira@softinsa.pt', serviceLine: 'Data & AI', points: 1450, badges: 7 },
-];
-
 const resolveBadgeLevel = (item) => {
   const byKey = {
     badge_level_junior: 'Junior',
@@ -51,7 +34,7 @@ const resolveBadgeLevelKey = (item) => {
 
 const normalizeBadges = (items) => {
   if (!Array.isArray(items) || items.length === 0) {
-    return fallbackBadges;
+    return [];
   }
 
   return items.map((item, index) => {
@@ -77,7 +60,7 @@ const normalizeBadges = (items) => {
 
 const normalizeConsultores = (items) => {
   if (!Array.isArray(items) || items.length === 0) {
-    return fallbackConsultores;
+    return [];
   }
 
   return items.map((item, index) => ({
@@ -99,8 +82,8 @@ function GaleriaPublica() {
     const saved = sessionStorage.getItem('gp_activeTab');
     return saved || 'badges';
   });
-  const [badges, setBadges] = useState(fallbackBadges);
-  const [consultores, setConsultores] = useState(fallbackConsultores);
+  const [badges, setBadges] = useState([]);
+  const [consultores, setConsultores] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -124,8 +107,8 @@ function GaleriaPublica() {
           return;
         }
 
-        setBadges(fallbackBadges);
-        setConsultores(fallbackConsultores);
+        setBadges([]);
+        setConsultores([]);
       }
     };
 
