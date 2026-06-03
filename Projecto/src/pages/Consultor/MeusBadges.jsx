@@ -19,7 +19,17 @@ const badgeStates = [
     Icon: CheckCircle2,
   },
   {
-    id: 'em_validacao',
+    id: 'pendente-tm',
+    label: 'Em Validação',
+    tint: 'rgba(250, 204, 21, 0.14)',
+    border: 'rgba(234, 179, 8, 0.36)',
+    buttonBg: '#fef3c7',
+    buttonBorder: '#eab308',
+    buttonColor: '#b45309',
+    Icon: SearchCheck,
+  },
+  {
+    id: 'pendente-sll',
     label: 'Em Validação',
     tint: 'rgba(250, 204, 21, 0.14)',
     border: 'rgba(234, 179, 8, 0.36)',
@@ -129,7 +139,7 @@ function MeusBadges() {
     { id: 'todos', label: 'Todos' },
     { id: 'special', label: 'Especial' },
     { id: 'aprovado', label: 'Aprovado' },
-    { id: 'em_validacao', label: 'Em Validação' },
+    { id: 'pendente', label: 'Em Validação' },
     { id: 'candidatura_em_progresso', label: 'Candidatura em Progresso' },
     { id: 'rejeitado', label: 'Rejeitado' },
   ], []);
@@ -166,7 +176,9 @@ function MeusBadges() {
       const stateLabel = badgeStateMap[item.stateId]?.label || '';
       const badgeTitle = String(item.name || item.area || '').toLowerCase();
       const filterMatch = activeFilter === 'todos'
-        || (activeFilter === 'special' ? isSpecial : item.stateId === activeFilter);
+        || (activeFilter === 'special' ? isSpecial
+          : activeFilter === 'pendente' ? (item.stateId === 'pendente-tm' || item.stateId === 'pendente-sll')
+          : item.stateId === activeFilter);
       const searchMatch =
         normalizedSearch.length === 0
         || badgeTitle.includes(normalizedSearch)

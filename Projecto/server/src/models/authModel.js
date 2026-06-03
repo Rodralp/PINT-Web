@@ -2,6 +2,8 @@ import { QueryTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import { Account } from './sql/Account.js';
 import { communicationModel } from './communicationModel.js';
+import { sendEmail } from '../services/emailService.js';
+import { emailTemplates } from '../services/emailTemplates.js';
 
 const DEFAULT_ROLE = 'consultor';
 const ALLOWED_ROLES = new Set(['consultor', 'talent-manager', 'service-line-leader', 'admin-gestor']);
@@ -581,7 +583,31 @@ export const authModel = {
 
     if (normalizedDecision === 'approve') {
       // Approve: set status to 'ativo'
-      return this.updateAdminUserStatus(accountId, { status: 'ativo' });
+      // Fetch user info before approval for email
+      const [userInfo] = await sequelize.query(
+        'SELECT nome, email FROM utilizador WHERE nutilizador = :accountId LIMIT 1',
+        {
+          replacements: { accountId: Number(accountId) },
+          type: QueryTypes.SELECT,
+        }
+      );
+
+      const result = this.updateAdminUserStatus(accountId, { status: 'ativo' });
+
+      // Send approval email
+      if (userInfo?.email) {
+        try {
+          await sendEmail({
+            to: userInfo.email,
+            subject: 'Conta Aprovada - PINT',
+            html: emailTemplates.registrationApproved({ userName: userInfo.nome || 'Utilizador' }),
+          });
+        } catch (emailError) {
+          console.error('Failed to send registration approval email.', emailError);
+        }
+      }
+
+      return result;
     } else {
       // Reject: delete the user from database
       const result = await sequelize.query(

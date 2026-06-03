@@ -3,6 +3,8 @@ import { Reminder } from './sql/Reminder.js';
 import { sequelize } from '../config/database.js';
 import { adminBadgeModel } from './adminBadgeModel.js';
 import { communicationModel } from './communicationModel.js';
+import { sendEmail } from '../services/emailService.js';
+import { emailTemplates } from '../services/emailTemplates.js';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const pedidoEstados = Object.freeze({
@@ -96,8 +98,12 @@ const mapPedidoEstadoToLearningPathStatus = (estado) => {
     return 'candidatura_em_progresso';
   }
 
-  if (isEstadoEmValidacao(normalized)) {
-    return 'em_validacao';
+  if (isEstadoEmValidacaoTm(normalized)) {
+    return 'pendente-tm';
+  }
+
+  if (isEstadoEmValidacaoSll(normalized)) {
+    return 'pendente-sll';
   }
 
   if (normalized === pedidoEstados.evidenciasInsuficientes || normalized === pedidoEstados.rejeitado) {
@@ -118,8 +124,12 @@ const mapPedidoEstadoToMyBadgeState = (estado) => {
     return 'candidatura_em_progresso';
   }
 
-  if (isEstadoEmValidacao(normalized)) {
-    return 'em_validacao';
+  if (isEstadoEmValidacaoTm(normalized)) {
+    return 'pendente-tm';
+  }
+
+  if (isEstadoEmValidacaoSll(normalized)) {
+    return 'pendente-sll';
   }
 
   if (normalized === pedidoEstados.evidenciasInsuficientes || normalized === pedidoEstados.rejeitado) {
@@ -130,7 +140,7 @@ const mapPedidoEstadoToMyBadgeState = (estado) => {
     return 'aprovado';
   }
 
-  return 'em_validacao';
+  return 'pendente-tm';
 };
 
 const mapPedidoEstadoToMyRequestStatus = (estado) => {
@@ -219,7 +229,8 @@ const resolveBadgeImage = (customImage, fallbackImage, isSpecial = false) => {
 
 const hasActiveBadgeRequest = (status) =>
   status === 'candidatura_em_progresso'
-  || status === 'em_validacao'
+  || status === 'pendente-tm'
+  || status === 'pendente-sll'
   || status === 'obtido';
 
 const formatDate = (value) => {
@@ -1192,7 +1203,7 @@ const buildProfileData = async (accountId) => {
         p.npedido AS id,
         CASE 
           WHEN e.estado = 'candidatura_em_progresso' THEN 'Candidatura submetida para ' || b.b_nome
-          WHEN e.estado IN ('em_validacao', 'pendente-tm', 'pendente-sll', 'em_validacao_sll') THEN 'Candidatura em validação: ' || b.b_nome
+          WHEN e.estado IN ('pendente-tm', 'pendente-sll') THEN 'Candidatura em validação: ' || b.b_nome
           WHEN e.estado = 'aprovado' THEN 'Badge aprovada: ' || b.b_nome
           WHEN e.estado = 'rejeitado' THEN 'Candidatura rejeitada: ' || b.b_nome
           WHEN e.estado = 'evidencias_insuficientes' THEN 'Evidências insuficientes: ' || b.b_nome
@@ -2197,7 +2208,7 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
     }
 
     if (isEstadoEmValidacao(existingEstado)) {
-      return { status: 'em_validacao', requestId: existingRequestId };
+      return { status: 'pendente-tm', requestId: existingRequestId };
     }
 
     if (
@@ -2232,7 +2243,37 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
       },
     );
 
-    return { status: 'em_validacao', requestId: existingRequestId };
+    // Send email confirmation of submission to TM
+    try {
+      const [consultorInfo] = await sequelize.query(
+        'SELECT u.nome, u.email FROM utilizador u WHERE u.nutilizador = :utilizadorId LIMIT 1',
+        {
+          replacements: { utilizadorId: Number(utilizadorId) },
+          type: QueryTypes.SELECT,
+        }
+      );
+      const [badgeInfo] = await sequelize.query(
+        'SELECT b_nome FROM badge WHERE nbadge = :badgeId LIMIT 1',
+        {
+          replacements: { badgeId: Number(parsedBadgeId) },
+          type: QueryTypes.SELECT,
+        }
+      );
+      if (consultorInfo?.email) {
+        await sendEmail({
+          to: consultorInfo.email,
+          subject: 'Pedido de Badge Enviado - PINT',
+          html: emailTemplates.requestSubmittedToTM({
+            userName: consultorInfo.nome || 'Consultor',
+            badgeName: badgeInfo?.b_nome || 'Badge',
+          }),
+        });
+      }
+    } catch (emailError) {
+      console.error('Failed to send request submission email.', emailError);
+    }
+
+    return { status: 'pendente-tm', requestId: existingRequestId };
   }
 
   const [createdRequest] = await sequelize.query(

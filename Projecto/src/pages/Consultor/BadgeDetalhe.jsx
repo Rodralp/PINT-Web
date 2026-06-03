@@ -108,7 +108,7 @@ const statusConfig = {
     className: 'is-progress',
     Icon: TimerReset,
   },
-  em_validacao: {
+  pendente: {
     label: 'Candidatura submetida - Em Validação',
     className: 'is-validation',
     Icon: SearchCheck,
@@ -136,8 +136,8 @@ const normalizeBadgeStatus = (badge) => {
     return 'obtido';
   }
 
-  if (stateId === 'em_validacao') {
-    return 'em_validacao';
+  if (stateId === 'pendente-tm' || stateId === 'pendente-sll') {
+    return 'pendente';
   }
 
   if (stateId === 'candidatura_em_progresso') {

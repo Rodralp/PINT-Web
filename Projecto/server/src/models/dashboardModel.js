@@ -101,7 +101,7 @@ const mapRequestStateToIconKey = (state) => {
   const normalized = normalizeRequestState(state);
 
   if (normalized === 'aprovado') return 'searchCheck';
-  if (normalized === 'em_validacao' || normalized === 'em_validacao_sll') return 'clock';
+  if (normalized === 'pendente-tm' || normalized === 'pendente-sll') return 'clock';
   if (normalized === 'evidencias_insuficientes') return 'alertTriangle';
   return 'alertTriangle';
 };
@@ -110,7 +110,7 @@ const mapRequestStateToSubtitle = (state) => {
   const normalized = normalizeRequestState(state);
 
   if (normalized === 'aprovado') return 'Aprovado';
-  if (normalized === 'em_validacao' || normalized === 'em_validacao_sll') return 'Em validacao';
+  if (normalized === 'pendente-tm' || normalized === 'pendente-sll') return 'Em validacao';
   if (normalized === 'evidencias_insuficientes') return 'Evidencias insuficientes';
   if (normalized === 'candidatura_em_progresso') return 'Candidatura em progresso';
   return 'Pendente';
@@ -211,14 +211,14 @@ const buildScopedBadgeCondition = (badgeColumn) => `
 
 const getPendingStatesByRole = (role) => {
   if (role === 'service-line-leader') {
-    return ['pendente-sll', 'em_validacao_sll'];
+    return ['pendente-sll'];
   }
 
   if (role === 'admin-gestor') {
-    return ['pendente-tm', 'pendente-sll', 'em_validacao', 'em_validacao_sll'];
+    return ['pendente-tm', 'pendente-sll'];
   }
 
-  return ['pendente-tm', 'em_validacao'];
+  return ['pendente-tm'];
 };
 
 const getVisibleStatesByRole = (role) => {
@@ -398,7 +398,7 @@ const getManagerDashboardDataFromDb = async (role, accountId) => {
             CASE
               WHEN LOWER(COALESCE(e.estado, '')) = 'rejeitado' THEN CONCAT('Pedido rejeitado: ', COALESCE(b.b_nome, 'Badge'))
               WHEN LOWER(COALESCE(e.estado, '')) IN ('aprovado') THEN CONCAT('Pedido aprovado: ', COALESCE(b.b_nome, 'Badge'))
-              WHEN LOWER(COALESCE(e.estado, '')) IN ('pendente-sll', 'pendente-tm', 'em_validacao', 'em_validacao_sll') THEN CONCAT('Pedido em validacao: ', COALESCE(b.b_nome, 'Badge'))
+              WHEN LOWER(COALESCE(e.estado, '')) IN ('pendente-sll', 'pendente-tm') THEN CONCAT('Pedido em validacao: ', COALESCE(b.b_nome, 'Badge'))
               ELSE CONCAT('Pedido submetido: ', COALESCE(b.b_nome, 'Badge'))
             END AS title,
             'fileText' AS icon_key

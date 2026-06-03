@@ -4,6 +4,8 @@ import path from 'node:path';
 import { sequelize } from '../config/database.js';
 import { syncSpecialBadgesForConsultor } from './consultorModel.js';
 import { communicationModel } from './communicationModel.js';
+import { sendEmail } from '../services/emailService.js';
+import { emailTemplates } from '../services/emailTemplates.js';
 import { adminBadgeModel } from './adminBadgeModel.js';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -1153,6 +1155,45 @@ const applyDecision = async ({ role, actorUtilizadorId, request, decision, comme
       }
     } catch (error) {
       console.error('Failed to notify request decision.', error);
+    }
+
+    // Send email notifications for approval/rejection
+    try {
+      const [consultorInfo] = await sequelize.query(
+        'SELECT nome, email FROM utilizador WHERE nutilizador = :consultorId LIMIT 1',
+        {
+          replacements: { consultorId: Number(consultorId) },
+          type: QueryTypes.SELECT,
+        }
+      );
+      const badgeName = request.badge_nome || request.area_nome || 'Badge';
+
+      if (consultorInfo?.email) {
+        if (shouldNotifyApproval) {
+          await sendEmail({
+            to: consultorInfo.email,
+            subject: 'Pedido Aprovado - PINT',
+            html: emailTemplates.requestApproved({
+              userName: consultorInfo.nome || 'Consultor',
+              badgeName,
+            }),
+          });
+        }
+
+        if (shouldNotifyRejection) {
+          await sendEmail({
+            to: consultorInfo.email,
+            subject: 'Pedido Rejeitado - PINT',
+            html: emailTemplates.requestRejected({
+              userName: consultorInfo.nome || 'Consultor',
+              badgeName,
+              comment: finalDescription,
+            }),
+          });
+        }
+      }
+    } catch (emailError) {
+      console.error('Failed to send request decision email.', emailError);
     }
   }
 

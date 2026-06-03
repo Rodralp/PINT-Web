@@ -24,7 +24,12 @@ const statusConfig = {
     className: 'status-progresso',
     Icon: TimerReset,
   },
-  em_validacao: {
+  'pendente-tm': {
+    label: 'Em Validacao',
+    className: 'status-validacao',
+    Icon: SearchCheck,
+  },
+  'pendente-sll': {
     label: 'Em Validacao',
     className: 'status-validacao',
     Icon: SearchCheck,
