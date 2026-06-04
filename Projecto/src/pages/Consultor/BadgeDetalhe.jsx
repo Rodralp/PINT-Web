@@ -8,7 +8,6 @@ import {
   EyeOff,
   FileText,
   Link,
-  MessageSquare,
   SearchCheck,
   SendHorizontal,
   TimerReset,
@@ -19,6 +18,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
 import BadgeImage from '../../components/BadgeImage';
+import LinkedInShareButton from '../../components/LinkedInShareButton';
 import {
   fetchBadgeRequirements,
   fetchMyBadges,
@@ -357,6 +357,25 @@ function BadgeDetalhe() {
   const showReviewMessage = badgeStatus === 'evidencias_insuficientes';
   const showShareActions = badgeStatus === 'obtido';
 
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
+
+  const getShareUrl = () => {
+    const badgeId = badge.badgeDbId || badge.id;
+    return `${API_BASE.replace(/\/api\/?$/, '')}/api/share/badge/${badgeId}`;
+  };
+
+  const getPublicUrl = () => {
+    const badgeId = badge.badgeDbId || badge.id;
+    return `${window.location.origin}/galeria-publica/badge/${badgeId}`;
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(getPublicUrl()).then(() => {
+      setStatusMessage('Link copiado para a area de transferencia!');
+      setTimeout(() => setStatusMessage(''), 3000);
+    });
+  };
+
   const handleRequestBadge = async () => {
     setStatusMessage('A processar submissão...');
 
@@ -670,16 +689,10 @@ function BadgeDetalhe() {
         <div className="badge-actions-row">
           {showShareActions && (
             <>
-              <button type="button" className="badge-share-icon-btn" aria-label="Partilhar no Teams">
-                <MessageSquare size={24} />
-              </button>
-              <button type="button" className="badge-share-icon-btn" aria-label="Partilhar no LinkedIn">
+              <button type="button" className="badge-share-icon-btn" aria-label="Copiar link" onClick={handleCopyLink}>
                 <Link size={24} />
               </button>
-              <button type="button" className="badge-share-primary-btn" aria-label="Partilhar">
-                <Share2 size={20} />
-                Partilhar
-              </button>
+              <LinkedInShareButton url={getShareUrl()} className="badge-share-primary-btn" />
             </>
           )}
 
