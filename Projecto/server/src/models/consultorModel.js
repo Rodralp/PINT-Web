@@ -2394,6 +2394,173 @@ const saveEvidences = async (accountId, pedidoId, nreq, fileMeta) => {
   };
 };
 
+const getPedidoDetail = async (accountId, pedidoId) => {
+  const parsedPedidoId = Number(pedidoId);
+  if (!Number.isInteger(parsedPedidoId) || parsedPedidoId <= 0) {
+    return null;
+  }
+
+  const utilizadorId = await getUtilizadorIdByAccountId(accountId);
+  if (!utilizadorId) {
+    return null;
+  }
+
+  const [row] = await sequelize.query(
+    `
+      SELECT
+        p.npedido,
+        p.data_submissao,
+        p.data_limite,
+        p.descricao,
+        e.estado AS estado_nome,
+        u.nome AS consultor_nome,
+        b.nbadge,
+        b.b_nome,
+        b.b_descricao,
+        b.pontos AS badge_pontos,
+        b.imagem AS badge_imagem,
+        b.validade,
+        t.tipo AS tipo_nome,
+        n.nivel AS nivel_nome,
+        a.area AS area_nome,
+        sl.sline AS sline_nome,
+        lp.lpath AS lpath_nome
+      FROM pedidos AS p
+      INNER JOIN estado AS e ON e.nestado = p.estado
+      INNER JOIN utilizador AS u ON u.nutilizador = p.nutilizador
+      LEFT JOIN badge AS b ON b.nbadge = p.nbadge
+      LEFT JOIN tipo AS t ON t.ntipo = b.ntipo
+      LEFT JOIN nivel_contem_b AS ncb ON ncb.nbadge = b.nbadge
+      LEFT JOIN nivel AS n ON n.nnivel = ncb.nnivel
+      LEFT JOIN area AS a ON a.narea = n.narea
+      LEFT JOIN service_line AS sl ON sl.nsline = a.nsline
+      LEFT JOIN learning_path AS lp ON lp.nlpath = sl.nlpath
+      WHERE p.npedido = :pedidoId
+        AND p.nutilizador = :utilizadorId
+      LIMIT 1
+    `,
+    {
+      replacements: { pedidoId: parsedPedidoId, utilizadorId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  if (!row) {
+    return null;
+  }
+
+  const badgeId = Number(row.nbadge);
+  const isSpecial = isSpecialTypeName(row.tipo_nome);
+  const template = resolveBadgeTemplate(row.nivel_nome, 0, row.tipo_nome);
+  const levelTitle = normalizeLevelTitle(row.nivel_nome) || 'Intermédio';
+  const status = mapPedidoEstadoToMyRequestStatus(row.estado_nome);
+  const resolvedPoints = Number(row.badge_pontos) > 0 ? Number(row.badge_pontos) : template.points;
+
+  await ensureRequirementsForBadges([badgeId]);
+  const requirementsByBadge = await loadRequirementsByBadgeIds([badgeId]);
+  const badgeRequirements = clone(requirementsByBadge.get(badgeId) || []);
+
+  const evidenceRows = await sequelize.query(
+    `
+      SELECT nevidencias, nreq, nevidencia, formato
+      FROM evidencias
+      WHERE npedido = :pedidoId
+      ORDER BY nreq ASC, nevidencias ASC
+    `,
+    {
+      replacements: { pedidoId: parsedPedidoId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  const evidenceByReq = new Map();
+  const unscopedAttachments = [];
+
+  for (const erow of evidenceRows) {
+    const requirementId = Number(erow.nreq);
+    const extension = String(erow.formato || '').trim().toLowerCase();
+    const labelBase = String(erow.nevidencia || 'evidencia').trim();
+    const label = extension && !labelBase.toLowerCase().endsWith(`.${extension}`)
+      ? `${labelBase}.${extension}`
+      : labelBase;
+    const attachment = {
+      id: `evidence-${Number(erow.nevidencias) || label}`,
+      evidenceId: Number(erow.nevidencias) || null,
+      type: extension === 'pdf' ? 'pdf' : 'file',
+      label,
+    };
+
+    if (!Number.isInteger(requirementId) || requirementId <= 0) {
+      unscopedAttachments.push(attachment);
+      continue;
+    }
+
+    if (!evidenceByReq.has(requirementId)) {
+      evidenceByReq.set(requirementId, []);
+    }
+
+    evidenceByReq.get(requirementId).push(attachment);
+  }
+
+  for (const requirement of badgeRequirements) {
+    const reqNum = Number(String(requirement.id || '').replace('req-', ''));
+    const attachments = evidenceByReq.get(reqNum) || [];
+    requirement.files = attachments.length;
+    requirement.attachments = attachments;
+  }
+
+  if (badgeRequirements.length > 0 && unscopedAttachments.length > 0) {
+    badgeRequirements[0].files = Number(badgeRequirements[0].files || 0) + unscopedAttachments.length;
+    badgeRequirements[0].attachments = [...(badgeRequirements[0].attachments || []), ...unscopedAttachments];
+  }
+
+  const motiveRows = await sequelize.query(
+    `
+      SELECT
+        m.nutilizador,
+        m.motivo_desc,
+        u.nome AS autor_nome,
+        u.permissoes AS autor_permissoes
+      FROM motivo AS m
+      INNER JOIN utilizador AS u ON u.nutilizador = m.nutilizador
+      WHERE m.npedido = :pedidoId
+    `,
+    {
+      replacements: { pedidoId: parsedPedidoId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  let reviewerName = null;
+  let reviewerDate = null;
+  let reviewerNote = null;
+
+  if (motiveRows.length > 0) {
+    const lastMotive = motiveRows[motiveRows.length - 1];
+    reviewerName = lastMotive.autor_nome || null;
+    reviewerNote = lastMotive.motivo_desc || null;
+    reviewerDate = formatShortDate(row.data_submissao);
+  }
+
+  return {
+    id: parsedPedidoId,
+    badge: row.b_nome || row.area_nome || 'Badge',
+    levelLabel: `Nível ${levelTitle}`,
+    area: row.lpath_nome || 'Jornada Técnica',
+    path: row.sline_nome || 'Service Line',
+    status,
+    points: resolvedPoints,
+    badgeImage: resolveBadgeImage(row.badge_imagem, template.badgeImage, isSpecial),
+    expiresAt: formatDate(row.validade),
+    submittedBy: row.consultor_nome || 'Utilizador',
+    submissionDate: formatShortDate(row.data_submissao),
+    requirements: badgeRequirements,
+    reviewerName,
+    reviewerDate,
+    reviewerNote,
+  };
+};
+
 export const consultorModel = {
   async getCatalogBadges(includeExpired = false) {
     try { await adminBadgeModel.checkAndExpireBadges(); } catch (e) { console.error('Error checking expired badges:', e); }
@@ -2496,6 +2663,11 @@ export const consultorModel = {
   async getMyRequests(accountId) {
     const data = await buildMyRequests(accountId);
     return clone(data);
+  },
+
+  async getPedidoDetail(accountId, pedidoId) {
+    const data = await getPedidoDetail(accountId, pedidoId);
+    return data ? clone(data) : null;
   },
 
   async getRankingConsultores() {

@@ -216,6 +216,11 @@
   border-color: #eef1f6;
 }
 
+.catalog-card.selected {
+  background: #edf5ff;
+  border-color: #1b84f4;
+}
+
 .catalog-card:focus {
   outline: none;
 }

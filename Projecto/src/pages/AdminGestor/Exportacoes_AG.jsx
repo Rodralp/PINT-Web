@@ -15,6 +15,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
+import BadgeImage from '../../components/BadgeImage';
 import { fetchManagedRequests } from '../../services/requestManagementService';
 import { fetchAdminUsers } from '../../services/adminUserService';
 import { fetchHistoricoBadges } from '../../services/talentManagerService';
@@ -531,7 +532,7 @@ function ExportacoesAG() {
             levelId: meta.levelId,
             level: levelTitle,
             points: meta.points,
-            badgeImage: meta.badgeImage,
+            badgeImage: badge?.badgeImage || meta.badgeImage,
             date: formatDateForUi(badge?.obtainedDate || badge?.dataObtencao),
           };
         });
@@ -1267,7 +1268,7 @@ function ExportacoesAG() {
                       onClick={() => toggleBadgeSelection(item.id)}
                     >
                       <div className="tm-export-badge-frame">
-                        <img src={item.badgeImage} alt={item.level} className="tm-export-badge-image" />
+                        <BadgeImage src={item.badgeImage} alt={item.level} className="tm-export-badge-image" levelKey={item.levelId || item.level} typeId={item.typeId} levelLabel={item.level} />
                       </div>
                       <strong>{item.area}</strong>
                       <span>{item.level}</span>

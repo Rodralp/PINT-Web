@@ -359,15 +359,12 @@ function BadgeDetalhe() {
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
 
-  const getShareUrl = () => {
-    const badgeId = badge.badgeDbId || badge.id;
-    return `${API_BASE.replace(/\/api\/?$/, '')}/api/share/badge/${badgeId}`;
-  };
-
   const getPublicUrl = () => {
     const badgeId = badge.badgeDbId || badge.id;
     return `${window.location.origin}/galeria-publica/badge/${badgeId}`;
   };
+
+  const getShareUrl = () => getPublicUrl();
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(getPublicUrl()).then(() => {
@@ -611,10 +608,13 @@ function BadgeDetalhe() {
 
                 {isOpen && (
                   <div className="badge-requirement-detail">
-                    <img
+                    <BadgeImage
                       src={requirement.image || badge.badgeImage}
                       alt={`Ilustracao do requisito ${index + 1}`}
                       className="badge-requirement-detail-image"
+                      levelKey={badge.levelKey}
+                      typeId={badge.typeId}
+                      levelLabel={levelLabel}
                     />
                     <div className="badge-requirement-detail-content">
                       <p>{requirement.description}</p>

@@ -281,7 +281,12 @@ function PedidoTM() {
                     {openRequirementId === item.id && (
                       <div className="tm-order-requirement-detail">
                         <div className="tm-order-requirement-detail-media">
-                          <img src={item.image || request.badgeImage} alt={request.badge} className="tm-order-requirement-detail-image" />
+                          <BadgeImage
+                            src={item.image || request.badgeImage}
+                            alt={request.badge}
+                            className="tm-order-requirement-detail-image"
+                            levelLabel={request.levelLabel}
+                          />
                         </div>
                         <div className="tm-order-requirement-detail-content">
                           <p>

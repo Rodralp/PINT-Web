@@ -37,6 +37,10 @@ export const consultorService = {
     return consultorModel.getMyRequests(accountId);
   },
 
+  getPedidoDetail(accountId, pedidoId) {
+    return consultorModel.getPedidoDetail(accountId, pedidoId);
+  },
+
   async getRankingConsultores() {
     return consultorModel.getRankingConsultores();
   },

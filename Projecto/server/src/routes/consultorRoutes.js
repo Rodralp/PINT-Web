@@ -13,6 +13,7 @@ import {
   getLearningPaths,
   getMyBadges,
   getMyRequests,
+  getPedidoDetail,
   getProfileData,
   getRankingConsultores,
   getReminders,
@@ -59,6 +60,7 @@ router.get('/preferencias', getPreferences);
 router.put('/preferencias', savePreferences);
 router.get('/sugestoes', getBadgeSuggestions);
 router.get('/meus-pedidos', getMyRequests);
+router.get('/pedidos/:pedidoId', getPedidoDetail);
 router.get('/ranking', getRankingConsultores);
 router.get('/lembretes', getReminders);
 router.post('/lembretes', createReminder);

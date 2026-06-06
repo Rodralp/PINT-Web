@@ -358,8 +358,13 @@
 .exports-certificate-thumb {
   width: 34px;
   height: 34px;
-  object-fit: contain;
   flex: 0 0 auto;
+}
+
+.exports-certificate-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .exports-certificate-item-text {
@@ -422,8 +427,13 @@
 .exports-certificate-badge {
   width: 110px;
   height: 110px;
-  object-fit: contain;
   margin-bottom: 18px;
+}
+
+.exports-certificate-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .exports-certificate-copy {

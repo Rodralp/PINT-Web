@@ -196,6 +196,16 @@ export async function fetchMyRequests() {
   return response.data;
 }
 
+export async function fetchPedidoDetail(pedidoId) {
+  const accountId = await ensureLoggedAccountId();
+  if (!accountId) {
+    throw new Error('Missing logged account id.');
+  }
+
+  const response = await apiClient.get(`/consultor/pedidos/${encodeURIComponent(pedidoId)}?accountId=${accountId}`);
+  return response.data;
+}
+
 export async function fetchRankingConsultores() {
   const response = await apiClient.get('/consultor/ranking');
   return response.data;

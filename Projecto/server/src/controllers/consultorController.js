@@ -148,6 +148,31 @@ export const getMyRequests = async (req, res) => {
   }
 };
 
+export const getPedidoDetail = async (req, res) => {
+  const accountId = parseAccountId(req.query?.accountId);
+  if (!accountId) {
+    res.status(400).json({ message: 'Account id is required.' });
+    return;
+  }
+
+  const pedidoId = Number(req.params?.pedidoId);
+  if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
+    res.status(400).json({ message: 'Invalid pedido id.' });
+    return;
+  }
+
+  try {
+    const data = await consultorService.getPedidoDetail(accountId, pedidoId);
+    if (!data) {
+      res.status(404).json({ message: 'Pedido not found.' });
+      return;
+    }
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch pedido detail.', error: error.message });
+  }
+};
+
 export const getRankingConsultores = async (_req, res) => {
   try {
     const data = await consultorService.getRankingConsultores();
