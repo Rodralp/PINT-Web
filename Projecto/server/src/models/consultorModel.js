@@ -2,6 +2,7 @@ import { QueryTypes } from 'sequelize';
 import { Reminder } from './sql/Reminder.js';
 import { sequelize } from '../config/database.js';
 import { adminBadgeModel } from './adminBadgeModel.js';
+const { loadBadgeImagesBatch } = adminBadgeModel;
 import { communicationModel } from './communicationModel.js';
 import { sendEmail } from '../services/emailService.js';
 import { emailTemplates } from '../services/emailTemplates.js';
@@ -1728,6 +1729,15 @@ const buildMyBadges = async (accountId) => {
     });
   }
 
+  const allBadgeIds = items.map((item) => item.badgeDbId).filter(Boolean);
+  const imageMap = await loadBadgeImagesBatch(allBadgeIds);
+
+  for (const item of items) {
+    if (imageMap[item.badgeDbId]) {
+      item.badgeImage = imageMap[item.badgeDbId];
+    }
+  }
+
   return items.sort((left, right) => right.points - left.points);
 };
 
@@ -2621,6 +2631,15 @@ export const consultorModel = {
         validade: row.validade || null,
       };
     });
+
+    const badgeIds = items.map((item) => item.badgeDbId).filter(Boolean);
+    const imageMap = await loadBadgeImagesBatch(badgeIds);
+
+    for (const item of items) {
+      if (imageMap[item.badgeDbId]) {
+        item.badgeImage = imageMap[item.badgeDbId];
+      }
+    }
 
     return items;
   },

@@ -32,6 +32,113 @@ const normalizeBadgeImage = (value) => {
   return normalized || null;
 };
 
+const parseDataUrl = (dataUrl) => {
+  const match = String(dataUrl || '').match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return null;
+  return { mimeType: match[1], base64: match[2] };
+};
+
+const isDataUrl = (value) => String(value || '').startsWith('data:');
+
+const saveBadgeImage = async (badgeId, imageDataUrl, transaction) => {
+  if (!badgeId || !imageDataUrl) return;
+
+  const parsed = parseDataUrl(imageDataUrl);
+  if (!parsed) return;
+
+  const binaryBuffer = Buffer.from(parsed.base64, 'base64');
+
+  await sequelize.query(
+    `
+      INSERT INTO badge_imagem (nbadge, mime_type, dados, atualizado_em)
+      VALUES (:badgeId, :mimeType, :dados, CURRENT_TIMESTAMP)
+      ON CONFLICT (nbadge) DO UPDATE
+        SET mime_type = EXCLUDED.mime_type,
+            dados = EXCLUDED.dados,
+            atualizado_em = CURRENT_TIMESTAMP
+    `,
+    {
+      replacements: {
+        badgeId,
+        mimeType: parsed.mimeType,
+        dados: binaryBuffer,
+      },
+      type: QueryTypes.INSERT,
+      transaction,
+    },
+  );
+};
+
+const loadBadgeImage = async (badgeId, transaction) => {
+  const options = transaction ? { transaction } : {};
+  const [row] = await sequelize.query(
+    `
+      SELECT mime_type, dados
+      FROM badge_imagem
+      WHERE nbadge = :badgeId
+      LIMIT 1
+    `,
+    {
+      replacements: { badgeId },
+      type: QueryTypes.SELECT,
+      ...options,
+    },
+  );
+
+  if (!row?.dados) return null;
+
+  const base64 = Buffer.isBuffer(row.dados)
+    ? row.dados.toString('base64')
+    : Buffer.from(row.dados).toString('base64');
+
+  return `data:${row.mime_type};base64,${base64}`;
+};
+
+const loadBadgeImagesBatch = async (badgeIds, transaction) => {
+  if (!badgeIds || badgeIds.length === 0) return {};
+
+  const options = transaction ? { transaction } : {};
+  const placeholders = badgeIds.map((_, i) => `:id${i}`).join(', ');
+  const replacements = {};
+  badgeIds.forEach((id, i) => { replacements[`id${i}`] = id; });
+
+  const [rows] = await sequelize.query(
+    `
+      SELECT nbadge, mime_type, dados
+      FROM badge_imagem
+      WHERE nbadge IN (${placeholders})
+    `,
+    {
+      replacements,
+      type: QueryTypes.SELECT,
+      ...options,
+    },
+  );
+
+  const imageMap = {};
+  for (const row of (Array.isArray(rows) ? rows : [])) {
+    const base64 = Buffer.isBuffer(row.dados)
+      ? row.dados.toString('base64')
+      : Buffer.from(row.dados).toString('base64');
+    imageMap[row.nbadge] = `data:${row.mime_type};base64,${base64}`;
+  }
+
+  return imageMap;
+};
+
+const deleteBadgeImage = async (badgeId, transaction) => {
+  if (!badgeId) return;
+  const options = transaction ? { transaction } : {};
+  await sequelize.query(
+    `DELETE FROM badge_imagem WHERE nbadge = :badgeId`,
+    {
+      replacements: { badgeId },
+      type: QueryTypes.DELETE,
+      ...options,
+    },
+  );
+};
+
 const ensureEstadoId = async (estadoNome) => {
   const [existing] = await sequelize.query(
     `
@@ -647,6 +754,10 @@ export const adminBadgeModel = {
         return null;
       }
 
+      if (isDataUrl(safeImage)) {
+        await saveBadgeImage(badgeRow.nbadge, safeImage, transaction);
+      }
+
       if (!isSpecial) {
         await createBadgeAssociations(badgeRow.nbadge, levelContext, transaction);
       }
@@ -660,6 +771,9 @@ export const adminBadgeModel = {
         loadBadgeTriggers(badgeRow.nbadge, transaction),
         loadBadgeRequirements(badgeRow.nbadge, transaction),
       ]);
+
+      const imageFromDb = await loadBadgeImage(badgeRow.nbadge, transaction);
+      badgeRow.imagem = imageFromDb || badgeRow.imagem;
 
       return mapBadgeResponse({
         badgeRow,
@@ -732,6 +846,12 @@ export const adminBadgeModel = {
         return null;
       }
 
+      if (isDataUrl(safeImage)) {
+        await saveBadgeImage(parsedBadgeId, safeImage, transaction);
+      } else if (safeImage === null) {
+        await deleteBadgeImage(parsedBadgeId, transaction);
+      }
+
       await clearBadgeAssociations(parsedBadgeId, transaction);
       if (!isSpecial) {
         await createBadgeAssociations(parsedBadgeId, levelContext, transaction);
@@ -746,6 +866,9 @@ export const adminBadgeModel = {
         loadBadgeTriggers(parsedBadgeId, transaction),
         loadBadgeRequirements(parsedBadgeId, transaction),
       ]);
+
+      const imageFromDb = await loadBadgeImage(parsedBadgeId, transaction);
+      badgeRow.imagem = imageFromDb || badgeRow.imagem;
 
       return mapBadgeResponse({
         badgeRow,
@@ -796,6 +919,9 @@ export const adminBadgeModel = {
 
     const badgeRow = row[0];
     const levelContext = await fetchBadgeLevelContextByBadgeId(parsedBadgeId);
+
+    const imageFromDb = await loadBadgeImage(parsedBadgeId);
+    badgeRow.imagem = imageFromDb || badgeRow.imagem;
 
     return mapBadgeResponse({
       badgeRow,
@@ -961,7 +1087,7 @@ export const adminBadgeModel = {
       },
     );
 
-    return rows.map((row) => ({
+    const results = rows.map((row) => ({
       nbadge: Number(row.nbadge),
       b_nome: row.b_nome,
       b_descricao: row.b_descricao,
@@ -973,6 +1099,17 @@ export const adminBadgeModel = {
       nivel_nome: row.nivel_nome || null,
       area: row.area || null,
     }));
+
+    const badgeIds = results.map((r) => r.nbadge).filter(Boolean);
+    const imageMap = await loadBadgeImagesBatch(badgeIds);
+
+    for (const item of results) {
+      if (imageMap[item.nbadge]) {
+        item.imagem = imageMap[item.nbadge];
+      }
+    }
+
+    return results;
   },
 
   async getExpiringSoonBadgesForUser(accountId, daysThreshold = 30) {
@@ -1009,7 +1146,7 @@ export const adminBadgeModel = {
       },
     );
 
-    return rows.map((row) => ({
+    const results = rows.map((row) => ({
       nbadge: Number(row.nbadge),
       b_nome: row.b_nome,
       b_descricao: row.b_descricao,
@@ -1019,7 +1156,20 @@ export const adminBadgeModel = {
       tipo: row.tipo,
       data_obtencao: row.data_obtencao,
     }));
+
+    const badgeIds = results.map((r) => r.nbadge).filter(Boolean);
+    const imageMap = await loadBadgeImagesBatch(badgeIds);
+
+    for (const item of results) {
+      if (imageMap[item.nbadge]) {
+        item.imagem = imageMap[item.nbadge];
+      }
+    }
+
+    return results;
   },
+
+  loadBadgeImagesBatch,
 };
 
 async function deactivateLevelIfNoActiveBadges(badgeId, transaction) {

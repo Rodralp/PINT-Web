@@ -33,6 +33,38 @@ export const connectToDatabase = async () => {
       CONSTRAINT unique_badge_expiracao UNIQUE (nbadge, data_expiracao)
     );
   `);
+
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS badge_imagem (
+      nbadge INTEGER PRIMARY KEY REFERENCES badge(nbadge) ON DELETE CASCADE,
+      mime_type VARCHAR(50) NOT NULL DEFAULT 'image/png',
+      dados BYTEA NOT NULL,
+      criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      atualizado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await sequelize.query(`
+    INSERT INTO badge_imagem (nbadge, mime_type, dados, criado_em, atualizado_em)
+    SELECT
+      b.nbadge,
+      COALESCE(
+        SUBSTRING(b.imagem FROM '^data:([^;]+);') ,
+        'image/png'
+      ) AS mime_type,
+      DECODE(
+        SUBSTRING(b.imagem FROM '^data:[^;]+;base64,(.+)$'),
+        'base64'
+      ) AS dados,
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP
+    FROM badge AS b
+    WHERE b.imagem IS NOT NULL
+      AND b.imagem LIKE 'data:%;base64,%'
+      AND NOT EXISTS (
+        SELECT 1 FROM badge_imagem bi WHERE bi.nbadge = b.nbadge
+      );
+  `);
 };
 
 export const syncDatabase = async () => {
