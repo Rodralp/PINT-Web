@@ -1,4 +1,4 @@
-import { sequelize, QueryTypes } from './server/src/config/database.js';
+import { sequelize, QueryTypes } from '../backend/src/config/database.js';
 
 async function run() {
   const accountId = 15;

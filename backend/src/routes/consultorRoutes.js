@@ -25,7 +25,7 @@ import {
 } from '../controllers/consultorController.js';
 
 const router = Router();
-const uploadsDir = path.resolve(globalThis.process?.cwd?.() || '.', 'server', 'uploads');
+const uploadsDir = path.resolve(globalThis.process?.cwd?.() || '.', 'uploads');
 const uploadStorage = multer.diskStorage({
   destination: (_req, _file, callback) => {
     try {

@@ -93,7 +93,7 @@ export const downloadManagedEvidence = async (req, res) => {
       return;
     }
 
-    const uploadsDir = path.resolve(globalThis.process?.cwd?.() || '.', 'server', 'uploads');
+    const uploadsDir = path.resolve(globalThis.process?.cwd?.() || '.', 'uploads');
     const resolvedFilePath = path.resolve(uploadsDir, evidence.storedName);
     const isInsideUploadsDir = resolvedFilePath === uploadsDir || resolvedFilePath.startsWith(`${uploadsDir}${path.sep}`);
 

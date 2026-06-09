@@ -9,7 +9,7 @@ import { emailTemplates } from '../services/emailTemplates.js';
 import { adminBadgeModel } from './adminBadgeModel.js';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
-const uploadsDir = path.resolve(globalThis.process?.cwd?.() || '.', 'server', 'uploads');
+const uploadsDir = path.resolve(globalThis.process?.cwd?.() || '.', 'uploads');
 
 const roleSet = new Set(['talent-manager', 'service-line-leader', 'admin-gestor']);
 // Estados canónicos e aliases legados suportados no fluxo de gestão.

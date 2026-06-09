@@ -3,7 +3,7 @@ import path from 'node:path';
 import { QueryTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
 
-const uploadsDir = path.resolve(globalThis.process?.cwd?.() || '.', 'server', 'uploads');
+const uploadsDir = path.resolve(globalThis.process?.cwd?.() || '.', 'uploads');
 const allowedLogTypes = new Set(['mensagem', 'aviso', 'importante', 'evento']);
 
 const normalizeRoles = (rolesValue) => {

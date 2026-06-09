@@ -1,6 +1,6 @@
 
 const fs = require('fs');
-let content = fs.readFileSync('server/src/models/dashboardModel.js', 'utf-8');
+let content = fs.readFileSync('../backend/src/models/dashboardModel.js', 'utf-8');
 content = content.replace(
   /SELECT COUNT\\(DISTINCT p\.npedido\\)::int AS total\\s+FROM pedidos AS p\\s+LEFT JOIN estado AS e\\s+ON e\.nestado = p\.estado\\s+WHERE LOWER\\(COALESCE\\(e\.estado, ''\\)\\) IN \\(:pendingStates\\)\\s+AND \\\$\\{buildScopedBadgeCondition\\('p\.nbadge'\\)\\}/,
   \WITH latest AS (
@@ -17,5 +17,5 @@ content = content.replace(
             ON e.nestado = l.estado
           WHERE LOWER(COALESCE(e.estado, '')) IN (:pendingStates)\
 );
-fs.writeFileSync('server/src/models/dashboardModel.js', content, 'utf-8');
+fs.writeFileSync('../backend/src/models/dashboardModel.js', content, 'utf-8');
 
