@@ -188,7 +188,7 @@ function Profile() {
               <button className="profile-home-btn" onClick={() => navigate(`/galeria-publica/consultor/${encodeURIComponent(loginData?.id)}`)}>
                 {t('profile_pub')}
               </button>
-              <button className="profile-edit-btn">
+              <button className="profile-edit-btn" onClick={() => navigate('/profile/edit')}>
                 <Edit3 size={18} /> {t('profile_edit')}
               </button>
             </div>
