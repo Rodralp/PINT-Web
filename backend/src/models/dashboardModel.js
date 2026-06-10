@@ -521,12 +521,15 @@ const defaultConsultorStats = Object.freeze([
   },
 ]);
 
+const RECENT_SPECIAL_BADGE_DAYS = 7;
+
 const defaultConsultorDashboard = Object.freeze({
   timelineValues: Array.from({ length: CONSULTOR_TIMELINE_DAYS }, () => 0),
   stats: defaultConsultorStats,
   inProgressItems: [],
   suggestionItems: [],
   recentActivities: [],
+  newSpecialBadges: [],
 });
 
 export const dashboardModel = {
@@ -551,7 +554,7 @@ export const dashboardModel = {
     try {
       const profileData = await consultorModel.getProfileData(parsedAccountId);
 
-      const [timelineRows, inProgressRows, suggestionItems] = await Promise.all([
+      const [timelineRows, inProgressRows, suggestionItems, newSpecialBadgeRows] = await Promise.all([
         sequelize.query(
           `
             SELECT
@@ -590,6 +593,31 @@ export const dashboardModel = {
           },
         ),
         consultorModel.getBadgeSuggestions(parsedAccountId, 3).catch(() => []),
+        sequelize.query(
+          `
+            SELECT
+              cb.nbadge,
+              cb.data_obtencao,
+              b.b_nome,
+              b.b_descricao,
+              b.pontos,
+              b.imagem,
+              t.tipo
+            FROM c_obtem_b AS cb
+            INNER JOIN badge AS b
+              ON b.nbadge = cb.nbadge
+            INNER JOIN tipo AS t
+              ON t.ntipo = b.ntipo
+            WHERE cb.nutilizador = :accountId
+              AND LOWER(t.tipo) = 'especial'
+              AND cb.data_obtencao >= CURRENT_DATE - INTERVAL '${RECENT_SPECIAL_BADGE_DAYS} days'
+            ORDER BY cb.data_obtencao DESC
+          `,
+          {
+            replacements: { accountId: parsedAccountId },
+            type: QueryTypes.SELECT,
+          },
+        ),
       ]);
 
       const timelineValues = buildDailySeries(timelineRows, CONSULTOR_TIMELINE_DAYS);
@@ -608,6 +636,16 @@ export const dashboardModel = {
         ? profileData.stats
         : clone(defaultConsultorDashboard.stats);
 
+      const newSpecialBadges = (Array.isArray(newSpecialBadgeRows) ? newSpecialBadgeRows : []).map((row) => ({
+        nbadge: Number(row.nbadge),
+        name: row.b_nome || 'Badge Especial',
+        description: row.b_descricao || '',
+        points: Number(row.pontos) || 0,
+        image: row.imagem || null,
+        tipo: row.tipo || 'Especial',
+        date: row.data_obtencao || null,
+      }));
+
       return {
         timelineValues,
         stats,
@@ -622,6 +660,7 @@ export const dashboardModel = {
             iconKey: item.icon === 'award' ? 'award' : 'fileText',
           }))
           : [],
+        newSpecialBadges,
       };
     } catch (error) {
       console.error('❌ getConsultorDashboardData error:', error.message);

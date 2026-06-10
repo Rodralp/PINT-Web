@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
 import SeeMore_PopUp from '../../components/SeeMore_PopUp';
+import BadgeCongratulationsModal from '../../components/BadgeCongratulationsModal';
 import { fetchConsultorDashboard } from '../../services/dashboardService';
 import { fetchBadgeSuggestions } from '../../services/consultorService';
 import {
@@ -22,6 +23,20 @@ import '../../css/Consultor/Dashboard_C.css';
 
 const TIMELINE_DAYS = 12;
 const defaultTimelineValues = Array.from({ length: TIMELINE_DAYS }, () => 0);
+const SEEN_SPECIAL_BADGES_PREFIX = 'seenSpecialBadgeIds_';
+
+const getSeenSpecialBadgesKey = () => {
+  try {
+    const raw = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
+    const data = raw ? JSON.parse(raw) : null;
+    const accountId = Number(data?.id);
+    return Number.isInteger(accountId) && accountId > 0
+      ? `${SEEN_SPECIAL_BADGES_PREFIX}${accountId}`
+      : null;
+  } catch {
+    return null;
+  }
+};
 
 const statIconMap = {
   award: Award,
@@ -75,6 +90,8 @@ function DashboardC() {
   const [dashboardStatusMessage, setDashboardStatusMessage] = useState('');
   const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
   const [isSuggestionsModalOpen, setIsSuggestionsModalOpen] = useState(false);
+  const [congratsBadge, setCongratsBadge] = useState(null);
+  const [congratsQueue, setCongratsQueue] = useState([]);
   const timelineData = useMemo(() => buildTimelineData(timelineValues, locale), [timelineValues, locale]);
   const [visibleTimelinePoints, setVisibleTimelinePoints] = useState(timelineData.length);
 
@@ -130,6 +147,26 @@ function DashboardC() {
         }
 
         setDashboardStatusMessage('');
+
+        const newBadges = Array.isArray(data.newSpecialBadges) ? data.newSpecialBadges : [];
+        if (newBadges.length > 0) {
+          const storageKey = getSeenSpecialBadgesKey();
+          let seenIds = [];
+          if (storageKey) {
+            try {
+              const stored = localStorage.getItem(storageKey);
+              seenIds = stored ? JSON.parse(stored) : [];
+            } catch {
+              seenIds = [];
+            }
+          }
+
+          const unseenBadges = newBadges.filter((b) => !seenIds.includes(b.nbadge));
+          if (unseenBadges.length > 0) {
+            setCongratsQueue(unseenBadges.slice(1));
+            setCongratsBadge(unseenBadges[0]);
+          }
+        }
       } catch {
         if (isMounted) {
           setDashboardStatusMessage('');
@@ -171,6 +208,32 @@ function DashboardC() {
   const yAxisStep = Math.max(1, Math.ceil(maxVisibleValue / 3));
   const chartMaxValue = yAxisStep * 3;
   const yAxisTicks = [0, 1, 2, 3].map((multiplier) => yAxisStep * multiplier);
+
+  const handleCloseCongrats = () => {
+    if (congratsBadge) {
+      const storageKey = getSeenSpecialBadgesKey();
+      if (storageKey) {
+        try {
+          const stored = localStorage.getItem(storageKey);
+          const seenIds = stored ? JSON.parse(stored) : [];
+          if (!seenIds.includes(congratsBadge.nbadge)) {
+            seenIds.push(congratsBadge.nbadge);
+            localStorage.setItem(storageKey, JSON.stringify(seenIds));
+          }
+        } catch {
+          // Ignore storage errors
+        }
+      }
+    }
+
+    if (congratsQueue.length > 0) {
+      setCongratsBadge(congratsQueue[0]);
+      setCongratsQueue((prev) => prev.slice(1));
+    } else {
+      setCongratsBadge(null);
+      setCongratsQueue([]);
+    }
+  };
 
   return (
     <Layout>
@@ -357,6 +420,12 @@ function DashboardC() {
             </article>
           )}
           emptyMessage={t('dashboard_empty_suggestions', 'Sem sugestões para mostrar.')}
+        />
+
+        <BadgeCongratulationsModal
+          isOpen={!!congratsBadge}
+          onClose={handleCloseCongrats}
+          badge={congratsBadge}
         />
       </div>
     </Layout>
