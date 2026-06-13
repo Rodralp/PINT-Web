@@ -338,3 +338,32 @@ export async function uploadEvidence(pedidoId, nreq, files) {
 
   return response.data;
 }
+
+export async function fetchUserImage() {
+  const accountId = await ensureLoggedAccountId();
+  if (!accountId) {
+    throw new Error('Missing logged account id.');
+  }
+
+  const response = await apiClient.get(`/consultor/user-image?accountId=${accountId}`);
+  return response.data;
+}
+
+export async function uploadUserImage(imageData) {
+  const accountId = await ensureLoggedAccountId();
+  if (!accountId) {
+    throw new Error('Missing logged account id.');
+  }
+
+  const response = await apiClient.post('/consultor/user-image', { accountId, image: imageData });
+  return response.data;
+}
+
+export async function deleteUserImage() {
+  const accountId = await ensureLoggedAccountId();
+  if (!accountId) {
+    throw new Error('Missing logged account id.');
+  }
+
+  await apiClient.delete(`/consultor/user-image?accountId=${accountId}`);
+}

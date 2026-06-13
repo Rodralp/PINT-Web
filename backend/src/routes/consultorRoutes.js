@@ -23,6 +23,9 @@ import {
   uploadEvidence,
   getBadgeRequirements,
   getExpiringSoonBadgesForUser,
+  getUserImage,
+  uploadUserImage,
+  deleteUserImage,
 } from '../controllers/consultorController.js';
 
 const router = Router();
@@ -72,5 +75,8 @@ router.get('/profile', getProfileData);
 router.put('/profile', updateProfileData);
 router.get('/badge/:badgeId/requirements', getBadgeRequirements);
 router.get('/expiring-soon', getExpiringSoonBadgesForUser);
+router.get('/user-image', getUserImage);
+router.post('/user-image', uploadUserImage);
+router.delete('/user-image', deleteUserImage);
 
 export default router;

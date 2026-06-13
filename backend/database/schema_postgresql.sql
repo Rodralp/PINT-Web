@@ -69,6 +69,14 @@ CREATE TABLE IF NOT EXISTS badge_imagem (
     atualizado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS utilizador_imagem (
+    nutilizador INTEGER PRIMARY KEY REFERENCES utilizador(nutilizador) ON DELETE CASCADE,
+    mime_type VARCHAR(50) NOT NULL DEFAULT 'image/png',
+    dados BYTEA NOT NULL,
+    criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS b_pertence_a (
     narea INTEGER NOT NULL REFERENCES area(narea),
     nbadge INTEGER NOT NULL REFERENCES badge(nbadge),
