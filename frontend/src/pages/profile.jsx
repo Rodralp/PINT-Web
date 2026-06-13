@@ -255,30 +255,37 @@ function Profile() {
               </a>
             </div>
 
-            <div className="dashboard-list">
+            <div className="dashboard-list-compact">
               {Array.isArray(serviceLineStats) && serviceLineStats.length > 0 ? (
                 (() => {
-                  const maxBadges = Math.max(...serviceLineStats.map((s) => s.badges || 0), 1);
-                  return serviceLineStats.map((stat) => {
+                  const filteredStats = serviceLineStats.filter((s) => (s.badges || 0) > 0);
+                  if (filteredStats.length === 0) {
+                    return <p className="badge-admin-muted">{t('no_skills') || 'Nenhuma habilidade para mostrar.'}</p>;
+                  }
+                  const maxBadges = Math.max(...filteredStats.map((s) => s.badges || 0), 1);
+                  return filteredStats.slice(0, 3).map((stat) => {
                     const percentage = ((stat.badges || 0) / maxBadges) * 100;
                     return (
-                      <article key={`sl-${stat.serviceLine}`} className="pp-service-line-item">
-                        <div className="pp-service-line-header">
+                      <div key={`sl-${stat.serviceLine}`} className="dashboard-list-item-compact" style={{ flexDirection: 'column', alignItems: 'stretch', padding: '0.5rem 0.2rem' }}>
+                        <div className="pp-service-line-header" style={{ width: '100%' }}>
                           <strong>{stat.serviceLine}</strong>
                           <span className="pp-service-line-meta">
                             {stat.badges} {t('badges')} · {stat.points} {t('points')}
                           </span>
                         </div>
-                        <div className="pp-progress-bar-bg">
+                        <div className="pp-progress-bar-bg" style={{ width: '100%' }}>
                           <div style={{ width: `${percentage}%` }} className="pp-progress-bar-fill" />
                         </div>
-                      </article>
+                      </div>
                     );
                   });
                 })()
               ) : (
-                skillsItems.map(({ title, subtitleKey, accent }) => (
-                  <article key={`${title}-${subtitleKey}`} className="dashboard-list-item">
+                skillsItems
+                  .filter((s) => s.visible !== false)
+                  .slice(0, 3)
+                  .map(({ title, subtitleKey, accent }) => (
+                  <div key={`${title}-${subtitleKey}`} className="dashboard-list-item-compact">
                     <div className={`dashboard-list-badge accent-${accent}`}>
                       <Award size={18} strokeWidth={2} />
                     </div>
@@ -287,7 +294,7 @@ function Profile() {
                       <span>{t(subtitleKey)}</span>
                     </div>
                     <ChevronsRight className="dashboard-item-chevron" size={18} />
-                  </article>
+                  </div>
                 ))
               )}
             </div>
@@ -305,7 +312,10 @@ function Profile() {
             </div>
 
             <div className="dashboard-list">
-              {certificationsItems.map(({ title, subtitleKey, accent }) => (
+              {certificationsItems
+                .filter((c) => c.visible !== false)
+                .slice(0, 3)
+                .map(({ title, subtitleKey, accent }) => (
                 <article key={`${title}-${subtitleKey}`} className="dashboard-list-item">
                   <div className={`dashboard-list-badge accent-${accent}`}>
                     <GraduationCap size={18} strokeWidth={2} />
@@ -350,10 +360,11 @@ function Profile() {
         isOpen={isSkillsModalOpen}
         onClose={() => setIsSkillsModalOpen(false)}
         title={t('profile_skills')}
-        items={Array.isArray(serviceLineStats) && serviceLineStats.length > 0 ? serviceLineStats : skillsItems}
+        items={Array.isArray(serviceLineStats) && serviceLineStats.length > 0 ? serviceLineStats.filter((s) => (s.badges || 0) > 0) : skillsItems.filter((s) => s.visible !== false)}
         renderItem={(item) => {
           if (Array.isArray(serviceLineStats) && serviceLineStats.length > 0) {
-            const maxBadges = Math.max(...serviceLineStats.map((s) => s.badges || 0), 1);
+            const filteredStats = serviceLineStats.filter((s) => (s.badges || 0) > 0);
+            const maxBadges = filteredStats.length > 0 ? Math.max(...filteredStats.map((s) => s.badges || 0), 1) : 1;
             const percentage = ((item.badges || 0) / maxBadges) * 100;
             return (
               <article className="pp-service-line-item">
@@ -390,7 +401,7 @@ function Profile() {
         isOpen={isCertificationsModalOpen}
         onClose={() => setIsCertificationsModalOpen(false)}
         title={t('profile_certifications')}
-        items={certificationsItems}
+        items={certificationsItems.filter((c) => c.visible !== false)}
         renderItem={(item) => (
           <article className="dashboard-list-item">
             <div className={`dashboard-list-badge accent-${item.accent}`}>
