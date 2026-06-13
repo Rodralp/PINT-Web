@@ -185,5 +185,10 @@
   "badge_level_intermediate": "Intermediate",
   "badge_level_senior": "Senior",
   "badge_level_specialist": "Specialist",
-  "badge_level_knowledge_lead": "Knowledge Lead"
+  "badge_level_knowledge_lead": "Knowledge Lead",
+
+  "badge_congrats_title": "Congratulations!",
+  "badge_congrats_subtitle": "You earned a new badge",
+  "badge_congrats_special_badge": "Special Badge",
+  "badge_congrats_continue": "Continue"
 }
