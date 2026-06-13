@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Layout from '../components/Layout'
+import apiClient from '../services/apiClient'
 import '../css/profile.css'
 
 function readStoredLogin() {
@@ -50,7 +51,7 @@ export default function ProfileEdit() {
   const removeCert = (idx) => setCertifications(s => s.filter((_,i) => i!==idx))
   const updateCert = (idx, patch) => setCertifications(s => s.map((it,i) => i===idx ? { ...it, ...patch } : it))
 
-  const onSave = (ev) => {
+  const onSave = async (ev) => {
     ev.preventDefault()
     const newData = {
       ...loginData,
@@ -62,6 +63,13 @@ export default function ProfileEdit() {
     }
 
     persistStoredLogin(stored.source, newData)
+
+    try {
+      await apiClient.put('/consultor/profile', { accountId: loginData.id, nome: name })
+    } catch {
+      // falha silenciosa — a edição local foi guardada
+    }
+
     navigate('/profile')
   }
 
