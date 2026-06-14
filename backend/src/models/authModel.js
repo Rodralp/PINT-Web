@@ -1,4 +1,6 @@
 import { QueryTypes } from 'sequelize';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import { sequelize } from '../config/database.js';
 import { Account } from './sql/Account.js';
 import { communicationModel } from './communicationModel.js';
@@ -198,9 +200,22 @@ export const authModel = {
   async login({ email, senha }) {
     const normalizedEmail = normalizeEmail(email);
 
-    const account = await Account.findOne({ where: { email: normalizedEmail, senha } });
+    const account = await Account.findOne({ where: { email: normalizedEmail } });
 
     if (!account) {
+      return { status: 'invalid_credentials' };
+    }
+
+    let passwordMatch = await bcrypt.compare(senha, account.senha);
+
+    if (!passwordMatch && account.senha === senha) {
+      passwordMatch = true;
+      const salt = await bcrypt.genSalt(10);
+      account.senha = await bcrypt.hash(senha, salt);
+      await account.save();
+    }
+
+    if (!passwordMatch) {
       return { status: 'invalid_credentials' };
     }
 
@@ -219,10 +234,17 @@ export const authModel = {
     }
 
     const hasPreferences = await getHasPreferences(account.id);
+    const accountData = sanitizeAccount(account, hasPreferences);
+
+    const token = jwt.sign(
+      { id: account.id, email: account.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
     return {
       status: 'ok',
-      account: sanitizeAccount(account, hasPreferences),
+      account: { ...accountData, token },
     };
   },
 
@@ -251,7 +273,8 @@ export const authModel = {
       throw error;
     }
 
-    if (String(account.senha || '') !== String(currentPassword || '')) {
+    const passwordMatch = await bcrypt.compare(currentPassword, account.senha);
+    if (!passwordMatch) {
       const error = new Error('Current password is invalid.');
       error.statusCode = 400;
       throw error;
@@ -263,7 +286,8 @@ export const authModel = {
       throw error;
     }
 
-    account.senha = String(newPassword || '');
+    const salt = await bcrypt.genSalt(10);
+    account.senha = await bcrypt.hash(newPassword, salt);
     await account.save();
 
     try {

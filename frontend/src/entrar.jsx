@@ -157,6 +157,7 @@ function Entrar() {
         roles: accountRoles,
         status: account.status,
         hasPreferences,
+        token: account.token,
       };
 
       if (formData.guardarDados) {
