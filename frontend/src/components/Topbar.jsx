@@ -137,7 +137,6 @@ function Topbar({ onToggleSidebar }) {
           <MessageSquare size={20} strokeWidth={2} />
         </button>
         <div className="topbar-user-info" onClick={handleProfileClick} style={{ cursor: 'pointer' }}>
-          <span className="topbar-user-name">{userName}</span>
           {
             (() => {
               const seed = String(loginData?.email || loginData?.nome || userName || '').toLowerCase().replace('@', '.');
