@@ -50,7 +50,6 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-left: 8px;
 }
 
 .topbar-user-name {
@@ -66,9 +65,6 @@
   object-fit: cover;
 }
 
-.topbar-more-btn {
-  margin-left: -8px; /* Pulled slightly closer to the user info */
-}
 
 /* Dropdown styles */
 .topbar-dropdown-container {
