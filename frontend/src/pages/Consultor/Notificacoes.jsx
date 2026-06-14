@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Filter, Search, SlidersHorizontal } from 'lucide-react';
+import { Filter, Search, SlidersHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
+import Pagination from '../../components/Pagination';
 import { fetchUserNotifications, markNotificationRead } from '../../services/communicationService';
 import '../../css/Consultor/Notificacoes.css';
 
@@ -254,9 +255,6 @@ function Notificacoes() {
     )));
   };
 
-  const onPagePrev = () => setPage((current) => Math.max(1, current - 1));
-  const onPageNext = () => setPage((current) => Math.min(totalPages, current + 1));
-
   return (
     <Layout>
       <div className="notifications-page">
@@ -427,26 +425,7 @@ function Notificacoes() {
               </table>
             </div>
 
-            <div className="notifications-pagination" role="navigation" aria-label={t('pagination')}>
-              <button type="button" className="notifications-page-btn ghost" onClick={onPagePrev} disabled={page === 1} aria-label={t('previous_page')}>
-                <ChevronLeft size={16} />
-              </button>
-
-              {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
-                <button
-                  key={pageNumber}
-                  type="button"
-                  className={`notifications-page-btn ${pageNumber === page ? 'active' : ''}`}
-                  onClick={() => setPage(pageNumber)}
-                >
-                  {pageNumber}
-                </button>
-              ))}
-
-              <button type="button" className="notifications-page-btn ghost" onClick={onPageNext} disabled={page === totalPages} aria-label={t('next_page')}>
-                <ChevronRight size={16} />
-              </button>
-            </div>
+            <Pagination page={page} totalPages={totalPages} setPage={setPage} />
           </div>
         </section>
       </div>

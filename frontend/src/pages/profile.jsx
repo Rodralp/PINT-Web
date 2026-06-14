@@ -25,7 +25,8 @@ import {
   Star,
   Zap
 } from 'lucide-react';
-import { fetchProfileData } from '../services/consultorService';
+import { fetchMyBadges, fetchProfileData } from '../services/consultorService';
+import BadgeImage from '../components/BadgeImage';
 import '../css/Consultor/Dashboard_C.css';
 import '../css/profile.css';
 
@@ -78,6 +79,7 @@ function Profile() {
   const [certificationsItems, setCertificationsItems] = useState(defaultCertificationsItems);
   const [activityItems, setActivityItems] = useState(defaultActivityItems);
   const [serviceLineStats, setServiceLineStats] = useState([]);
+  const [badgeItems, setBadgeItems] = useState([]);
   const [profileLocation, setProfileLocation] = useState('Portugal');
   const [profileJoined, setProfileJoined] = useState('2023');
   const [statusMessage, setStatusMessage] = useState('');
@@ -147,6 +149,15 @@ function Profile() {
         if (isMounted) {
           setStatusMessage('');
         }
+      }
+
+      try {
+        const badges = await fetchMyBadges();
+        if (isMounted && Array.isArray(badges)) {
+          setBadgeItems(badges.filter((b) => b.status === 'obtido'));
+        }
+      } catch {
+        // silencioso
       }
     };
 
@@ -302,8 +313,8 @@ function Profile() {
 
           <section className="dashboard-card dashboard-panel-card">
             <div className="dashboard-panel-header">
-              <h2>{t('profile_certifications')}</h2>
-              <a href="#ver-todos-certificacoes" onClick={(event) => {
+              <h2>Vitrine</h2>
+              <a href="#ver-todos-badges" onClick={(event) => {
                 event.preventDefault();
                 setIsCertificationsModalOpen(true);
               }}>
@@ -311,22 +322,22 @@ function Profile() {
               </a>
             </div>
 
-            <div className="dashboard-list">
-              {certificationsItems
-                .filter((c) => c.visible !== false)
-                .slice(0, 3)
-                .map(({ title, subtitleKey, accent }) => (
-                <article key={`${title}-${subtitleKey}`} className="dashboard-list-item">
-                  <div className={`dashboard-list-badge accent-${accent}`}>
-                    <GraduationCap size={18} strokeWidth={2} />
-                  </div>
-                  <div className="dashboard-list-content">
-                    <strong>{title}</strong>
-                    <span>{t(subtitleKey)}</span>
-                  </div>
-                  <ChevronsRight className="dashboard-item-chevron" size={18} />
-                </article>
+            <div className="vitrine-grid">
+              {badgeItems.slice(0, 6).map((badge) => (
+                <div key={badge.id} className="vitrine-item" title={badge.name || badge.area}>
+                  <BadgeImage
+                    className="vitrine-badge-image"
+                    src={badge.badgeImage}
+                    alt={badge.name || badge.area || 'Badge'}
+                    frameSrc={badge.badgeFrameImage}
+                    levelKey={badge.levelKey}
+                    typeId={badge.typeId}
+                  />
+                </div>
               ))}
+              {badgeItems.length === 0 && (
+                <p className="badge-admin-muted">{t('no_certifications') || 'Nenhum badge obtido.'}</p>
+              )}
             </div>
           </section>
         </div>
@@ -400,21 +411,29 @@ function Profile() {
       <SeeMore_PopUp
         isOpen={isCertificationsModalOpen}
         onClose={() => setIsCertificationsModalOpen(false)}
-        title={t('profile_certifications')}
-        items={certificationsItems.filter((c) => c.visible !== false)}
-        renderItem={(item) => (
-          <article className="dashboard-list-item">
-            <div className={`dashboard-list-badge accent-${item.accent}`}>
-              <GraduationCap size={18} strokeWidth={2} />
+        title="Vitrine"
+        items={badgeItems}
+        renderItem={(badge) => (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, flexShrink: 0 }}>
+              <BadgeImage
+                className="vitrine-badge-image"
+                src={badge.badgeImage}
+                alt={badge.name || badge.area || 'Badge'}
+                frameSrc={badge.badgeFrameImage}
+                levelKey={badge.levelKey}
+                typeId={badge.typeId}
+              />
             </div>
-            <div className="dashboard-list-content">
-              <strong>{item.title}</strong>
-              <span>{t(item.subtitleKey)}</span>
+            <div>
+              <strong>{badge.name || badge.area || 'Badge'}</strong>
+              <span style={{ display: 'block', fontSize: 13, color: '#6b7280' }}>
+                {badge.points} pts
+              </span>
             </div>
-            <ChevronsRight className="dashboard-item-chevron" size={18} />
-          </article>
+          </div>
         )}
-        emptyMessage={t('no_certifications', 'Nenhuma certificação para mostrar.')}
+        emptyMessage="Nenhum badge obtido."
       />
     </Layout>
   );
