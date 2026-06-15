@@ -1,7 +1,5 @@
 import jwt from 'jsonwebtoken';
 
-const jwtSecret = process.env.JWT_SECRET;
-
 export const checkToken = (req, res, next) => {
   let token = req.headers['x-access-token'] || req.headers['authorization'];
 
@@ -15,6 +13,8 @@ export const checkToken = (req, res, next) => {
       message: 'Token indisponivel.',
     });
   }
+
+  const jwtSecret = process.env.JWT_SECRET;
 
   jwt.verify(token, jwtSecret, (err, decoded) => {
     if (err) {
