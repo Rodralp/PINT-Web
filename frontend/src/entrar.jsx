@@ -6,6 +6,7 @@ import TermsModal from './components/TermsModal';
 import PrivacyModal from './components/PrivacyModal';
 import ForgotPasswordModal from './components/ForgotPasswordModal';
 import { loginAccount } from './services/authService';
+import apiClient from './services/apiClient';
 import './css/LoginAccount.css';
 
 const dashboardPathByRole = {
@@ -173,6 +174,14 @@ function Entrar() {
       // O estado autenticado fica apenas na sessão ativa.
       localStorage.removeItem('loginData');
       sessionStorage.setItem('loginData', JSON.stringify(dadosLogin));
+
+      apiClient.get(`/consultor/user-image?accountId=${account.id}`).then((imgRes) => {
+        if (imgRes.data?.image) {
+          const current = JSON.parse(sessionStorage.getItem('loginData') || '{}');
+          current.avatar = imgRes.data.image;
+          sessionStorage.setItem('loginData', JSON.stringify(current));
+        }
+      }).catch(() => {});
 
       const mustChoosePreferences = accountRoles.includes(DEFAULT_ROLE) && !hasPreferences;
       setRedirectPath(mustChoosePreferences ? CONSULTOR_PREFERENCES_PATH : resolveDashboardPath(accountRoles));

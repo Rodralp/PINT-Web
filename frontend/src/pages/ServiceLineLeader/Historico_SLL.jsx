@@ -454,7 +454,7 @@ function HistoricoSLL() {
                           <td>
                             <div className="consultant-cell">
                               <img
-                                src={item.avatar || `https://i.pravatar.cc/120?u=${item.email}`}
+                                src={item.avatar || `/avatars/default-avatar.svg`}
                                 alt={item.name}
                                 className="consultant-avatar-small"
                               />

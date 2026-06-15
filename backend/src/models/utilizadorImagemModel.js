@@ -69,7 +69,7 @@ const loadUserImagesBatch = async (utilizadorIds, transaction) => {
   const replacements = {};
   utilizadorIds.forEach((id, i) => { replacements[`id${i}`] = id; });
 
-  const [rows] = await sequelize.query(
+  const rows = await sequelize.query(
     `
       SELECT nutilizador, mime_type, dados
       FROM utilizador_imagem

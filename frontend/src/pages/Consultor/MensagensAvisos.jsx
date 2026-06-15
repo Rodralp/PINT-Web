@@ -82,7 +82,7 @@ const buildMessageBody = (value) => {
 };
 
 const buildMessageAvatar = (seed) => (
-  `https://i.pravatar.cc/120?u=${encodeURIComponent(String(seed || 'user').toLowerCase())}`
+  `/avatars/default-avatar.svg`
 );
 
 const mapAnnouncementToMessage = (item) => {

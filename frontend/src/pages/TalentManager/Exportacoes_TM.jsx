@@ -17,8 +17,10 @@ import {
 import Layout from '../../components/Layout';
 import BadgeImage from '../../components/BadgeImage';
 import { fetchManagedRequests } from '../../services/requestManagementService';
-import { fetchHistoricoBadges, fetchHistoricoConsultores } from '../../services/talentManagerService';
+import { fetchCatalogBadges } from '../../services/consultorService';
+import { fetchHistoricoConsultores } from '../../services/talentManagerService';
 import '../../css/TalentManager/Exportacoes_TM.css';
+import '../../css/Consultor/CatalogoBadges_C.css';
 
 const tabs = [
   { id: 'pedidos', label: 'Pedidos de Badges' },
@@ -127,6 +129,16 @@ const normalizeLevelId = (level) => {
   }
 
   return 'junior';
+};
+
+const getExpirationStatus = (validade) => {
+  if (!validade) return null;
+  const today = new Date();
+  const expDate = new Date(validade);
+  const daysUntil = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+  if (daysUntil <= 0) return { status: 'expired', label: 'Expirada', days: daysUntil };
+  if (daysUntil <= 30) return { status: 'expiring', label: `Expira em ${daysUntil} dias`, days: daysUntil };
+  return null;
 };
 
 const normalizeLevelTitle = (value) => {
@@ -497,7 +509,7 @@ function ExportacoesTM() {
 
         const [requestsData, badgesData, consultantsData] = await Promise.all([
           fetchManagedRequests('talent-manager'),
-          fetchHistoricoBadges(),
+          fetchCatalogBadges(false),
           fetchHistoricoConsultores(),
         ]);
 
@@ -511,18 +523,26 @@ function ExportacoesTM() {
           status: normalizeRequestExportStatus(request),
         }));
 
-        const formattedBadges = (Array.isArray(badgesData) ? badgesData : []).map((badge) => {
-          const levelTitle = normalizeLevelTitle(badge?.level);
-          const meta = buildBadgeDisplayMeta(levelTitle);
+        const formattedBadges = (Array.isArray(badgesData) ? badgesData : []).map((badge, index) => {
+          const isSpecial = Boolean(badge?.isSpecial) || badge?.typeId === 'special' || !badge?.levelKey;
+          const levelKey = isSpecial ? null : (badge?.levelKey || badge?.typeId || null);
+          const levelLabel = isSpecial ? 'Especial' : (badge?.levelLabel || badge?.level || translateLevel(levelKey) || 'Badge');
+          const typeId = badge?.typeId || levelKey || (isSpecial ? 'special' : null);
 
           return {
-            id: Number(badge?.id),
-            area: String(badge?.area || badge?.name || 'N/A'),
-            levelId: meta.levelId,
-            level: levelTitle,
-            points: meta.points,
-            badgeImage: badge?.badgeImage || meta.badgeImage,
-            date: formatDateForUi(badge?.obtainedDate || badge?.dataObtencao),
+            id: Number(badge?.id) || index,
+            name: badge?.name || badge?.area || 'Badge',
+            area: badge?.area || badge?.name || 'Badge',
+            levelId: levelKey,
+            levelKey: levelKey,
+            typeId: typeId,
+            isSpecial,
+            levelLabel: levelLabel,
+            level: levelLabel,
+            points: Number(badge?.points) || 0,
+            badgeImage: badge?.badgeImage || null,
+            validade: badge?.validade || null,
+            date: formatDateForUi(badge?.date),
           };
         });
 
@@ -1084,7 +1104,7 @@ function ExportacoesTM() {
                 }}
               >
                 <Filter size={18} />
-                <span>Filtrar pesquisa</span>
+                <span className="tm-export-control-btn-label">Filtrar pesquisa</span>
               </button>
 
               {showFilterDropdown && (
@@ -1117,7 +1137,7 @@ function ExportacoesTM() {
                 }}
               >
                 <SlidersHorizontal size={18} />
-                <span>Ordenar</span>
+                <span className="tm-export-control-btn-label">Ordenar</span>
               </button>
 
               {showSortDropdown && (
@@ -1244,44 +1264,79 @@ function ExportacoesTM() {
                     {allSelectedCurrentTab ? 'Desselecionar todos' : 'Selecionar todos'}
                   </button>
                   <span className="tm-export-selected-count">{selectedCount} selecionados</span>
-                  <button type="button" className="tm-export-btn secondary" aria-label="Exportar badges em PDF" onClick={exportBadgesToPDF}>
+                  <button type="button" className="tm-export-btn secondary" aria-label="Exportar badges em PDF" onClick={exportBadgesToPDF} disabled={selectedBadgeIds.length === 0}>
                     <FileDown size={16} />
                     <span>Exportar PDF</span>
                   </button>
-                  <button type="button" className="tm-export-btn primary" aria-label="Exportar badges em Excel" onClick={exportBadgesToExcel}>
+                  <button type="button" className="tm-export-btn primary" aria-label="Exportar badges em Excel" onClick={exportBadgesToExcel} disabled={selectedBadgeIds.length === 0}>
                     <ArrowDownToLine size={16} />
                     <span>Exportar Excel</span>
                   </button>
                 </div>
               </div>
 
-              <div className="tm-export-badges-grid">
+              <div className="catalog-grid">
                 {pagedBadges.map((item) => {
                   const isSelected = selectedBadgeIds.includes(item.id);
+                  const badgeTitle = item.name || item.area || 'Badge';
+                  const levelLabel = item.isSpecial ? 'Especial' : item.levelLabel || item.level;
+                  const expirationInfo = getExpirationStatus(item.validade);
 
                   return (
-                    <button
+                    <article
                       key={item.id}
-                      type="button"
-                      className={`tm-export-badge-card ${isSelected ? 'selected' : ''}`}
+                      className={`catalog-card ${isSelected ? 'selected' : ''}`}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => toggleBadgeSelection(item.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          toggleBadgeSelection(item.id);
+                        }
+                      }}
                     >
-                      <div className="tm-export-badge-frame">
-                        <BadgeImage src={item.badgeImage} alt={item.level} className="tm-export-badge-image" levelKey={item.levelId || item.level} typeId={item.typeId} levelLabel={item.level} />
+                      {expirationInfo && expirationInfo.status === 'expiring' && (
+                        <div style={{
+                          position: 'absolute', top: '8px', right: '8px',
+                          background: 'rgba(251, 191, 36, 0.9)', color: '#92400e',
+                          padding: '2px 8px', borderRadius: '12px', fontSize: '11px',
+                          fontWeight: '600', display: 'flex', alignItems: 'center',
+                          gap: '4px', zIndex: 1,
+                        }}>
+                          <Clock3 size={12} />
+                          {expirationInfo.label}
+                        </div>
+                      )}
+
+                      <div className="catalog-badge-frame">
+                        <BadgeImage src={item.badgeImage} alt={levelLabel} className="catalog-badge-image" levelKey={item.levelKey || item.levelId} typeId={item.typeId} levelLabel={levelLabel} />
                       </div>
-                      <strong>{item.area}</strong>
-                      <span>{item.level}</span>
-                      <div className="tm-export-badge-meta">
-                        <div>
+                      <div className="catalog-card-title">{badgeTitle}</div>
+                      <div className="catalog-card-level">{levelLabel}</div>
+                      <div className="catalog-card-meta">
+                        <div className="catalog-meta-row">
                           <Trophy size={14} />
-                          {item.points} pontos
+                          <span>{item.points} pontos</span>
                         </div>
-                        <div>
+                        <div className="catalog-meta-row" style={{
+                          color: expirationInfo?.status === 'expiring' ? '#b45309'
+                               : expirationInfo?.status === 'expired' ? '#dc2626'
+                               : '#6b7280',
+                        }}>
                           <Clock3 size={14} />
-                          {item.date}
+                          <span>
+                            {item.validade
+                              ? (expirationInfo?.status === 'expired'
+                                ? 'Expirada'
+                                : `Expira: ${new Date(item.validade).toLocaleDateString('pt-PT')}`
+                              )
+                              : item.date
+                            }
+                          </span>
                         </div>
                       </div>
-                    </button>
+                    </article>
                   );
                 })}
               </div>

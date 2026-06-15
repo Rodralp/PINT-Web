@@ -10,7 +10,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--sp-6);
-  z-index: 50; /* Above sidebar and content */
+  z-index: 100; /* Above sidebar and content */
 }
 
 .topbar-logo {
@@ -83,7 +83,7 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   padding: var(--sp-2) 0;
   min-width: 200px;
-  z-index: 100;
+  z-index: 110;
   border: 1px solid #eaeaea;
   display: flex;
   flex-direction: column;
