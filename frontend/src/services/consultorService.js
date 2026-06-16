@@ -282,10 +282,6 @@ export async function fetchProfileData() {
       patch.serviceLine = data.serviceLine;
     }
 
-    if (data.avatar) {
-      patch.avatar = data.avatar;
-    }
-
     if (Object.keys(patch).length > 0) {
       updateStoredLoginData(patch);
     }

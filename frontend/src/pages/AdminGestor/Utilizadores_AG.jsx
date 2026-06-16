@@ -45,7 +45,7 @@ const toRoleLabel = (roles) => {
 
 const toAvatar = (seed) => {
   const normalizedSeed = String(seed || 'user').toLowerCase().replace('@', '.');
-  return `https://i.pravatar.cc/120?u=${encodeURIComponent(normalizedSeed)}`;
+  return `/avatars/default-avatar.svg`;
 };
 
 const DEFAULT_ROLE = 'consultor';

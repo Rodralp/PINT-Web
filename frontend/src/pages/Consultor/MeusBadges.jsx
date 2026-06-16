@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
-import { CheckCircle2, Clock3, Filter, SearchCheck, Search, SlidersHorizontal, Trophy, AlertTriangle, ChevronLeft, ChevronRight, TimerReset } from 'lucide-react';
+import { CheckCircle2, Clock3, Filter, SearchCheck, Search, SlidersHorizontal, Trophy, AlertTriangle, TimerReset } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
 import BadgeImage from '../../components/BadgeImage';
+import Pagination from '../../components/Pagination';
 import { fetchMyBadges } from '../../services/consultorService';
 import '../../css/Consultor/CatalogoBadges_C.css';
 
@@ -240,14 +241,6 @@ function MeusBadges() {
   const toggleSortDropdown = () => {
     setShowSortDropdown((current) => !current);
     setShowFilterDropdown(false);
-  };
-
-  const previousPage = () => {
-    setPage((current) => Math.max(1, current - 1));
-  };
-
-  const nextPage = () => {
-    setPage((current) => Math.min(totalPages, current + 1));
   };
 
   const handleOpenBadgeDetails = (item) => {
@@ -498,38 +491,7 @@ function MeusBadges() {
             <div className="catalog-empty-state">Nenhum badge encontrado com os filtros escolhidos.</div>
           )}
 
-          <div className="catalog-pagination" role="navigation" aria-label={t('pagination')}>
-            <button
-              type="button"
-              className="catalog-page-btn ghost"
-              aria-label={t('previous_page')}
-              onClick={previousPage}
-              disabled={page === 1}
-            >
-              <ChevronLeft size={16} />
-            </button>
-
-            {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
-              <button
-                key={pageNumber}
-                type="button"
-                className={`catalog-page-btn ${pageNumber === page ? 'active' : ''}`}
-                onClick={() => setPage(pageNumber)}
-              >
-                {pageNumber}
-              </button>
-            ))}
-
-            <button
-              type="button"
-              className="catalog-page-btn ghost"
-              aria-label={t('next_page')}
-              onClick={nextPage}
-              disabled={page === totalPages}
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
+          <Pagination page={page} totalPages={totalPages} setPage={setPage} />
         </section>
       </div>
     </Layout>

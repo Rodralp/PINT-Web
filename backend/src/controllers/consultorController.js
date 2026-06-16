@@ -415,3 +415,33 @@ export const deleteUserImage = async (req, res) => {
     res.status(500).json({ message: error?.message || 'Failed to delete user image.' });
   }
 };
+
+export const getUserVitrine = async (req, res) => {
+  const accountId = parseAccountId(req.query?.accountId || req.params?.accountId);
+  if (!accountId) {
+    res.status(400).json({ message: 'Account id is required.' });
+    return;
+  }
+
+  try {
+    const data = await consultorService.getUserVitrine(accountId);
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch vitrine.', error: error.message });
+  }
+};
+
+export const saveUserVitrine = async (req, res) => {
+  const accountId = parseAccountId(req.body?.accountId);
+  if (!accountId) {
+    res.status(400).json({ message: 'accountId is required.' });
+    return;
+  }
+
+  try {
+    const data = await consultorService.saveUserVitrine(accountId, req.body?.badges);
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to save vitrine.', error: error.message });
+  }
+};

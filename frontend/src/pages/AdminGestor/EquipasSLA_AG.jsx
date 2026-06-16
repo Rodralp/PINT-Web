@@ -20,7 +20,7 @@ const getAvatarSeed = (member) =>
     .replace('@', '.');
 
 const getMemberAvatarUrl = (member) =>
-  `https://i.pravatar.cc/120?u=${encodeURIComponent(getAvatarSeed(member))}`;
+  `/avatars/default-avatar.svg`;
 
 const onMemberAvatarError = (event, member) => {
   event.currentTarget.onerror = null;

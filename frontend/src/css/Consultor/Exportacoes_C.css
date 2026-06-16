@@ -316,12 +316,14 @@
   grid-template-columns: minmax(0, 252px) minmax(0, 1fr);
   gap: 20px;
   align-items: start;
+  overflow: hidden;
 }
 
 .exports-certificate-sidebar {
   background: #f8fafc;
   border-radius: 12px;
   padding: 14px;
+  overflow: hidden;
 }
 
 .exports-mini-pager {
@@ -335,6 +337,8 @@
   flex-direction: column;
   gap: 8px;
   margin-bottom: 14px;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .exports-certificate-item {
@@ -408,6 +412,7 @@
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
   padding: 26px 20px 22px;
   text-align: center;
+  overflow: hidden;
 }
 
 .exports-certificate-brand {

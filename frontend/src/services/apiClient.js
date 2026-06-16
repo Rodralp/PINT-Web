@@ -15,6 +15,21 @@ const http = axios.create({
   timeout: REQUEST_TIMEOUT_MS,
 });
 
+http.interceptors.request.use((config) => {
+  const loginDataRaw = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
+  if (loginDataRaw) {
+    try {
+      const loginData = JSON.parse(loginDataRaw);
+      if (loginData && loginData.token) {
+        config.headers.Authorization = `Bearer ${loginData.token}`;
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+  return config;
+});
+
 const request = async (path, options = {}) => {
   try {
     const response = await http({

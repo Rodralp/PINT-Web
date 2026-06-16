@@ -16,7 +16,7 @@ const ITEMS_PER_PAGE = 12;
 
 const buildAvatarUrl = (consultant) =>
   consultant.avatar
-  || `https://i.pravatar.cc/120?u=${encodeURIComponent(consultant.email || consultant.name || consultant.id)}`;
+  || `/avatars/default-avatar.svg`;
 
 function RankingConsultores() {
   const [consultants, setConsultants] = useState([]);
@@ -310,7 +310,7 @@ function RankingConsultores() {
                     src={buildAvatarUrl(consultant)}
                     alt={consultant.name}
                     onError={(event) => {
-                      event.currentTarget.src = `https://i.pravatar.cc/120?u=${encodeURIComponent(consultant.email || consultant.name || consultant.id)}`;
+                      event.currentTarget.src = `/avatars/default-avatar.svg`;
                     }}
                   />
 

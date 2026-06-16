@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, ChevronLeft, ChevronRight, Eye, X } from 'lucide-react';
 import Layout from '../../components/Layout';
 import {
@@ -328,7 +329,7 @@ function HistoricoTM() {
                           <td>
                             <div className="consultant-cell">
                               <img
-                                src={item.avatar || `https://i.pravatar.cc/120?u=${item.email}`}
+                                src={item.avatar || `/avatars/default-avatar.svg`}
                                 alt={item.name}
                                 className="consultant-avatar-small"
                               />
@@ -392,7 +393,7 @@ function HistoricoTM() {
             </>
           )}
 
-          {modalOpen && (
+          {modalOpen && createPortal(
             <div className="modal-overlay" onClick={closeModal}>
               <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
@@ -600,7 +601,8 @@ function HistoricoTM() {
                   )}
                 </div>
               </div>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
       </div>
