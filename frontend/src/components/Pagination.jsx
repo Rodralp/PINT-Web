@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import '../css/Pagination.css'
 
-export default function Pagination({ page, totalPages, setPage, prevLabel, nextLabel }) {
+export default function Pagination({ page, totalPages, setPage }) {
   if (totalPages <= 1) return null
 
   const prev = () => setPage((p) => Math.max(1, p - 1))

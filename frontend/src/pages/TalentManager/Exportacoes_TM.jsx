@@ -6,8 +6,6 @@ import {
   ArrowDownToLine,
   FileDown,
   ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
   SlidersHorizontal,
   Trophy,
   Clock3,
@@ -15,6 +13,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
+import Pagination from '../../components/Pagination';
 import BadgeImage from '../../components/BadgeImage';
 import { fetchManagedRequests } from '../../services/requestManagementService';
 import { fetchCatalogBadges } from '../../services/consultorService';
@@ -884,14 +883,6 @@ function ExportacoesTM() {
     });
   };
 
-  const previousPage = () => {
-    setPage((current) => Math.max(1, current - 1));
-  };
-
-  const nextPage = () => {
-    setPage((current) => Math.min(totalPages, current + 1));
-  };
-
   // Export handlers
   const exportBadgesToPDF = () => {
     const selected = badgeItems.filter((item) => selectedBadgeIds.includes(item.id));
@@ -1019,8 +1010,8 @@ function ExportacoesTM() {
   if (loading) {
     return (
       <Layout>
-        <div className="tm-export-page">
-          <header className="tm-export-header">
+        <div className="page tm-export-page">
+          <header className="page-header tm-export-header">
             <button type="button" className="tm-export-back-btn" onClick={handleGoBack} aria-label="Voltar">
               <ArrowLeft size={22} />
             </button>
@@ -1037,8 +1028,8 @@ function ExportacoesTM() {
   if (error) {
     return (
       <Layout>
-        <div className="tm-export-page">
-          <header className="tm-export-header">
+        <div className="page tm-export-page">
+          <header className="page-header tm-export-header">
             <button type="button" className="tm-export-back-btn" onClick={handleGoBack} aria-label="Voltar">
               <ArrowLeft size={22} />
             </button>
@@ -1054,8 +1045,8 @@ function ExportacoesTM() {
 
   return (
     <Layout>
-      <div className="tm-export-page">
-        <header className="tm-export-header">
+      <div className="page tm-export-page">
+        <header className="page-header tm-export-header">
           <button type="button" className="tm-export-back-btn" onClick={handleGoBack} aria-label="Voltar">
             <ArrowLeft size={22} />
           </button>
@@ -1077,10 +1068,10 @@ function ExportacoesTM() {
           ))}
         </div>
 
-        <section className="tm-export-shell">
+        <section className="shell tm-export-shell">
 
-          <div className="tm-export-toolbar">
-            <label className="tm-export-search" htmlFor="tm-export-search-input">
+          <div className="toolbar tm-export-toolbar">
+            <label className="search-wrap tm-export-search" htmlFor="tm-export-search-input">
               <Search size={20} />
               <input
                 id="tm-export-search-input"
@@ -1097,7 +1088,7 @@ function ExportacoesTM() {
             <div className="tm-export-control-group" ref={filterDropdownRef}>
               <button
                 type="button"
-                className={`tm-export-control-btn ${showFilterDropdown || hasActiveFilter ? 'active' : ''}`}
+                className={`action-btn tm-export-control-btn ${showFilterDropdown || hasActiveFilter ? 'active' : ''}`}
                 onClick={() => {
                   setShowFilterDropdown((current) => !current);
                   setShowSortDropdown(false);
@@ -1108,12 +1099,12 @@ function ExportacoesTM() {
               </button>
 
               {showFilterDropdown && (
-                <div className="tm-export-dropdown-menu" role="menu" aria-label="Filtrar pesquisa">
+                <div className="dropdown-menu tm-export-dropdown-menu" role="menu" aria-label="Filtrar pesquisa">
                   {filterOptions.map((item) => (
                     <button
                       key={item.id}
                       type="button"
-                      className={`tm-export-dropdown-item ${activeFilter === item.id ? 'active' : ''}`}
+                      className={`dropdown-item tm-export-dropdown-item ${activeFilter === item.id ? 'active' : ''}`}
                       onClick={() => {
                         setActiveFilter(item.id);
                         setShowFilterDropdown(false);
@@ -1130,7 +1121,7 @@ function ExportacoesTM() {
             <div className="tm-export-control-group" ref={sortDropdownRef}>
               <button
                 type="button"
-                className={`tm-export-control-btn ${showSortDropdown || hasActiveSort ? 'active' : ''}`}
+                className={`action-btn tm-export-control-btn ${showSortDropdown || hasActiveSort ? 'active' : ''}`}
                 onClick={() => {
                   setShowSortDropdown((current) => !current);
                   setShowFilterDropdown(false);
@@ -1141,12 +1132,12 @@ function ExportacoesTM() {
               </button>
 
               {showSortDropdown && (
-                <div className="tm-export-dropdown-menu" role="menu" aria-label="Ordenar">
+                <div className="dropdown-menu tm-export-dropdown-menu" role="menu" aria-label="Ordenar">
                   {sortOptions.map((item) => (
                     <button
                       key={item.id}
                       type="button"
-                      className={`tm-export-dropdown-item ${sortBy === item.id ? 'active' : ''}`}
+                      className={`dropdown-item tm-export-dropdown-item ${sortBy === item.id ? 'active' : ''}`}
                       onClick={() => {
                         setSortBy(item.id);
                         setShowSortDropdown(false);
@@ -1196,8 +1187,8 @@ function ExportacoesTM() {
                 ))}
               </div>
 
-              <div className="tm-export-table-wrap">
-                <table className="tm-export-table">
+              <div className="table-wrap tm-export-table-wrap">
+                <table className="table tm-export-table">
                   <thead>
                     <tr>
                       <th />
@@ -1212,7 +1203,7 @@ function ExportacoesTM() {
                   <tbody>
                     {pagedRequests.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="tm-export-empty-row">Sem resultados para os filtros escolhidos.</td>
+                        <td colSpan={7} className="empty-state tm-export-empty-row">Sem resultados para os filtros escolhidos.</td>
                       </tr>
                     )}
 
@@ -1364,8 +1355,8 @@ function ExportacoesTM() {
                 </div>
               </div>
 
-              <div className="tm-export-table-wrap">
-                <table className="tm-export-table consultores">
+              <div className="table-wrap tm-export-table-wrap">
+                <table className="table tm-export-table consultores">
                   <thead>
                     <tr>
                       <th />
@@ -1381,7 +1372,7 @@ function ExportacoesTM() {
                   <tbody>
                     {pagedConsultants.length === 0 && (
                       <tr>
-                        <td colSpan={8} className="tm-export-empty-row">Sem resultados para os filtros escolhidos.</td>
+                        <td colSpan={8} className="empty-state tm-export-empty-row">Sem resultados para os filtros escolhidos.</td>
                       </tr>
                     )}
 
@@ -1430,26 +1421,7 @@ function ExportacoesTM() {
             </>
           )}
 
-          <div className="tm-export-pagination" role="navigation" aria-label="Paginação de exportações">
-            <button type="button" className="tm-export-page-btn ghost" onClick={previousPage} disabled={page === 1}>
-              <ChevronLeft size={16} />
-            </button>
-
-            {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
-              <button
-                key={pageNumber}
-                type="button"
-                className={`tm-export-page-btn ${pageNumber === page ? 'active' : ''}`}
-                onClick={() => setPage(pageNumber)}
-              >
-                {pageNumber}
-              </button>
-            ))}
-
-            <button type="button" className="tm-export-page-btn ghost" onClick={nextPage} disabled={page === totalPages}>
-              <ChevronRight size={16} />
-            </button>
-          </div>
+          <Pagination page={page} totalPages={totalPages} setPage={setPage} />
         </section>
       </div>
     </Layout>
