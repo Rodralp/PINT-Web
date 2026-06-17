@@ -179,8 +179,8 @@ function DashboardAG() {
 
   return (
     <Layout>
-      <div className="dashboard-tm dashboard-ag-theme">
-        <header className="dashboard-tm-header">
+      <div className="page dashboard-tm dashboard-ag-theme">
+        <header className="page-header dashboard-tm-header">
           <h1>Dashboard Admin / Gestor</h1>
         </header>
 

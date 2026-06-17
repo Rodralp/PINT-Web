@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Search, ShieldCheck, UserPlus2, X } from 'lucide-react';
 import Layout from '../../components/Layout';
+import Pagination from '../../components/Pagination';
 import '../../css/AdminGestor/Utilizadores_AG.css';
 import {
   createAdminUser,
@@ -517,12 +518,12 @@ function UtilizadoresAG() {
 
   return (
     <Layout>
-      <div className="ag-users-page">
-        <header className="ag-users-header">
+      <div className="page ag-users-page">
+        <header className="page-header ag-users-header">
           <h1>Utilizadores</h1>
         </header>
 
-        <section className="ag-users-card">
+        <section className="shell ag-users-card">
           <div className="ag-users-tabs" role="tablist" aria-label="Separadores de utilizadores">
             <button
               type="button"
@@ -545,8 +546,8 @@ function UtilizadoresAG() {
             </button>
           </div>
 
-          <div className="ag-users-toolbar">
-            <label className="ag-users-search" htmlFor="ag-users-search-input">
+          <div className="toolbar ag-users-toolbar">
+            <label className="search-wrap ag-users-search" htmlFor="ag-users-search-input">
               <Search size={18} />
               <input
                 id="ag-users-search-input"
@@ -592,8 +593,8 @@ function UtilizadoresAG() {
             </p>
           )}
 
-          <div className="ag-users-table-wrap">
-            <table className="ag-users-table">
+          <div className="table-wrap ag-users-table-wrap">
+            <table className="table ag-users-table">
               <thead>
                 {activeTab === 'users' ? (
                   <tr>
@@ -617,7 +618,7 @@ function UtilizadoresAG() {
               <tbody>
                 {isLoading && (
                   <tr>
-                    <td className="ag-users-empty" colSpan={activeTab === 'users' ? 7 : 3}>
+                    <td className="empty-state ag-users-empty" colSpan={activeTab === 'users' ? 7 : 3}>
                       A carregar...
                     </td>
                   </tr>
@@ -625,7 +626,7 @@ function UtilizadoresAG() {
 
                 {!isLoading && pagedUsers.length === 0 && (
                   <tr>
-                    <td className="ag-users-empty" colSpan={activeTab === 'users' ? 7 : 3}>
+                    <td className="empty-state ag-users-empty" colSpan={activeTab === 'users' ? 7 : 3}>
                       Sem resultados.
                     </td>
                   </tr>
@@ -712,34 +713,7 @@ function UtilizadoresAG() {
             </table>
           </div>
 
-          {totalPages > 1 && (
-            <footer className="ag-users-pagination">
-              <button
-                type="button"
-                onClick={() => setPage((current) => Math.max(1, current - 1))}
-                disabled={page <= 1}
-              >
-                &lt;
-              </button>
-              {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNum) => (
-                <button
-                  key={pageNum}
-                  type="button"
-                  onClick={() => setPage(pageNum)}
-                  className={page === pageNum ? 'current' : ''}
-                >
-                  {pageNum}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-                disabled={page >= totalPages}
-              >
-                &gt;
-              </button>
-            </footer>
-          )}
+          {totalPages > 1 && <Pagination page={page} totalPages={totalPages} setPage={setPage} />}
         </section>
 
         {showCreateModal && (
