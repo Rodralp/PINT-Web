@@ -1,3 +1,7 @@
+.catalog-header-actions {
+  margin-left: auto;
+}
+
 .catalog-controls { /*ainda usado*/
   grid-template-columns: minmax(0, 1fr) minmax(0, 220px) minmax(0, 220px);
   margin-bottom: 10px;

@@ -317,8 +317,8 @@ function GestaoGeralAG() {
 
   return (
     <Layout>
-      <div className="page ag-general-page">
-        <header className="page-header ag-general-header">
+      <div className="page">
+        <header className="page-header">
           <h1>Gestão Geral</h1>
         </header>
 
@@ -342,7 +342,7 @@ function GestaoGeralAG() {
           ))}
         </div>
 
-        <section className="shell ag-general-shell">
+        <section className="shell">
 
           <div className="toolbar ag-general-toolbar">
             <label className="search-wrap ag-general-search" htmlFor="ag-general-search-input">

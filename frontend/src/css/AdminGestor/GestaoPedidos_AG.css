@@ -29,23 +29,6 @@
   line-height: 1.45;
 }
 
-.ag-orders-back-btn {
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: #344054;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-}
-
-.ag-orders-back-btn:hover {
-  background: rgba(148, 163, 184, 0.14);
-}
-
 .ag-orders-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

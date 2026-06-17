@@ -20,7 +20,7 @@
   padding: var(--sp-3) var(--sp-4) var(--sp-4);
 }
 
-.ag-general-page:has(.ag-general-tabs .ag-general-tab:first-of-type.active) .ag-general-shell {
+.page:has(.ag-general-tabs .ag-general-tab:first-of-type.active) .shell {
   border-top-left-radius: 0;
 }
 
@@ -37,15 +37,15 @@
   border: none;
   border-radius: 10px 10px 0 0;
   background: transparent;
-  color: #7d8aa0;
-  padding: 0 18px;
-  font-size: var(--fs-base);
+  color: #8892a4;
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 
 .ag-general-tab.active {
-  color: #273142;
   background: #ffffff;
+  color: #2f3747;
 }
 
 .ag-general-toolbar {

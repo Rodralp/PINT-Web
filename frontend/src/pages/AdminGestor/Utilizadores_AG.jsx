@@ -518,12 +518,12 @@ function UtilizadoresAG() {
 
   return (
     <Layout>
-      <div className="page ag-users-page">
-        <header className="page-header ag-users-header">
+      <div className="page">
+        <header className="page-header">
           <h1>Utilizadores</h1>
         </header>
 
-        <section className="shell ag-users-card">
+        <section className="shell">
           <div className="ag-users-tabs" role="tablist" aria-label="Separadores de utilizadores">
             <button
               type="button"
@@ -593,8 +593,8 @@ function UtilizadoresAG() {
             </p>
           )}
 
-          <div className="table-wrap ag-users-table-wrap">
-            <table className="table ag-users-table">
+          <div className="table-wrap">
+            <table className="table">
               <thead>
                 {activeTab === 'users' ? (
                   <tr>
@@ -618,7 +618,7 @@ function UtilizadoresAG() {
               <tbody>
                 {isLoading && (
                   <tr>
-                    <td className="empty-state ag-users-empty" colSpan={activeTab === 'users' ? 7 : 3}>
+                    <td className="empty-state" colSpan={activeTab === 'users' ? 7 : 3}>
                       A carregar...
                     </td>
                   </tr>
@@ -626,7 +626,7 @@ function UtilizadoresAG() {
 
                 {!isLoading && pagedUsers.length === 0 && (
                   <tr>
-                    <td className="empty-state ag-users-empty" colSpan={activeTab === 'users' ? 7 : 3}>
+                    <td className="empty-state" colSpan={activeTab === 'users' ? 7 : 3}>
                       Sem resultados.
                     </td>
                   </tr>

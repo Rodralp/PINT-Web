@@ -266,8 +266,8 @@ function EquipasSLAAG() {
 
   return (
     <Layout>
-      <div className="page ag-teams-page">
-        <header className="page-header ag-teams-header">
+      <div className="page">
+        <header className="page-header">
           <h1>Equipas e SLA</h1>
         </header>
 

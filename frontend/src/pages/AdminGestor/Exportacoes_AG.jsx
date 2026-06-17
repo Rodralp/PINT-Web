@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowDownToLine,
-  ArrowLeft,
   Clock3,
   FileDown,
   Filter,
@@ -73,14 +72,6 @@ const tabDefaults = {
   badges: { filter: 'todos', sort: 'padrao' },
   consultores: { filter: 'todos', sort: 'points_desc' },
 };
-
-const badgeLevels = [
-  { id: 'junior', label: 'Júnior', points: 100, badgeImage: '/badges/Júnior.png' },
-  { id: 'intermedio', label: 'Intermédio', points: 150, badgeImage: '/badges/Intermédio.png' },
-  { id: 'senior', label: 'Sénior', points: 200, badgeImage: '/badges/Sénior.png' },
-  { id: 'especialista', label: 'Especialista', points: 250, badgeImage: '/badges/Especialista.png' },
-  { id: 'lider', label: 'Líder de Conhecimento', points: 300, badgeImage: '/badges/Líder de Conhecimento.png' },
-];
 
 const requestStatusMeta = {
   enviado: { label: 'Enviados', className: 'sent' },
@@ -216,17 +207,6 @@ const toConsultantStatusLabel = (status) => {
   }
 
   return 'Inativo';
-};
-
-const buildBadgeDisplayMeta = (level) => {
-  const levelId = normalizeLevelId(level);
-  const template = badgeLevels.find((item) => item.id === levelId) || badgeLevels[0];
-
-  return {
-    levelId,
-    points: Number(template?.points) || 0,
-    badgeImage: template?.badgeImage || '/badges/default.png',
-  };
 };
 
 const getLoginName = () => {
@@ -789,15 +769,6 @@ function ExportacoesAG() {
 
   const userName = getLoginName() || 'João Gomes';
 
-  const handleGoBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
-    navigate('/admin-gestor/dashboard');
-  };
-
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
     setSearchTerm('');
@@ -1010,11 +981,8 @@ function ExportacoesAG() {
   if (loading) {
     return (
       <Layout>
-        <div className="page tm-export-page">
-          <header className="page-header tm-export-header">
-            <button type="button" className="tm-export-back-btn" onClick={handleGoBack} aria-label="Voltar">
-              <ArrowLeft size={22} />
-            </button>
+        <div className="page">
+          <header className="page-header">
             <h1>Exportações Administrador / Gestor</h1>
           </header>
           <div className="tm-export-loading">
@@ -1028,11 +996,8 @@ function ExportacoesAG() {
   if (error) {
     return (
       <Layout>
-        <div className="page tm-export-page">
-          <header className="page-header tm-export-header">
-            <button type="button" className="tm-export-back-btn" onClick={handleGoBack} aria-label="Voltar">
-              <ArrowLeft size={22} />
-            </button>
+        <div className="page">
+          <header className="page-header">
             <h1>Exportações Administrador / Gestor</h1>
           </header>
           <div className="tm-export-error">
@@ -1045,11 +1010,8 @@ function ExportacoesAG() {
 
   return (
     <Layout>
-      <div className="page tm-export-page">
-        <header className="page-header tm-export-header">
-          <button type="button" className="tm-export-back-btn" onClick={handleGoBack} aria-label="Voltar">
-            <ArrowLeft size={22} />
-          </button>
+      <div className="page">
+        <header className="page-header">
           <h1>Exportações Administrador / Gestor</h1>
         </header>
 
@@ -1068,7 +1030,7 @@ function ExportacoesAG() {
           ))}
         </div>
 
-        <section className="shell tm-export-shell">
+        <section className="shell">
 
           <div className="toolbar tm-export-toolbar">
             <label className="search-wrap tm-export-search" htmlFor="tm-export-search-input">

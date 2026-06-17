@@ -28,7 +28,7 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: var(--fs-5xl);
+  font-size: var(--fs-xl);
   font-weight: 600;
   color: #1f2937;
 }
@@ -568,7 +568,7 @@
 
   .ag-sla-alerts-card h2,
   .ag-teams-list-header h2 {
-    font-size: var(--fs-4xl);
+    font-size: var(--fs-lg);
   }
 
   .ag-team-row-top h3 {
@@ -603,7 +603,7 @@
 
   .ag-sla-alerts-card h2,
   .ag-teams-list-header h2 {
-    font-size: var(--fs-3xl);
+    font-size: var(--fs-base);
   }
 
   .ag-teams-list-header {
