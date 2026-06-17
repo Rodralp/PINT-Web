@@ -620,8 +620,8 @@ function BadgeAdmin() {
 
   return (
     <Layout>
-      <div className="page badge-admin-page">
-        <header className="page-header badge-admin-header">
+      <div className="badge-admin-page">
+        <header className="badge-admin-header">
           <button type="button" className="badge-admin-back" onClick={handleBack}>
             <ChevronLeft size={18} />
           </button>

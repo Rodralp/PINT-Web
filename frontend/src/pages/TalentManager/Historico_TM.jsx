@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Eye, X } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Eye, X } from 'lucide-react';
 import Layout from '../../components/Layout';
-import Pagination from '../../components/Pagination';
 import {
   fetchHistoricoServiceLines,
   fetchHistoricoBadges,
@@ -129,6 +128,9 @@ function HistoricoTM() {
     return filteredData.slice(start, end);
   }, [filteredData, page]);
 
+  const previousPage = () => setPage((p) => Math.max(1, p - 1));
+  const nextPage = () => setPage((p) => Math.min(totalPages, p + 1));
+
   const openModal = async (type, id) => {
     setModalType(type);
     setModalOpen(true);
@@ -176,8 +178,8 @@ function HistoricoTM() {
 
   return (
     <Layout>
-      <div className="page tm-export-page historico-page">
-        <header className="page-header tm-export-header">
+      <div className="tm-export-page historico-page">
+        <header className="tm-export-header">
           <h1>Histórico Geral</h1>
         </header>
 
@@ -185,7 +187,7 @@ function HistoricoTM() {
           Veja o progresso global dos consultores por Service Line, Badge e perfil.
         </p>
 
-        <div className="shell tm-export-shell">
+        <div className="tm-export-shell">
           <div className="tm-export-tabs">
             {tabs.map((tab) => (
               <button
@@ -199,8 +201,8 @@ function HistoricoTM() {
             ))}
           </div>
 
-          <div className="toolbar tm-export-toolbar historico-toolbar-single">
-            <div className="search-wrap tm-export-search">
+          <div className="tm-export-toolbar historico-toolbar-single">
+            <div className="tm-export-search">
               <Search size={18} />
               <input
                 type="text"
@@ -217,8 +219,8 @@ function HistoricoTM() {
           {!isLoading && !errorMessage && (
             <>
               {activeTab === 'service-lines' && (
-                <div className="table-wrap orders-table-wrap">
-                  <table className="table orders-table">
+                <div className="orders-table-wrap">
+                  <table className="orders-table">
                     <thead>
                       <tr>
                         <th>Service Line</th>
@@ -232,7 +234,7 @@ function HistoricoTM() {
                     <tbody>
                       {pagedData.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="empty-state orders-empty-row">Nenhuma service line encontrada.</td>
+                          <td colSpan={6} className="orders-empty-row">Nenhuma service line encontrada.</td>
                         </tr>
                       )}
                       {pagedData.map((item) => (
@@ -245,7 +247,7 @@ function HistoricoTM() {
                           <td>
                             <button
                               type="button"
-                              className="action-btn tm-export-control-btn historico-action-btn"
+                              className="tm-export-control-btn historico-action-btn"
                               onClick={() => openModal('serviceLine', item.id)}
                             >
                               <Eye size={16} />
@@ -260,8 +262,8 @@ function HistoricoTM() {
               )}
 
               {activeTab === 'badges' && (
-                <div className="table-wrap orders-table-wrap">
-                  <table className="table orders-table">
+                <div className="orders-table-wrap">
+                  <table className="orders-table">
                     <thead>
                       <tr>
                         <th>Badge</th>
@@ -275,7 +277,7 @@ function HistoricoTM() {
                     <tbody>
                       {pagedData.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="empty-state orders-empty-row">Nenhum badge encontrado.</td>
+                          <td colSpan={6} className="orders-empty-row">Nenhum badge encontrado.</td>
                         </tr>
                       )}
                       {pagedData.map((item) => (
@@ -288,7 +290,7 @@ function HistoricoTM() {
                           <td>
                             <button
                               type="button"
-                              className="action-btn tm-export-control-btn historico-action-btn"
+                              className="tm-export-control-btn historico-action-btn"
                               onClick={() => openModal('badge', item.id)}
                             >
                               <Eye size={16} />
@@ -303,8 +305,8 @@ function HistoricoTM() {
               )}
 
               {activeTab === 'consultores' && (
-                <div className="table-wrap orders-table-wrap">
-                  <table className="table orders-table">
+                <div className="orders-table-wrap">
+                  <table className="orders-table">
                     <thead>
                       <tr>
                         <th>Consultor</th>
@@ -319,7 +321,7 @@ function HistoricoTM() {
                     <tbody>
                       {pagedData.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="empty-state orders-empty-row">Nenhum consultor encontrado.</td>
+                          <td colSpan={7} className="orders-empty-row">Nenhum consultor encontrado.</td>
                         </tr>
                       )}
                       {pagedData.map((item) => (
@@ -342,7 +344,7 @@ function HistoricoTM() {
                           <td>
                             <button
                               type="button"
-                              className="action-btn tm-export-control-btn historico-action-btn"
+                              className="tm-export-control-btn historico-action-btn"
                               onClick={() => openModal('consultor', item.id)}
                             >
                               <Eye size={16} />
@@ -357,7 +359,36 @@ function HistoricoTM() {
               )}
 
               {filteredData.length > 0 && (
-                <Pagination page={page} totalPages={totalPages} setPage={setPage} />
+                <div className="orders-pagination" role="navigation">
+                  <button
+                    type="button"
+                    className="orders-page-btn ghost"
+                    onClick={previousPage}
+                    disabled={page === 1}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
+                    <button
+                      key={pageNumber}
+                      type="button"
+                      className={`orders-page-btn ${pageNumber === page ? 'active' : ''}`}
+                      onClick={() => setPage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    className="orders-page-btn ghost"
+                    onClick={nextPage}
+                    disabled={page === totalPages}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
               )}
             </>
           )}
@@ -388,7 +419,7 @@ function HistoricoTM() {
                           </div>
                           <h4>Badges Obtidos ({modalData.badgesObtidos?.length || 0})</h4>
                           {modalData.badgesObtidos?.length > 0 ? (
-                            <table className="table orders-table">
+                            <table className="orders-table">
                               <thead>
                                 <tr>
                                   <th>Badge</th>
@@ -415,7 +446,7 @@ function HistoricoTM() {
                           )}
                           <h4 style={{ marginTop: '20px' }}>Badges em Progresso ({modalData.badgesEmProgresso?.length || 0})</h4>
                           {modalData.badgesEmProgresso?.length > 0 ? (
-                            <table className="table orders-table">
+                            <table className="orders-table">
                               <thead>
                                 <tr>
                                   <th>Badge</th>
@@ -454,7 +485,7 @@ function HistoricoTM() {
                           </div>
                           <h4>Consultores que Obtiveram ({modalData.totalObtidos})</h4>
                           {modalData.consultoresObtidos?.length > 0 ? (
-                            <table className="table orders-table">
+                            <table className="orders-table">
                               <thead>
                                 <tr>
                                   <th>Consultor</th>
@@ -477,7 +508,7 @@ function HistoricoTM() {
                           )}
                           <h4 style={{ marginTop: '20px' }}>Consultores em Progresso ({modalData.totalEmProgresso})</h4>
                           {modalData.consultoresEmProgresso?.length > 0 ? (
-                            <table className="table orders-table">
+                            <table className="orders-table">
                               <thead>
                                 <tr>
                                   <th>Consultor</th>
@@ -514,7 +545,7 @@ function HistoricoTM() {
                           </div>
                           <h4>Áreas</h4>
                           {modalData.areas?.length > 0 ? (
-                            <table className="table orders-table">
+                            <table className="orders-table">
                               <thead>
                                 <tr>
                                   <th>Área</th>
@@ -539,7 +570,7 @@ function HistoricoTM() {
                           )}
                           <h4 style={{ marginTop: '20px' }}>Consultores ({modalData.consultores?.length || 0})</h4>
                           {modalData.consultores?.length > 0 ? (
-                            <table className="table orders-table">
+                            <table className="orders-table">
                               <thead>
                                 <tr>
                                   <th>Consultor</th>

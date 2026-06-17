@@ -178,8 +178,8 @@ function DashboardSLL() {
 
   return (
     <Layout>
-      <div className="page dashboard-tm dashboard-sll-theme">
-        <header className="page-header dashboard-tm-header">
+      <div className="dashboard-tm dashboard-sll-theme">
+        <header className="dashboard-tm-header">
           <h1>Dashboard Service Line Leader</h1>
         </header>
 

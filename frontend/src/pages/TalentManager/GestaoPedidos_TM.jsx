@@ -6,13 +6,14 @@ import {
   ArrowDown,
   ArrowUp,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Eye,
   SearchCheck,
   Users,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
-import Pagination from '../../components/Pagination';
 import '../../css/TalentManager/GestaoPedidos_TM.css';
 import { fetchManagedRequests } from '../../services/requestManagementService';
 
@@ -200,6 +201,8 @@ function GestaoPedidosTM() {
     setPage(1);
   };
 
+  const previousPage = () => setPage((current) => Math.max(1, current - 1));
+  const nextPage = () => setPage((current) => Math.min(totalPages, current + 1));
   const toggleSort = (key) => {
     setSortConfig((current) => (
       current.key === key
@@ -216,8 +219,8 @@ function GestaoPedidosTM() {
 
   return (
     <Layout>
-        <div className="page tm-orders-page">
-        <header className="page-header tm-orders-header">
+      <div className="tm-orders-page">
+        <header className="tm-orders-header">
           <button type="button" className="tm-orders-back-btn" onClick={handleGoBack} aria-label="Voltar">
             <ArrowLeft size={22} />
           </button>
@@ -245,7 +248,7 @@ function GestaoPedidosTM() {
           })}
         </section>
 
-        <section className="shell tm-orders-board">
+        <section className="tm-orders-board">
           <div className="tm-orders-main-card">
             {isLoading && <p>A carregar pedidos...</p>}
             {!isLoading && statusMessage && <p>{statusMessage}</p>}
@@ -272,8 +275,8 @@ function GestaoPedidosTM() {
               </div>
             </div>
 
-            <div className="table-wrap tm-orders-table-wrap">
-              <table className="table tm-orders-table">
+            <div className="tm-orders-table-wrap">
+              <table className="tm-orders-table">
                 <thead>
                   <tr>
                     <th className="sortable" onClick={() => toggleSort('consultant')}>
@@ -297,7 +300,7 @@ function GestaoPedidosTM() {
                 <tbody>
                   {pagedRequests.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="empty-state tm-orders-empty-row">
+                      <td colSpan={6} className="tm-orders-empty-row">
                         Sem pedidos para os filtros escolhidos.
                       </td>
                     </tr>
@@ -344,7 +347,26 @@ function GestaoPedidosTM() {
               </table>
             </div>
 
-            <Pagination page={page} totalPages={totalPages} setPage={setPage} />
+            <div className="tm-orders-pagination" role="navigation" aria-label="Paginação de pedidos">
+              <button type="button" className="tm-page-btn ghost" onClick={previousPage} disabled={page === 1}>
+                <ChevronLeft size={16} />
+              </button>
+
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  className={`tm-page-btn ${pageNumber === page ? 'active' : ''}`}
+                  onClick={() => setPage(pageNumber)}
+                >
+                  {pageNumber}
+                </button>
+              ))}
+
+              <button type="button" className="tm-page-btn ghost" onClick={nextPage} disabled={page === totalPages}>
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
 
           <div />

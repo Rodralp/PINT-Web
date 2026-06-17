@@ -1,8 +1,12 @@
-/*
-PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
-*/
+/* ============================================================
+   MainLayout — Base design system for PINT-Web
+   ============================================================
+   Import after tokens.css.
+   All page-specific CSS should reference these variables
+   and extend these base classes.
+   ============================================================ */
 
-/* -- Variáveis de Cor -------------------------------------------- */
+/* ── Color Tokens ─────────────────────────────────────────── */
 :root {
   /* Brand */
   --color-primary: #1b84f4;
@@ -64,7 +68,7 @@ PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
 }
 
 
-/* -- Page Wrapper -------------------------------------------- */
+/* ── Page Wrapper ─────────────────────────────────────────── */
 .page {
   display: flex;
   flex-direction: column;
@@ -72,7 +76,7 @@ PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
 }
 
 
-/* -- Header / Title -------------------------------------------- */
+/* ── Header / Title ───────────────────────────────────────── */
 .page-header {
   display: flex;
   align-items: center;
@@ -112,7 +116,7 @@ PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
 }
 
 
-/* -- Shell / Main Card -------------------------------------------- */
+/* ── Shell / Main Card ────────────────────────────────────── */
 .shell {
   background: var(--surface-card);
   border: 1px solid var(--border-card);
@@ -121,7 +125,7 @@ PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
   padding: var(--sp-4);
 }
 
-/* -- Inner / Secondary Card -------------------------------------------- */
+/* ── Inner / Secondary Card ───────────────────────────────── */
 .card {
   background: var(--surface-card);
   border: 1px solid var(--border-table-wrap);
@@ -130,7 +134,7 @@ PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
 }
 
 
-/* -- Toolbar / Controls Row -------------------------------------------- */
+/* ── Toolbar / Controls Row ───────────────────────────────── */
 .toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 200px) minmax(0, 200px);
@@ -138,7 +142,7 @@ PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
 }
 
 
-/* -- Search Input -------------------------------------------- */
+/* ── Search Input ─────────────────────────────────────────── */
 .search-wrap {
   border: 2px solid var(--border-input);
   border-radius: var(--radius-md);
@@ -166,7 +170,7 @@ PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
 }
 
 
-/* -- Action / Filter Button -------------------------------------------- */
+/* ── Action / Filter Button ───────────────────────────────── */
 .action-btn {
   min-height: var(--h-lg);
   border: 2px solid var(--border-input);
@@ -190,7 +194,7 @@ PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
 }
 
 
-/* -- Dropdown Menu -------------------------------------------- */
+/* ── Dropdown Menu ────────────────────────────────────────── */
 .dropdown-menu {
   position: absolute;
   top: calc(100% + 6px);
@@ -232,7 +236,7 @@ PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
 }
 
 
-/* -- Buttons -------------------------------------------- */
+/* ── Buttons ──────────────────────────────────────────────── */
 .btn-primary {
   border: none;
   background: var(--color-primary);
@@ -290,7 +294,7 @@ PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
 }
 
 
-/* -- Status Badge / Pill -------------------------------------------- */
+/* ── Status Badge / Pill ──────────────────────────────────── */
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -324,7 +328,7 @@ PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
 }
 
 
-/* -- Status Summary Grid (4 columns) -------------------------------------------- */
+/* ── Status Summary Grid (4 columns) ──────────────────────── */
 .status-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -367,7 +371,7 @@ PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
 }
 
 
-/* -- Filter Chips -------------------------------------------- */
+/* ── Filter Chips ─────────────────────────────────────────── */
 .filter-chip {
   border: none;
   background: var(--color-default-bg);
@@ -396,7 +400,7 @@ PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
 }
 
 
-/* -- Table -------------------------------------------- */
+/* ── Table ────────────────────────────────────────────────── */
 .table-wrap {
   overflow-x: auto;
 }
@@ -438,7 +442,7 @@ PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
 }
 
 
-/* -- Empty State -------------------------------------------- */
+/* ── Empty State ──────────────────────────────────────────── */
 .empty-state {
   border: 1px dashed var(--border-empty);
   border-radius: var(--radius-lg);

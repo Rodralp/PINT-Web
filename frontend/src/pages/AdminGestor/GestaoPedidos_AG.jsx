@@ -6,13 +6,14 @@ import {
   ArrowUp,
   ArrowLeft,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Eye,
   SearchCheck,
   Users,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
-import Pagination from '../../components/Pagination';
 import '../../css/AdminGestor/GestaoPedidos_AG.css';
 import { fetchManagedRequests } from '../../services/requestManagementService';
 
@@ -221,6 +222,8 @@ function GestaoPedidosAG() {
     setPage(1);
   };
 
+  const previousPage = () => setPage((current) => Math.max(1, current - 1));
+  const nextPage = () => setPage((current) => Math.min(totalPages, current + 1));
   const toggleSort = (key) => {
     setSortConfig((current) => (
       current.key === key
@@ -237,8 +240,8 @@ function GestaoPedidosAG() {
 
   return (
     <Layout>
-      <div className="page ag-orders-page">
-        <header className="page-header ag-orders-header">
+      <div className="ag-orders-page">
+        <header className="ag-orders-header">
           <button type="button" className="ag-orders-back-btn" onClick={handleGoBack} aria-label="Voltar">
             <ArrowLeft size={22} />
           </button>
@@ -265,7 +268,7 @@ function GestaoPedidosAG() {
           })}
         </section>
 
-        <section className="shell ag-orders-main-card">
+        <section className="ag-orders-main-card">
           {isLoading && <p>A carregar pedidos...</p>}
           {!isLoading && statusMessage && <p>{statusMessage}</p>}
 
@@ -291,8 +294,8 @@ function GestaoPedidosAG() {
             </div>
           </div>
 
-          <div className="table-wrap ag-orders-table-wrap">
-            <table className="table ag-orders-table">
+          <div className="ag-orders-table-wrap">
+            <table className="ag-orders-table">
               <thead>
                 <tr>
                   <th className="sortable" onClick={() => toggleSort('consultant')}>
@@ -317,7 +320,7 @@ function GestaoPedidosAG() {
               <tbody>
                 {pagedRequests.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="empty-state ag-orders-empty-row">
+                    <td colSpan={6} className="ag-orders-empty-row">
                       Sem pedidos para os filtros escolhidos.
                     </td>
                   </tr>
@@ -359,7 +362,26 @@ function GestaoPedidosAG() {
             </table>
           </div>
 
-          <Pagination page={safePage} totalPages={totalPages} setPage={setPage} />
+          <div className="ag-orders-pagination" role="navigation" aria-label="Paginação de pedidos">
+            <button type="button" className="ag-page-btn ghost" onClick={previousPage} disabled={safePage === 1}>
+              <ChevronLeft size={16} />
+            </button>
+
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+              <button
+                key={pageNumber}
+                type="button"
+                className={`ag-page-btn ${pageNumber === safePage ? 'active' : ''}`}
+                onClick={() => setPage(pageNumber)}
+              >
+                {pageNumber}
+              </button>
+            ))}
+
+            <button type="button" className="ag-page-btn ghost" onClick={nextPage} disabled={safePage === totalPages}>
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </section>
       </div>
     </Layout>

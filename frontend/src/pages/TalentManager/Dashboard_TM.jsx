@@ -177,8 +177,8 @@ function DashboardTM() {
 
   return (
     <Layout>
-      <div className="page dashboard-tm">
-        <header className="page-header dashboard-tm-header">
+      <div className="dashboard-tm">
+        <header className="dashboard-tm-header">
           <h1>Dashboard Talent Manager</h1>
         </header>
 

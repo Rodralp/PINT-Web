@@ -6,9 +6,10 @@ import {
   SlidersHorizontal,
   Trophy,
   Award,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
-import Pagination from '../../components/Pagination';
 import { fetchRankingConsultoresSLL } from '../../services/serviceLineLeaderService';
 import '../../css/Consultor/Ranking_C.css';
 import '../../css/ServiceLineLeader/Ranking_SLL.css';
@@ -257,10 +258,18 @@ function RankingSLL() {
     setPage(1);
   };
 
+  const previousPage = () => {
+    setPage((current) => Math.max(1, current - 1));
+  };
+
+  const nextPage = () => {
+    setPage((current) => Math.min(totalPages, current + 1));
+  };
+
   return (
     <Layout>
-      <div className="page ranking-page sll-ranking-page">
-        <header className="page-header ranking-header">
+      <div className="ranking-page sll-ranking-page">
+        <header className="ranking-header">
           <button type="button" className="ranking-back-btn" onClick={handleGoBack} aria-label="Voltar">
             <ArrowLeft size={22} />
           </button>
@@ -271,7 +280,7 @@ function RankingSLL() {
           </div>
         </header>
 
-        <section className="shell ranking-shell">
+        <section className="ranking-shell">
           <div className="catalog-controls sll-ranking-controls">
             <div className="catalog-search-wrap">
               <Search size={20} />
@@ -351,12 +360,31 @@ function RankingSLL() {
           </div>
 
           {sortedConsultants.length === 0 && (
-            <div className="empty-state ranking-empty-state">
+            <div className="ranking-empty-state">
               Nao ha consultores para os filtros escolhidos nesta service line.
             </div>
           )}
 
-          <Pagination page={page} totalPages={totalPages} setPage={setPage} />
+          <div className="ranking-pagination" role="navigation" aria-label="Paginacao de ranking">
+            <button type="button" className="ranking-page-btn ghost" onClick={previousPage} disabled={page === 1}>
+              <ChevronLeft size={16} />
+            </button>
+
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+              <button
+                key={pageNumber}
+                type="button"
+                className={`ranking-page-btn ${pageNumber === page ? 'active' : ''}`}
+                onClick={() => setPage(pageNumber)}
+              >
+                {pageNumber}
+              </button>
+            ))}
+
+            <button type="button" className="ranking-page-btn ghost" onClick={nextPage} disabled={page === totalPages}>
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </section>
       </div>
     </Layout>
