@@ -187,7 +187,7 @@
   font-weight: 700;
 }
 
-:is(.sll-order-requirements-list, .tm-order-requirements-list, .ag-order-requirements-list, .badge-requirements-list) {
+:is(.sll-order-requirements-list, .tm-order-requirements-list, .ag-order-requirements-list) {
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
@@ -250,7 +250,7 @@
   gap: var(--sp-5);
 }
 
-:is(.sll-order-requirement-detail-media, .tm-order-requirement-detail-media, .ag-order-requirement-detail-media, .badge-requirement-detail-image, .badge-requirement-detail-media) {
+:is(.sll-order-requirement-detail-media, .tm-order-requirement-detail-media, .ag-order-requirement-detail-media, .badge-requirement-detail-image) {
   flex: 0 0 auto;
 }
 
@@ -369,7 +369,7 @@
   font-weight: 700;
 }
 
-:is(.sll-order-subtitle, .tm-order-subtitle) {
+.sll-order-subtitle {
   margin-top: var(--sp-4) !important;
 }
 

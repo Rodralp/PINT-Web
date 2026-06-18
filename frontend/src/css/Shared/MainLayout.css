@@ -79,36 +79,12 @@ PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
   gap: var(--sp-2);
 }
 
-.page-back-btn {
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: transparent;
-  color: var(--text-heading);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.page-back-btn:hover {
-  background: rgba(148, 163, 184, 0.14);
-}
-
 .page-header h1 {
   margin: 0;
   font-size: var(--fs-4xl);
   font-weight: 700;
   color: var(--text-heading);
   line-height: 1.15;
-}
-
-.page-header-subtitle {
-  margin: 0 0 0 var(--sp-1);
-  font-size: var(--fs-base);
-  color: var(--text-muted);
 }
 
 
