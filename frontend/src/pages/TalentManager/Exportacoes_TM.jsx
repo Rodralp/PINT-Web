@@ -1010,11 +1010,8 @@ function ExportacoesTM() {
   if (loading) {
     return (
       <Layout>
-        <div className="page tm-export-page">
-          <header className="page-header tm-export-header">
-            <button type="button" className="tm-export-back-btn" onClick={handleGoBack} aria-label="Voltar">
-              <ArrowLeft size={22} />
-            </button>
+        <div className="page">
+          <header className="page-header">
             <h1>Exportações Talent Manager</h1>
           </header>
           <div className="tm-export-loading">
@@ -1028,11 +1025,8 @@ function ExportacoesTM() {
   if (error) {
     return (
       <Layout>
-        <div className="page tm-export-page">
-          <header className="page-header tm-export-header">
-            <button type="button" className="tm-export-back-btn" onClick={handleGoBack} aria-label="Voltar">
-              <ArrowLeft size={22} />
-            </button>
+        <div className="page">
+          <header className="page-header">
             <h1>Exportações Talent Manager</h1>
           </header>
           <div className="tm-export-error">
@@ -1045,11 +1039,8 @@ function ExportacoesTM() {
 
   return (
     <Layout>
-      <div className="page tm-export-page">
-        <header className="page-header tm-export-header">
-          <button type="button" className="tm-export-back-btn" onClick={handleGoBack} aria-label="Voltar">
-            <ArrowLeft size={22} />
-          </button>
+      <div className="page">
+        <header className="page-header">
           <h1>Exportações Talent Manager</h1>
         </header>
 
@@ -1068,7 +1059,7 @@ function ExportacoesTM() {
           ))}
         </div>
 
-        <section className="shell tm-export-shell">
+        <section className="shell">
 
           <div className="toolbar tm-export-toolbar">
             <label className="search-wrap tm-export-search" htmlFor="tm-export-search-input">
@@ -1088,7 +1079,7 @@ function ExportacoesTM() {
             <div className="tm-export-control-group" ref={filterDropdownRef}>
               <button
                 type="button"
-                className={`action-btn tm-export-control-btn ${showFilterDropdown || hasActiveFilter ? 'active' : ''}`}
+                className={`tm-export-control-btn ${showFilterDropdown || hasActiveFilter ? 'active' : ''}`}
                 onClick={() => {
                   setShowFilterDropdown((current) => !current);
                   setShowSortDropdown(false);

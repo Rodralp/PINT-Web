@@ -176,16 +176,12 @@ function HistoricoTM() {
 
   return (
     <Layout>
-      <div className="page tm-export-page historico-page">
-        <header className="page-header tm-export-header">
+      <div className="page historico-page">
+        <header className="page-header">
           <h1>Histórico Geral</h1>
         </header>
 
-        <p className="tm-export-scope-note">
-          Veja o progresso global dos consultores por Service Line, Badge e perfil.
-        </p>
-
-        <div className="shell tm-export-shell">
+        <div className="shell">
           <div className="tm-export-tabs">
             {tabs.map((tab) => (
               <button
@@ -199,7 +195,7 @@ function HistoricoTM() {
             ))}
           </div>
 
-          <div className="toolbar tm-export-toolbar historico-toolbar-single">
+          <div className="toolbar tm-export-toolbar">
             <div className="search-wrap tm-export-search">
               <Search size={18} />
               <input
