@@ -34,13 +34,8 @@ function readStoredLogin() {
 
 function persistStoredLogin(source, data) {
   const serialized = JSON.stringify(data)
-  if (source === 'local') {
-    localStorage.setItem('loginData', serialized)
-    sessionStorage.removeItem('loginData')
-    return
-  }
   sessionStorage.setItem('loginData', serialized)
-  localStorage.removeItem('loginData')
+  localStorage.setItem('loginData', serialized)
 }
 
 export default function ProfileEdit() {

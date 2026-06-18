@@ -29,8 +29,8 @@ const tabs = [
 
 const requestStatusFilters = [
   { id: 'enviado', label: 'Enviados' },
-  { id: 'pendente', label: 'Pendente' },
-  { id: 'rejeitado', label: 'Rejeitado' },
+  { id: 'pendente', label: 'Pendentes' },
+  { id: 'rejeitado', label: 'Rejeitados' },
 ];
 
 const levelFilterOptions = [
@@ -64,6 +64,8 @@ const badgeSortOptions = [
 const consultantSortOptions = [
   { id: 'points_desc', label: 'Pontos (Maior para Menor)' },
   { id: 'points_asc', label: 'Pontos (Menor para Maior)' },
+  { id: 'badges_desc', label: 'Badges (Maior para Menor)' },
+  { id: 'badges_asc', label: 'Badges (Menor para Maior)' },
   { id: 'nome_az', label: 'Nome (A-Z)' },
   { id: 'entrada_recente', label: 'Data de entrada (Recente)' },
 ];
@@ -84,8 +86,8 @@ const badgeLevels = [
 
 const requestStatusMeta = {
   enviado: { label: 'Enviados', className: 'sent' },
-  pendente: { label: 'Pendente', className: 'pending' },
-  rejeitado: { label: 'Rejeitado', className: 'rejected' },
+  pendente: { label: 'Pendentes', className: 'pending' },
+  rejeitado: { label: 'Rejeitados', className: 'rejected' },
 };
 
 const parsePtDate = (value) => {
@@ -212,7 +214,7 @@ const toConsultantStatusLabel = (status) => {
   }
 
   if (normalized === 'pendente') {
-    return 'Pendente';
+    return 'Pendentes';
   }
 
   return 'Inativo';
@@ -711,6 +713,16 @@ function ExportacoesTM() {
       return nextRows;
     }
 
+    if (sortBy === 'badges_desc') {
+      nextRows.sort((a, b) => (b.badges || 0) - (a.badges || 0) || b.points - a.points || (a.name || '').localeCompare(b.name || ''));
+      return nextRows;
+    }
+
+    if (sortBy === 'badges_asc') {
+      nextRows.sort((a, b) => (a.badges || 0) - (b.badges || 0) || a.points - b.points || (a.name || '').localeCompare(b.name || ''));
+      return nextRows;
+    }
+
     if (sortBy === 'nome_az') {
       nextRows.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       return nextRows;
@@ -745,17 +757,32 @@ function ExportacoesTM() {
   const start = (page - 1) * pageSize;
   const end = start + pageSize;
 
+  const consultantRankMap = useMemo(() => {
+    const sorted = [...filteredConsultants].sort((a, b) => b.points - a.points || b.badges - a.badges || (a.name || '').localeCompare(b.name || ''));
+    const map = {};
+    let lastRank = 0;
+    let lastPoints = null;
+    let lastBadges = null;
+    sorted.forEach((c, i) => {
+      if (c.points !== lastPoints || c.badges !== lastBadges) {
+        lastRank = i + 1;
+        lastPoints = c.points;
+        lastBadges = c.badges;
+      }
+      map[c.id] = lastRank;
+    });
+    return map;
+  }, [filteredConsultants]);
+
   const pagedRequests = useMemo(() => sortedRequests.slice(start, end), [sortedRequests, start, end]);
   const pagedBadges = useMemo(() => sortedBadges.slice(start, end), [sortedBadges, start, end]);
 
-  const pagedConsultants = useMemo(
-    () =>
-      sortedConsultants.slice(start, end).map((item, index) => ({
-        ...item,
-        rank: start + index + 1,
-      })),
-    [sortedConsultants, start, end],
-  );
+  const pagedConsultants = useMemo(() => {
+    return sortedConsultants.slice(start, end).map((c) => ({
+      ...c,
+      rank: consultantRankMap[c.id] || 1,
+    }));
+  }, [sortedConsultants, start, end, consultantRankMap]);
 
   const selectedRequestCount = filteredRequests.filter((item) => selectedRequestIds.includes(item.id)).length;
   const selectedBadgeCount = filteredBadges.filter((item) => selectedBadgeIds.includes(item.id)).length;
@@ -1390,7 +1417,6 @@ function ExportacoesTM() {
                           <td>{item.email}</td>
                           <td>
                             <span className="tm-export-points">
-                              <TrendingUp size={13} />
                               {new Intl.NumberFormat('pt-PT').format(item.points)}
                             </span>
                           </td>

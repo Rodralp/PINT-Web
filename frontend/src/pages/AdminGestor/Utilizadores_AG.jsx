@@ -44,9 +44,9 @@ const toRoleLabel = (roles) => {
   return list.map((role) => roleLabels[role] || role).join(' + ');
 };
 
-const toAvatar = (seed) => {
-  const normalizedSeed = String(seed || 'user').toLowerCase().replace('@', '.');
-  return `/avatars/default-avatar.svg`;
+const toAvatar = (user) => {
+  if (user?.avatar) return user.avatar;
+  return '/avatars/default-avatar.svg';
 };
 
 const DEFAULT_ROLE = 'consultor';
@@ -523,29 +523,29 @@ function UtilizadoresAG() {
           <h1>Utilizadores</h1>
         </header>
 
-        <section className="shell">
-          <div className="ag-users-tabs" role="tablist" aria-label="Separadores de utilizadores">
-            <button
-              type="button"
-              role="tab"
-              className={`ag-users-tab ${activeTab === 'users' ? 'active' : ''}`}
-              aria-selected={activeTab === 'users'}
-              onClick={() => setActiveTab('users')}
-            >
-              Utilizadores
-            </button>
-            <button
-              type="button"
-              role="tab"
-              className={`ag-users-tab ${activeTab === 'pending' ? 'active' : ''}`}
-              aria-selected={activeTab === 'pending'}
-              onClick={() => setActiveTab('pending')}
-            >
-              Pedidos Pendentes
-              <span className="ag-users-tab-badge">{pendingCount}</span>
-            </button>
-          </div>
+        <div className="ag-users-tabs" role="tablist" aria-label="Separadores de utilizadores">
+          <button
+            type="button"
+            role="tab"
+            className={`ag-users-tab ${activeTab === 'users' ? 'active' : ''}`}
+            aria-selected={activeTab === 'users'}
+            onClick={() => setActiveTab('users')}
+          >
+            Utilizadores
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={`ag-users-tab ${activeTab === 'pending' ? 'active' : ''}`}
+            aria-selected={activeTab === 'pending'}
+            onClick={() => setActiveTab('pending')}
+          >
+            Pedidos Pendentes
+            {pendingCount > 0 && <span className="ag-users-tab-badge">{pendingCount}</span>}
+          </button>
+        </div>
 
+        <section className="shell">
           <div className="toolbar ag-users-toolbar">
             <label className="search-wrap ag-users-search" htmlFor="ag-users-search-input">
               <Search size={18} />
@@ -638,7 +638,7 @@ function UtilizadoresAG() {
                       <tr key={user.id}>
                         <td>
                           <div className="ag-users-name-cell">
-                            <img src={toAvatar(user.email)} alt={user.nome} />
+                            <img src={toAvatar(user)} alt={user.nome} />
                             <div>
                               <strong>{user.nome}</strong>
                               <span>{user.email}</span>
@@ -680,7 +680,7 @@ function UtilizadoresAG() {
                       <tr key={user.id}>
                         <td>
                           <div className="ag-users-name-cell">
-                            <img src={toAvatar(user.email)} alt={user.nome} />
+                            <img src={toAvatar(user)} alt={user.nome} />
                             <div>
                               <strong>{user.nome}</strong>
                               <span>{user.email}</span>

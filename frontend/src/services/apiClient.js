@@ -42,11 +42,19 @@ const request = async (path, options = {}) => {
       status: response.status,
     };
   } catch (error) {
+    const statusCode = error?.response?.status;
+
+    if (statusCode === 401) {
+      sessionStorage.removeItem('loginData');
+      localStorage.removeItem('loginData');
+      window.location.href = '/entrar';
+      return;
+    }
+
     const message = error?.response?.data?.message || error?.message || 'HTTP request failed';
     const requestError = new Error(message);
     const errorDetails = error?.response?.data?.details;
     const errorCode = error?.response?.data?.code;
-    const statusCode = error?.response?.status;
 
     // Attach full server response data for debugging
     if (error?.response?.data) {

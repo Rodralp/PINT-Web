@@ -103,9 +103,9 @@ function Topbar({ onToggleSidebar }) {
   }, [dropdownRef]);
 
   const handleLogout = () => {
-    // Termina a sessão autenticada em todos os armazenamentos.
     sessionStorage.removeItem('loginData');
     localStorage.removeItem('loginData');
+    localStorage.removeItem('iniciarAuto');
 
     navigate('/');
   };

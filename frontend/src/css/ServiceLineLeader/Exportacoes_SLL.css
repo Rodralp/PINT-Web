@@ -345,6 +345,9 @@
   font-weight: 700;
   color: #6f7888;
   background: #eef2f7;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tm-export-status-chip.enviado.active {
@@ -378,4 +381,48 @@
   padding: 40px;
   color: #ef4444;
   font-size: 16px;
+}
+
+.tm-export-rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.tm-export-rank.top-1 {
+  color: #d97706;
+}
+
+.tm-export-rank.top-2 {
+  color: #6b7280;
+}
+
+.tm-export-rank.top-3 {
+  color: #b45309;
+}
+
+.tm-export-rank.default {
+  color: #6f7888;
+}
+
+.tm-export-points {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.tm-export-badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef2f7;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #2f3747;
 }
