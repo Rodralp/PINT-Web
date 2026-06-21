@@ -585,6 +585,7 @@ export const dashboardModel = {
           `
             SELECT
               p.npedido,
+              p.nbadge,
               b.b_nome,
               p.data_submissao,
               COALESCE(e.estado, 'pendente') AS estado
@@ -640,6 +641,7 @@ export const dashboardModel = {
           subtitle: mapRequestStateToSubtitle(estado),
           accent: estado === 'aprovado' ? 'success' : estado === 'evidencias_insuficientes' ? 'amber' : 'warning',
           iconKey: mapRequestStateToIconKey(estado),
+          badgeDbId: row.nbadge ? Number(row.nbadge) : null,
         };
       });
 

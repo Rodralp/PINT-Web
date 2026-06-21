@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import SeeMore_PopUp from '../../components/SeeMore_PopUp';
 import BadgeCongratulationsModal from '../../components/BadgeCongratulationsModal';
@@ -81,6 +82,7 @@ const defaultDashboardStats = [
 
 function DashboardC() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const timelineChartRef = useRef(null);
   const locale = i18n.language?.startsWith('es') ? 'es-ES' : i18n.language?.startsWith('en') ? 'en-GB' : 'pt-PT';
   const [timelineValues, setTimelineValues] = useState(defaultTimelineValues);
@@ -328,7 +330,13 @@ function DashboardC() {
                 const ProgressIcon = item.icon;
 
                 return (
-                  <article key={`${item.title}-${index}`} className="dashboard-list-item">
+                  <article
+                    key={`${item.title}-${index}`}
+                    className="dashboard-list-item dashboard-clickable"
+                    onClick={() => item.badgeDbId && navigate(`/consultor/badge/${item.badgeDbId}`, {
+                      state: { badge: { badgeDbId: item.badgeDbId, name: item.title } },
+                    })}
+                  >
                     <div className={`dashboard-list-badge accent-${item.accent}`}>
                     <Sparkles size={18} strokeWidth={2} />
                   </div>
@@ -360,8 +368,14 @@ function DashboardC() {
             </div>
 
             <div className="dashboard-list dashboard-suggestions-list">
-              {suggestionItems.map(({ title, subtitleKey, accent }, index) => (
-                <article key={`${title}-${index}`} className="dashboard-list-item dashboard-suggestion-item">
+              {suggestionItems.map(({ title, subtitleKey, accent, badgeDbId }, index) => (
+                <article
+                  key={`${title}-${index}`}
+                  className="dashboard-list-item dashboard-suggestion-item dashboard-clickable"
+                  onClick={() => badgeDbId && navigate(`/consultor/badge/${badgeDbId}`, {
+                    state: { badge: { badgeDbId, name: title, levelKey: subtitleKey } },
+                  })}
+                >
                   <div className={`dashboard-list-badge accent-${accent}`}>
                     <GraduationCap size={18} strokeWidth={2} />
                   </div>
