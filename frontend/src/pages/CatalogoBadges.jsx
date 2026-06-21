@@ -267,7 +267,7 @@ function CatalogoBadges() {
     <Layout>
       <div className="page">
         <header className="page-header">
-          <h1>{t('catalog_title')}</h1>
+          <h1>{isAdminRoute ? t('management_title') : t('catalog_title')}</h1>
           {isAdminRoute && (
             <div className="catalog-header-actions">
               <button type="button" className="btn-primary catalog-create-btn" onClick={handleCreateBadge}>
