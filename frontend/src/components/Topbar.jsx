@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, MessageSquare, MoreVertical, Settings, Languages, LogOut, Menu, LayoutDashboard } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Bell, MessageSquare, MoreVertical, Settings, Languages, LogOut, Menu } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/apiClient';
 import '../css/Topbar.css';
@@ -12,13 +12,6 @@ const settingsPathByRole = {
   'talent-manager': '/talent-manager/definicoes',
   'service-line-leader': '/service-line-leader/definicoes',
   'admin-gestor': '/admin-gestor/definicoes',
-};
-
-const DASHBOARD_PATH_BY_ROLE = {
-  consultor: '/consultor/dashboard',
-  'talent-manager': '/talent-manager/dashboard',
-  'service-line-leader': '/service-line-leader/dashboard',
-  'admin-gestor': '/admin-gestor/dashboard',
 };
 
 const normalizeRoles = (rolesValue) => {
@@ -51,7 +44,6 @@ function Topbar({ onToggleSidebar }) {
   const [topbarAvatar, setTopbarAvatar] = useState(null);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-  const location = useLocation();
   const { t, i18n } = useTranslation();
   const storedLoginData = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
   const loginData = (() => {
@@ -142,9 +134,6 @@ function Topbar({ onToggleSidebar }) {
     setShowLanguageMenu(false);
   };
 
-  const isOnDashboard = location.pathname.endsWith('/dashboard');
-  const dashboardPath = DASHBOARD_PATH_BY_ROLE[loginData?.role] || '/consultor/dashboard';
-
   return (
     <header className="topbar">
       <div className="topbar-logo d-flex align-items-center gap-2">
@@ -164,12 +153,6 @@ function Topbar({ onToggleSidebar }) {
         />
       </div>
       <div className="topbar-right">
-        {!isOnDashboard && loginData && (
-          <button className="topbar-dashboard-btn" onClick={() => navigate(dashboardPath)}>
-            <LayoutDashboard size={18} strokeWidth={2} />
-            <span>{t('topbar_back_to_dashboard')}</span>
-          </button>
-        )}
         <button className="topbar-icon-btn" onClick={handleNotificationsClick} aria-label={t('notifications_title')}>
           <Bell size={20} strokeWidth={2} />
         </button>

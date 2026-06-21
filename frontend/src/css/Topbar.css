@@ -46,27 +46,6 @@
   background-color: #f5f5f5;
 }
 
-.topbar-dashboard-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: 1px solid #e2e8f0;
-  cursor: pointer;
-  color: #333;
-  padding: 6px 14px;
-  border-radius: var(--radius-md);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  transition: background-color 0.2s, border-color 0.2s;
-  white-space: nowrap;
-}
-
-.topbar-dashboard-btn:hover {
-  background-color: #f5f5f5;
-  border-color: #cbd5e1;
-}
-
 .topbar-user-info {
   display: flex;
   align-items: center;
