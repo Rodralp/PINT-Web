@@ -63,7 +63,6 @@ function DashboardTM() {
   const [topConsultores, setTopConsultores] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
   const [dashboardStatusMessage, setDashboardStatusMessage] = useState('');
-  const [isTopConsultoresModalOpen, setIsTopConsultoresModalOpen] = useState(false);
   const [isActivitiesModalOpen, setIsActivitiesModalOpen] = useState(false);
   const badgesTimelineData = useMemo(
     () => buildDailyTimelineData(badgesTimelineValues, 'day-month'),
@@ -313,15 +312,6 @@ function DashboardTM() {
               <section className="consultores-section h-100 w-100">
                 <div className="section-header">
                   <h2>Top Consultores</h2>
-                  <a
-                    href="#consultores"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setIsTopConsultoresModalOpen(true);
-                    }}
-                  >
-                    Ver todos
-                  </a>
                 </div>
                 <div className="consultores-grid">
                   {topConsultores.map((consultor) => {
@@ -401,46 +391,6 @@ function DashboardTM() {
             </div>
           </div>
         </div>
-
-        <SeeMore_PopUp
-          isOpen={isTopConsultoresModalOpen}
-          onClose={() => setIsTopConsultoresModalOpen(false)}
-          title="Top Consultores"
-          items={topConsultores}
-          renderItem={(consultor) => {
-            return (
-              <div className="consultor-card" style={{ marginBottom: 0 }}>
-                <div className="consultor-header">
-                  <div className="consultor-avatar">
-                    {consultor.avatar ? (
-                      <img src={consultor.avatar} alt={consultor.name} className="consultor-avatar-img" />
-                    ) : (
-                      <Users size={24} className="icon-color" />
-                    )}
-                  </div>
-                  <div className="consultor-info">
-                    <div className="consultor-name">
-                      <span className="consultor-rank">#{consultor.rank}</span>
-                      {consultor.name}
-                    </div>
-                    <div className="consultor-email">{consultor.email}</div>
-                  </div>
-                </div>
-                <div className="consultor-stats">
-                  <div className="stat">
-                    <span className="stat-label">Pontos</span>
-                    <span className="stat-value">{consultor.points}</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat-label">Badges</span>
-                    <span className="stat-value">{consultor.badges}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          }}
-          emptyMessage="Sem dados de consultores para apresentar."
-        />
 
         <SeeMore_PopUp
           isOpen={isActivitiesModalOpen}
