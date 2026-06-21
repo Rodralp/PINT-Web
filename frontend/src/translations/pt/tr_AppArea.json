@@ -5,6 +5,7 @@
   "topbar_settings": "Configuração",
   "topbar_language": "Idioma",
   "topbar_logout": "Sair",
+  "topbar_back_to_dashboard": "Voltar ao Dashboard",
 
   "sidebar_section_consultor": "Consultor",
   "sidebar_section_tm": "Talent Manager",

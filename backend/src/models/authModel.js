@@ -119,7 +119,7 @@ const getAdminUsersBaseQuery = `
     u.email,
     u.permissoes,
     u.status,
-    '2024-01-01' AS joined_at,
+    COALESCE(DATE(u.data_registo), CURRENT_DATE) AS joined_at,
     COALESCE(bs.points, 0) AS points,
     COALESCE(bs.badges, 0) AS badges,
     COALESCE(sl.service_lines, '') AS service_lines
@@ -236,11 +236,12 @@ export const authModel = {
     const hasPreferences = await getHasPreferences(account.id);
     const accountData = sanitizeAccount(account, hasPreferences);
 
-    const token = jwt.sign(
-      { id: account.id, email: account.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
+    const roles = normalizeRoleList(account.permissoes);
+    const isAdminGestor = roles.includes('admin-gestor');
+
+    const token = isAdminGestor
+      ? jwt.sign({ id: account.id, email: account.email }, process.env.JWT_SECRET)
+      : jwt.sign({ id: account.id, email: account.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
     return {
       status: 'ok',
@@ -336,7 +337,7 @@ export const authModel = {
     });
 
     // Filter results in JavaScript to avoid complex SQL WHERE conditions
-    return rows.filter((row) => {
+    const mappedUsers = rows.filter((row) => {
       // Filter by tab (pending or active/inactive)
       const status = row.status?.toLowerCase() || '';
       if (isTabPending) {
@@ -360,6 +361,21 @@ export const authModel = {
 
       return true;
     }).map(mapUserRow);
+
+    // Batch-load avatars
+    const userIds = mappedUsers.map((u) => u.id).filter(Boolean);
+    let avatarMap = {};
+    if (userIds.length > 0) {
+      try {
+        const { utilizadorImagemModel } = await import('./utilizadorImagemModel.js');
+        avatarMap = await utilizadorImagemModel.loadUserImagesBatch(userIds);
+      } catch { /* no images */ }
+    }
+
+    return mappedUsers.map((u) => ({
+      ...u,
+      avatar: avatarMap[u.id] || null,
+    }));
   },
 
   async createAdminUser({ nome, email, senha, roles, serviceLineIds }) {

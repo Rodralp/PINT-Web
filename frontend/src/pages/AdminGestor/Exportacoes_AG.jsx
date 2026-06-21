@@ -2,9 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowDownToLine,
-  ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
   Clock3,
   FileDown,
   Filter,
@@ -15,6 +12,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
+import Pagination from '../../components/Pagination';
 import BadgeImage from '../../components/BadgeImage';
 import { fetchManagedRequests } from '../../services/requestManagementService';
 import { fetchAdminUsers } from '../../services/adminUserService';
@@ -30,8 +28,8 @@ const tabs = [
 
 const requestStatusFilters = [
   { id: 'enviado', label: 'Enviados' },
-  { id: 'pendente', label: 'Pendente' },
-  { id: 'rejeitado', label: 'Rejeitado' },
+  { id: 'pendente', label: 'Pendentes' },
+  { id: 'rejeitado', label: 'Rejeitados' },
 ];
 
 const levelFilterOptions = [
@@ -65,6 +63,8 @@ const badgeSortOptions = [
 const consultantSortOptions = [
   { id: 'points_desc', label: 'Pontos (Maior para Menor)' },
   { id: 'points_asc', label: 'Pontos (Menor para Maior)' },
+  { id: 'badges_desc', label: 'Badges (Maior para Menor)' },
+  { id: 'badges_asc', label: 'Badges (Menor para Maior)' },
   { id: 'nome_az', label: 'Nome (A-Z)' },
   { id: 'entrada_recente', label: 'Data de entrada (Recente)' },
 ];
@@ -75,18 +75,10 @@ const tabDefaults = {
   consultores: { filter: 'todos', sort: 'points_desc' },
 };
 
-const badgeLevels = [
-  { id: 'junior', label: 'Júnior', points: 100, badgeImage: '/badges/Júnior.png' },
-  { id: 'intermedio', label: 'Intermédio', points: 150, badgeImage: '/badges/Intermédio.png' },
-  { id: 'senior', label: 'Sénior', points: 200, badgeImage: '/badges/Sénior.png' },
-  { id: 'especialista', label: 'Especialista', points: 250, badgeImage: '/badges/Especialista.png' },
-  { id: 'lider', label: 'Líder de Conhecimento', points: 300, badgeImage: '/badges/Líder de Conhecimento.png' },
-];
-
 const requestStatusMeta = {
   enviado: { label: 'Enviados', className: 'sent' },
-  pendente: { label: 'Pendente', className: 'pending' },
-  rejeitado: { label: 'Rejeitado', className: 'rejected' },
+  pendente: { label: 'Pendentes', className: 'pending' },
+  rejeitado: { label: 'Rejeitados', className: 'rejected' },
 };
 
 const parsePtDate = (value) => {
@@ -213,21 +205,10 @@ const toConsultantStatusLabel = (status) => {
   }
 
   if (normalized === 'pendente') {
-    return 'Pendente';
+    return 'Pendentes';
   }
 
   return 'Inativo';
-};
-
-const buildBadgeDisplayMeta = (level) => {
-  const levelId = normalizeLevelId(level);
-  const template = badgeLevels.find((item) => item.id === levelId) || badgeLevels[0];
-
-  return {
-    levelId,
-    points: Number(template?.points) || 0,
-    badgeImage: template?.badgeImage || '/badges/default.png',
-  };
 };
 
 const getLoginName = () => {
@@ -528,7 +509,7 @@ function ExportacoesAG() {
           name: String(consultant?.nome || consultant?.name || 'N/A'),
           email: String(consultant?.email || 'N/A'),
           points: Number(consultant?.points || 0),
-          joinedAt: formatDateForUi(consultant?.joinedAt),
+          joinedAt: formatDateForUi(consultant?.joinedAt || consultant?.dataEntrada),
           badges: Number(consultant?.badges || 0),
           status: normalizeConsultantStatus(consultant?.status),
         }));
@@ -712,6 +693,16 @@ function ExportacoesAG() {
       return nextRows;
     }
 
+    if (sortBy === 'badges_desc') {
+      nextRows.sort((a, b) => (b.badges || 0) - (a.badges || 0) || b.points - a.points || (a.name || '').localeCompare(b.name || ''));
+      return nextRows;
+    }
+
+    if (sortBy === 'badges_asc') {
+      nextRows.sort((a, b) => (a.badges || 0) - (b.badges || 0) || a.points - b.points || (a.name || '').localeCompare(b.name || ''));
+      return nextRows;
+    }
+
     if (sortBy === 'nome_az') {
       nextRows.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       return nextRows;
@@ -746,17 +737,32 @@ function ExportacoesAG() {
   const start = (page - 1) * pageSize;
   const end = start + pageSize;
 
+  const consultantRankMap = useMemo(() => {
+    const sorted = [...filteredConsultants].sort((a, b) => b.points - a.points || b.badges - a.badges || (a.name || '').localeCompare(b.name || ''));
+    const map = {};
+    let lastRank = 0;
+    let lastPoints = null;
+    let lastBadges = null;
+    sorted.forEach((c, i) => {
+      if (c.points !== lastPoints || c.badges !== lastBadges) {
+        lastRank = i + 1;
+        lastPoints = c.points;
+        lastBadges = c.badges;
+      }
+      map[c.id] = lastRank;
+    });
+    return map;
+  }, [filteredConsultants]);
+
   const pagedRequests = useMemo(() => sortedRequests.slice(start, end), [sortedRequests, start, end]);
   const pagedBadges = useMemo(() => sortedBadges.slice(start, end), [sortedBadges, start, end]);
 
-  const pagedConsultants = useMemo(
-    () =>
-      sortedConsultants.slice(start, end).map((item, index) => ({
-        ...item,
-        rank: start + index + 1,
-      })),
-    [sortedConsultants, start, end],
-  );
+  const pagedConsultants = useMemo(() => {
+    return sortedConsultants.slice(start, end).map((c) => ({
+      ...c,
+      rank: consultantRankMap[c.id] || 1,
+    }));
+  }, [sortedConsultants, start, end, consultantRankMap]);
 
   const selectedRequestCount = filteredRequests.filter((item) => selectedRequestIds.includes(item.id)).length;
   const selectedBadgeCount = filteredBadges.filter((item) => selectedBadgeIds.includes(item.id)).length;
@@ -789,15 +795,6 @@ function ExportacoesAG() {
   const searchPlaceholder = activeTab === 'consultores' ? 'Pesquisar consultores' : 'Pesquisar badges';
 
   const userName = getLoginName() || 'João Gomes';
-
-  const handleGoBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
-    navigate('/admin-gestor/dashboard');
-  };
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
@@ -882,14 +879,6 @@ function ExportacoesAG() {
       filteredConsultants.forEach((item) => next.add(item.id));
       return Array.from(next);
     });
-  };
-
-  const previousPage = () => {
-    setPage((current) => Math.max(1, current - 1));
-  };
-
-  const nextPage = () => {
-    setPage((current) => Math.min(totalPages, current + 1));
   };
 
   // Export handlers
@@ -1019,11 +1008,8 @@ function ExportacoesAG() {
   if (loading) {
     return (
       <Layout>
-        <div className="tm-export-page">
-          <header className="tm-export-header">
-            <button type="button" className="tm-export-back-btn" onClick={handleGoBack} aria-label="Voltar">
-              <ArrowLeft size={22} />
-            </button>
+        <div className="page">
+          <header className="page-header">
             <h1>Exportações Administrador / Gestor</h1>
           </header>
           <div className="tm-export-loading">
@@ -1037,11 +1023,8 @@ function ExportacoesAG() {
   if (error) {
     return (
       <Layout>
-        <div className="tm-export-page">
-          <header className="tm-export-header">
-            <button type="button" className="tm-export-back-btn" onClick={handleGoBack} aria-label="Voltar">
-              <ArrowLeft size={22} />
-            </button>
+        <div className="page">
+          <header className="page-header">
             <h1>Exportações Administrador / Gestor</h1>
           </header>
           <div className="tm-export-error">
@@ -1054,11 +1037,8 @@ function ExportacoesAG() {
 
   return (
     <Layout>
-      <div className="tm-export-page">
-        <header className="tm-export-header">
-          <button type="button" className="tm-export-back-btn" onClick={handleGoBack} aria-label="Voltar">
-            <ArrowLeft size={22} />
-          </button>
+      <div className="page">
+        <header className="page-header">
           <h1>Exportações Administrador / Gestor</h1>
         </header>
 
@@ -1077,10 +1057,10 @@ function ExportacoesAG() {
           ))}
         </div>
 
-        <section className="tm-export-shell">
+        <section className="shell">
 
-          <div className="tm-export-toolbar">
-            <label className="tm-export-search" htmlFor="tm-export-search-input">
+          <div className="toolbar tm-export-toolbar">
+            <label className="search-wrap tm-export-search" htmlFor="tm-export-search-input">
               <Search size={20} />
               <input
                 id="tm-export-search-input"
@@ -1108,12 +1088,12 @@ function ExportacoesAG() {
               </button>
 
               {showFilterDropdown && (
-                <div className="tm-export-dropdown-menu" role="menu" aria-label="Filtrar pesquisa">
+                <div className="dropdown-menu tm-export-dropdown-menu" role="menu" aria-label="Filtrar pesquisa">
                   {filterOptions.map((item) => (
                     <button
                       key={item.id}
                       type="button"
-                      className={`tm-export-dropdown-item ${activeFilter === item.id ? 'active' : ''}`}
+                      className={`dropdown-item tm-export-dropdown-item ${activeFilter === item.id ? 'active' : ''}`}
                       onClick={() => {
                         setActiveFilter(item.id);
                         setShowFilterDropdown(false);
@@ -1141,12 +1121,12 @@ function ExportacoesAG() {
               </button>
 
               {showSortDropdown && (
-                <div className="tm-export-dropdown-menu" role="menu" aria-label="Ordenar">
+                <div className="dropdown-menu tm-export-dropdown-menu" role="menu" aria-label="Ordenar">
                   {sortOptions.map((item) => (
                     <button
                       key={item.id}
                       type="button"
-                      className={`tm-export-dropdown-item ${sortBy === item.id ? 'active' : ''}`}
+                      className={`dropdown-item tm-export-dropdown-item ${sortBy === item.id ? 'active' : ''}`}
                       onClick={() => {
                         setSortBy(item.id);
                         setShowSortDropdown(false);
@@ -1196,8 +1176,8 @@ function ExportacoesAG() {
                 ))}
               </div>
 
-              <div className="tm-export-table-wrap">
-                <table className="tm-export-table">
+              <div className="table-wrap tm-export-table-wrap">
+                <table className="table tm-export-table">
                   <thead>
                     <tr>
                       <th />
@@ -1212,7 +1192,7 @@ function ExportacoesAG() {
                   <tbody>
                     {pagedRequests.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="tm-export-empty-row">Sem resultados para os filtros escolhidos.</td>
+                        <td colSpan={7} className="empty-state tm-export-empty-row">Sem resultados para os filtros escolhidos.</td>
                       </tr>
                     )}
 
@@ -1364,8 +1344,8 @@ function ExportacoesAG() {
                 </div>
               </div>
 
-              <div className="tm-export-table-wrap">
-                <table className="tm-export-table consultores">
+              <div className="table-wrap tm-export-table-wrap">
+                <table className="table tm-export-table consultores">
                   <thead>
                     <tr>
                       <th />
@@ -1381,7 +1361,7 @@ function ExportacoesAG() {
                   <tbody>
                     {pagedConsultants.length === 0 && (
                       <tr>
-                        <td colSpan={8} className="tm-export-empty-row">Sem resultados para os filtros escolhidos.</td>
+                        <td colSpan={8} className="empty-state tm-export-empty-row">Sem resultados para os filtros escolhidos.</td>
                       </tr>
                     )}
 
@@ -1408,7 +1388,6 @@ function ExportacoesAG() {
                           <td>{item.email}</td>
                           <td>
                             <span className="tm-export-points">
-                              <TrendingUp size={13} />
                               {new Intl.NumberFormat('pt-PT').format(item.points)}
                             </span>
                           </td>
@@ -1430,26 +1409,7 @@ function ExportacoesAG() {
             </>
           )}
 
-          <div className="tm-export-pagination" role="navigation" aria-label="Paginação de exportações">
-            <button type="button" className="tm-export-page-btn ghost" onClick={previousPage} disabled={page === 1}>
-              <ChevronLeft size={16} />
-            </button>
-
-            {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
-              <button
-                key={pageNumber}
-                type="button"
-                className={`tm-export-page-btn ${pageNumber === page ? 'active' : ''}`}
-                onClick={() => setPage(pageNumber)}
-              >
-                {pageNumber}
-              </button>
-            ))}
-
-            <button type="button" className="tm-export-page-btn ghost" onClick={nextPage} disabled={page === totalPages}>
-              <ChevronRight size={16} />
-            </button>
-          </div>
+          <Pagination page={page} totalPages={totalPages} setPage={setPage} />
         </section>
       </div>
     </Layout>

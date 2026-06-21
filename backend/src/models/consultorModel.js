@@ -1081,6 +1081,7 @@ const _buildProfileDataInner = async (parsedAccountId) => {
         COALESCE(bs.points, 0) AS points,
         COALESCE(bs.badges, 0) AS badges,
         COALESCE(dsl.sline, 'Application Operations') AS "serviceLine",
+        COALESCE(DATE(u.data_registo), CURRENT_DATE) AS "joined",
         COALESCE(cr.ranking_position, 0) AS ranking
       FROM utilizador AS u
       LEFT JOIN badge_scores AS bs
@@ -1256,6 +1257,7 @@ const _buildProfileDataInner = async (parsedAccountId) => {
     ranking: Number(row.ranking) || 0,
     streakDays,
     location: row.localizacao || '',
+    joined: row.joined || '',
     serviceLine: row.serviceLine || 'Application Operations',
     avatar: avatar || null,
     serviceLineStats,

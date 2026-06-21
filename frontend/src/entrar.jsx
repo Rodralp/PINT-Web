@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from './components/Navbar';
@@ -18,7 +18,8 @@ const dashboardPathByRole = {
 
 const DEFAULT_ROLE = 'consultor';
 const CONSULTOR_PREFERENCES_PATH = '/consultor/preferencias';
-const REMEMBERED_LOGIN_KEY = 'rememberedLoginData';
+const DADOS_LOGIN_KEY = 'dadosLogin';
+const INICIAR_AUTO_KEY = 'iniciarAuto';
 
 const normalizeRoles = (rolesValue) => {
   const rawRoles = Array.isArray(rolesValue)
@@ -46,28 +47,13 @@ const resolveDashboardPath = (rolesValue) => {
 
 const getRememberedLoginData = () => {
   try {
-    const rememberedRaw = localStorage.getItem(REMEMBERED_LOGIN_KEY);
-    if (rememberedRaw) {
-      return JSON.parse(rememberedRaw);
+    const raw = localStorage.getItem(DADOS_LOGIN_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      return { ...data, guardarDados: true };
     }
-
-    // Compatibilidade com versões antigas que guardavam tudo no mesmo objeto.
-    const legacyLoginDataRaw = localStorage.getItem('loginData');
-    if (!legacyLoginDataRaw) {
-      return null;
-    }
-
-    const legacyLoginData = JSON.parse(legacyLoginDataRaw);
-    return legacyLoginData?.guardarDados
-      ? {
-          email: legacyLoginData.email || '',
-          senha: legacyLoginData.senha || '',
-          guardarDados: true,
-        }
-      : null;
-  } catch {
-    return null;
-  }
+  } catch { /* ignore */ }
+  return null;
 };
 
 function Entrar() {
@@ -93,6 +79,20 @@ function Entrar() {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [redirectPath, setRedirectPath] = useState('/consultor/dashboard');
+
+  // If loginData already exists, redirect to dashboard.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('loginData') || localStorage.getItem('loginData');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.token) {
+          const path = dashboardPathByRole[parsed.role] || '/consultor/dashboard';
+          navigate(path, { replace: true });
+        }
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -162,24 +162,32 @@ function Entrar() {
       };
 
       if (formData.guardarDados) {
-        localStorage.setItem(REMEMBERED_LOGIN_KEY, JSON.stringify({
+        localStorage.setItem(DADOS_LOGIN_KEY, JSON.stringify({
           email: formData.email,
           senha: formData.senha,
-          guardarDados: true,
         }));
+        localStorage.setItem(INICIAR_AUTO_KEY, '1');
+        localStorage.setItem('loginData', JSON.stringify(dadosLogin));
       } else {
-        localStorage.removeItem(REMEMBERED_LOGIN_KEY);
+        localStorage.removeItem(DADOS_LOGIN_KEY);
+        localStorage.removeItem(INICIAR_AUTO_KEY);
+        localStorage.removeItem('loginData');
       }
 
       // O estado autenticado fica apenas na sessão ativa.
-      localStorage.removeItem('loginData');
       sessionStorage.setItem('loginData', JSON.stringify(dadosLogin));
 
       apiClient.get(`/consultor/user-image?accountId=${account.id}`).then((imgRes) => {
         if (imgRes.data?.image) {
-          const current = JSON.parse(sessionStorage.getItem('loginData') || '{}');
-          current.avatar = imgRes.data.image;
-          sessionStorage.setItem('loginData', JSON.stringify(current));
+          const currentSession = JSON.parse(sessionStorage.getItem('loginData') || '{}');
+          currentSession.avatar = imgRes.data.image;
+          sessionStorage.setItem('loginData', JSON.stringify(currentSession));
+
+          if (formData.guardarDados) {
+            const currentLocal = JSON.parse(localStorage.getItem('loginData') || '{}');
+            currentLocal.avatar = imgRes.data.image;
+            localStorage.setItem('loginData', JSON.stringify(currentLocal));
+          }
         }
       }).catch(() => {});
 

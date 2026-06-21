@@ -257,14 +257,14 @@ function Notificacoes() {
 
   return (
     <Layout>
-      <div className="notifications-page">
-        <header className="notifications-header">
+      <div className="page notifications-page">
+        <header className="page-header notifications-header">
           <h1>{t('notifications_title')}</h1>
         </header>
 
-        <section className="notifications-shell">
-          <div className="notifications-toolbar">
-            <label className="notifications-search-wrap" htmlFor="notifications-search-input">
+        <section className="shell notifications-shell">
+          <div className="toolbar notifications-toolbar">
+            <div className="search-wrap">
               <Search size={20} />
               <input
                 id="notifications-search-input"
@@ -274,12 +274,12 @@ function Notificacoes() {
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
               />
-            </label>
+            </div>
 
             <div className="notifications-control-group" ref={filterDropdownRef}>
               <button
                 type="button"
-                className={`notifications-control-btn ${showFilterDropdown || hasActiveFilter ? 'active' : ''}`}
+                className={`action-btn notifications-control-btn ${showFilterDropdown || hasActiveFilter ? 'active' : ''}`}
                 onClick={() => {
                   setShowFilterDropdown((current) => !current);
                   setShowSortDropdown(false);
@@ -290,12 +290,12 @@ function Notificacoes() {
               </button>
 
               {showFilterDropdown && (
-                <div className="notifications-dropdown-menu" aria-label={t('notifications_filter_label')}>
+                <div className="dropdown-menu" aria-label={t('notifications_filter_label')}>
                   {filters.map((filter) => (
                     <button
                       key={filter.id}
                       type="button"
-                      className={`notifications-dropdown-item ${activeFilter === filter.id ? 'active' : ''}`}
+                      className={`dropdown-item ${activeFilter === filter.id ? 'active' : ''}`}
                       onClick={() => {
                         setActiveFilter(filter.id);
                         setShowFilterDropdown(false);
@@ -311,7 +311,7 @@ function Notificacoes() {
             <div className="notifications-control-group" ref={sortDropdownRef}>
               <button
                 type="button"
-                className={`notifications-control-btn ${showSortDropdown || hasActiveSort ? 'active' : ''}`}
+                className={`action-btn notifications-control-btn ${showSortDropdown || hasActiveSort ? 'active' : ''}`}
                 onClick={() => {
                   setShowSortDropdown((current) => !current);
                   setShowFilterDropdown(false);
@@ -322,12 +322,12 @@ function Notificacoes() {
               </button>
 
               {showSortDropdown && (
-                <div className="notifications-dropdown-menu" aria-label={t('notifications_sort_label')}>
+                <div className="dropdown-menu" aria-label={t('notifications_sort_label')}>
                   {sortOptions.map((option) => (
                     <button
                       key={option.id}
                       type="button"
-                      className={`notifications-dropdown-item ${sortBy === option.id ? 'active' : ''}`}
+                      className={`dropdown-item ${sortBy === option.id ? 'active' : ''}`}
                       onClick={() => {
                         setSortBy(option.id);
                         setShowSortDropdown(false);
@@ -347,8 +347,8 @@ function Notificacoes() {
               <span>{sortedNotifications.length} {t('notifications_items_label')}</span>
             </div>
 
-            <div className="notifications-table-wrap">
-              <table className="notifications-table">
+            <div className="table-wrap bordered">
+              <table className="table notifications-table">
                 <thead>
                   <tr>
                     <th className="notifications-col-seen">{t('notifications_column_seen')}</th>
@@ -401,7 +401,7 @@ function Notificacoes() {
                           <td>{formatNotificationDate(notification.date, i18n.language === 'en' ? 'en-GB' : 'pt-PT')}</td>
                           <td>
                             {canOpen ? (
-                              <button type="button" className="notifications-view-btn" onClick={() => handleOpenNotification(notification)}>
+                              <button type="button" className="btn-outline" onClick={() => handleOpenNotification(notification)}>
                                 {isExpandable && isExpanded ? t('notifications_view_less') : t('notifications_view_button')}
                               </button>
                             ) : (

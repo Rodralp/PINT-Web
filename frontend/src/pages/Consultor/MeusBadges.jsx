@@ -285,20 +285,20 @@ function MeusBadges() {
 
   return (
     <Layout>
-      <div className="catalog-page">
-        <header className="catalog-header">
+      <div className="page">
+        <header className="page-header">
           <h1>{t('my_badges_title')}</h1>
         </header>
 
-        <section className="catalog-shell">
+        <section className="shell">
           {statusMessage && (
             <div className="alert alert-warning py-2" role="status">
               {statusMessage}
             </div>
           )}
 
-          <div className="catalog-controls">
-            <div className="catalog-search-wrap">
+          <div className="toolbar catalog-controls">
+            <div className="search-wrap">
               <Search size={20} />
               <input
                 type="text"
@@ -312,7 +312,7 @@ function MeusBadges() {
             <div className="catalog-dropdown" ref={filterDropdownRef}>
               <button
                 type="button"
-                className={`catalog-action-btn ${showFilterDropdown || hasActiveFilter ? 'active' : ''}`}
+                className={`action-btn catalog-action-btn ${showFilterDropdown || hasActiveFilter ? 'active' : ''}`}
                 onClick={toggleFilterDropdown}
               >
                 <Filter size={20} />
@@ -320,12 +320,12 @@ function MeusBadges() {
               </button>
 
               {showFilterDropdown && (
-                <div className="catalog-dropdown-menu" role="menu" aria-label="Filtros de badges">
+                <div className="dropdown-menu" role="menu" aria-label="Filtros de badges">
                   {filters.map((filter) => (
                     <button
                       key={filter.id}
                       type="button"
-                      className={`catalog-dropdown-item ${activeFilter === filter.id ? 'active' : ''}`}
+                      className={`dropdown-item ${activeFilter === filter.id ? 'active' : ''}`}
                       onClick={() => onFilterSelect(filter.id)}
                     >
                       {filter.label}
@@ -338,7 +338,7 @@ function MeusBadges() {
             <div className="catalog-dropdown" ref={sortDropdownRef}>
               <button
                 type="button"
-                className={`catalog-action-btn ${showSortDropdown || hasActiveSort ? 'active' : ''}`}
+                className={`action-btn catalog-action-btn ${showSortDropdown || hasActiveSort ? 'active' : ''}`}
                 onClick={toggleSortDropdown}
               >
                 <SlidersHorizontal size={20} />
@@ -346,12 +346,12 @@ function MeusBadges() {
               </button>
 
               {showSortDropdown && (
-                <div className="catalog-dropdown-menu" role="menu" aria-label="Ordenacao de badges">
+                <div className="dropdown-menu" role="menu" aria-label="Ordenacao de badges">
                   {sortOptions.map((option) => (
                     <button
                       key={option.id}
                       type="button"
-                      className={`catalog-dropdown-item ${sortBy === option.id ? 'active' : ''}`}
+                      className={`dropdown-item ${sortBy === option.id ? 'active' : ''}`}
                       onClick={() => onSortSelect(option.id)}
                     >
                       {option.label}
@@ -488,7 +488,7 @@ function MeusBadges() {
           </div>
 
           {filteredBadges.length === 0 && (
-            <div className="catalog-empty-state">Nenhum badge encontrado com os filtros escolhidos.</div>
+            <div className="empty-state catalog-empty-state">Nenhum badge encontrado com os filtros escolhidos.</div>
           )}
 
           <Pagination page={page} totalPages={totalPages} setPage={setPage} />

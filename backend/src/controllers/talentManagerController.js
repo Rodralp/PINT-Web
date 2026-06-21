@@ -282,6 +282,7 @@ export const getHistoricoConsultores = async (req, res) => {
           COALESCE(pb.badges_obtidas, 0) AS "badgesObtidas",
           COALESCE(pr.badges_em_progresso, 0) AS "badgesEmProgresso",
           COALESCE(dsl.sline, '-') AS "serviceLine",
+          COALESCE(DATE(u.data_registo), CURRENT_DATE) AS "joinedAt",
           CASE
             WHEN LOWER(COALESCE(u.status, '')) IN ('ativo', 'inativo', 'pendente') THEN LOWER(u.status)
             ELSE 'inativo'

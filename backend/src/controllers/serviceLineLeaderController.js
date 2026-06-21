@@ -387,6 +387,7 @@ export const getHistoricoConsultoresSLL = async (req, res) => {
           u.nome AS name,
           u.email,
           COALESCE(pb.points, 0) AS points,
+          COALESCE(DATE(u.data_registo), CURRENT_DATE) AS "joinedAt",
           CASE
             WHEN LOWER(COALESCE(u.status, '')) IN ('ativo', 'inativo', 'pendente') THEN LOWER(u.status)
             ELSE 'inativo'

@@ -52,12 +52,6 @@
   gap: 12px;
 }
 
-.topbar-user-name {
-  font-size: var(--fs-base);
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
 .topbar-avatar {
   width: 32px;
   height: 32px;
@@ -168,10 +162,6 @@
   
   .topbar-right {
     gap: 4px;
-  }
-  
-  .topbar-user-name {
-    display: none; /* Esconde o nome no telemóvel para poupar espaço */
   }
   
   .topbar-user-info {
