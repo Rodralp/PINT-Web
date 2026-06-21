@@ -5,6 +5,7 @@
   "topbar_settings": "Settings",
   "topbar_language": "Language",
   "topbar_logout": "Logout",
+  "topbar_back_to_dashboard": "Back to Dashboard",
 
   "sidebar_section_consultor": "Consultant",
   "sidebar_section_tm": "Talent Manager",
