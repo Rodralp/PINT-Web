@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -48,8 +48,18 @@ const ITEMS_PER_PAGE = 10;
 
 function MeusPedidos() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [allRequests, setAllRequests] = useState([]);
-  const [activeFilters, setActiveFilters] = useState(filters.map((filter) => filter.id));
+  const filtersFromUrl = useMemo(() => {
+    const param = searchParams.get('filters');
+    if (param) {
+      const ids = param.split(',').map((s) => s.trim()).filter(Boolean);
+      const validIds = ids.filter((id) => filters.some((f) => f.id === id));
+      return validIds.length > 0 ? validIds : filters.map((f) => f.id);
+    }
+    return filters.map((filter) => filter.id);
+  }, []);
+  const [activeFilters, setActiveFilters] = useState(filtersFromUrl);
   const [page, setPage] = useState(1);
 
   useEffect(() => {

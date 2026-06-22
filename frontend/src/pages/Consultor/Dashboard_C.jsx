@@ -4,18 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import SeeMore_PopUp from '../../components/SeeMore_PopUp';
 import BadgeCongratulationsModal from '../../components/BadgeCongratulationsModal';
+import BadgeImage from '../../components/BadgeImage';
 import { fetchConsultorDashboard } from '../../services/dashboardService';
 import { fetchBadgeSuggestions } from '../../services/consultorService';
 import {
   Award,
   Flame,
   Clock3,
-  Trophy,
-  AlertTriangle,
-  SearchCheck,
-  TimerReset,
-  Sparkles,
-  GraduationCap,
   ChevronsRight,
   ArrowRight,
   Crown
@@ -44,12 +39,6 @@ const statIconMap = {
   flame: Flame,
   clock: Clock3,
   crown: Crown,
-};
-
-const progressIconMap = {
-  alertTriangle: AlertTriangle,
-  searchCheck: SearchCheck,
-  clock: Clock3,
 };
 
 const buildTimelineData = (values, locale) => {
@@ -89,8 +78,8 @@ function DashboardC() {
   const [dashboardStats, setDashboardStats] = useState(defaultDashboardStats);
   const [inProgressItems, setInProgressItems] = useState([]);
   const [suggestionItems, setSuggestionItems] = useState([]);
+  const [allSuggestionItems, setAllSuggestionItems] = useState([]);
   const [dashboardStatusMessage, setDashboardStatusMessage] = useState('');
-  const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
   const [isSuggestionsModalOpen, setIsSuggestionsModalOpen] = useState(false);
   const [congratsBadge, setCongratsBadge] = useState(null);
   const [congratsQueue, setCongratsQueue] = useState([]);
@@ -102,9 +91,10 @@ function DashboardC() {
 
     const loadDashboardData = async () => {
       try {
-        const [dashboardResult, suggestionsResult] = await Promise.allSettled([
+        const [dashboardResult, suggestionsResult, allSuggestionsResult] = await Promise.allSettled([
           fetchConsultorDashboard(),
           fetchBadgeSuggestions(3),
+          fetchBadgeSuggestions(100),
         ]);
 
         if (dashboardResult.status !== 'fulfilled') {
@@ -133,10 +123,7 @@ function DashboardC() {
         setDashboardStats(mappedStats);
 
         const mappedInProgress = Array.isArray(data.inProgressItems)
-          ? data.inProgressItems.map((item) => ({
-            ...item,
-            icon: progressIconMap[item.iconKey] || AlertTriangle,
-          }))
+          ? data.inProgressItems
           : [];
         setInProgressItems(mappedInProgress);
 
@@ -146,6 +133,15 @@ function DashboardC() {
           setSuggestionItems(data.suggestionItems);
         } else {
           setSuggestionItems([]);
+        }
+
+        const allSuggestionsData = allSuggestionsResult.status === 'fulfilled' ? allSuggestionsResult.value : [];
+        if (Array.isArray(allSuggestionsData) && allSuggestionsData.length > 0) {
+          setAllSuggestionItems(allSuggestionsData);
+        } else if (Array.isArray(suggestionsData) && suggestionsData.length > 0) {
+          setAllSuggestionItems(suggestionsData);
+        } else {
+          setAllSuggestionItems([]);
         }
 
         setDashboardStatusMessage('');
@@ -318,7 +314,7 @@ function DashboardC() {
                 href="#ver-todos-progresso"
                 onClick={(event) => {
                   event.preventDefault();
-                  setIsProgressModalOpen(true);
+                  navigate('/consultor/meus-pedidos?filters=pendente,rejeitado');
                 }}
               >
                 {t('dashboard_view_all')} <ArrowRight size={16} />
@@ -326,30 +322,43 @@ function DashboardC() {
             </div>
 
             <div className="dashboard-list">
-              {inProgressItems.map((item, index) => {
-                const ProgressIcon = item.icon;
-
-                return (
-                  <article
-                    key={`${item.title}-${index}`}
-                    className="dashboard-list-item dashboard-clickable"
-                    onClick={() => item.badgeDbId && navigate(`/consultor/badge/${item.badgeDbId}`, {
-                      state: { badge: { badgeDbId: item.badgeDbId, name: item.title } },
-                    })}
-                  >
-                    <div className={`dashboard-list-badge accent-${item.accent}`}>
-                    <Sparkles size={18} strokeWidth={2} />
+              {inProgressItems.map((item, index) => (
+                <article
+                  key={`${item.title}-${index}`}
+                  className="dashboard-list-item dashboard-clickable"
+                  style={{ cursor: item.badgeDbId ? 'pointer' : 'default' }}
+                  onClick={() => {
+                    if (item.badgeDbId) {
+                      navigate(`/consultor/badge/${item.badgeDbId}`, {
+                        state: {
+                          badge: {
+                            badgeDbId: item.badgeDbId,
+                            name: item.title,
+                            levelKey: item.levelKey || '',
+                            badgeImage: item.badgeImage || '',
+                          },
+                          backTo: '/consultor/dashboard',
+                          activeSidebarRoute: '/consultor/dashboard',
+                        },
+                      });
+                    }
+                  }}
+                >
+                  <div className="dashboard-list-badge">
+                    <BadgeImage
+                      src={item.badgeImage || ''}
+                      alt={item.title}
+                      className="dashboard-list-badge-img"
+                      levelKey={item.levelKey || ''}
+                      typeId={item.typeId || ''}
+                    />
                   </div>
                   <div className="dashboard-list-content">
-                      <strong>{item.title}</strong>
+                    <strong>{item.title}</strong>
                     <span>{item.subtitle || t(item.subtitleKey)}</span>
                   </div>
-                    <div className={`dashboard-list-action accent-${item.accent}`}>
-                      <ProgressIcon size={18} strokeWidth={2} />
-                  </div>
-                  </article>
-                );
-              })}
+                </article>
+              ))}
             </div>
           </section>
 
@@ -368,16 +377,36 @@ function DashboardC() {
             </div>
 
             <div className="dashboard-list dashboard-suggestions-list">
-              {suggestionItems.map(({ title, subtitleKey, accent, badgeDbId }, index) => (
+              {suggestionItems.map(({ title, subtitleKey, accent, badgeDbId, badgeImage, levelKey, typeId }, index) => (
                 <article
                   key={`${title}-${index}`}
                   className="dashboard-list-item dashboard-suggestion-item dashboard-clickable"
-                  onClick={() => badgeDbId && navigate(`/consultor/badge/${badgeDbId}`, {
-                    state: { badge: { badgeDbId, name: title, levelKey: subtitleKey } },
-                  })}
+                  style={{ cursor: badgeDbId ? 'pointer' : 'default' }}
+                  onClick={() => {
+                    if (badgeDbId) {
+                      navigate(`/consultor/badge/${badgeDbId}`, {
+                        state: {
+                          badge: {
+                            badgeDbId,
+                            name: title,
+                            levelKey: levelKey || '',
+                            badgeImage: badgeImage || '',
+                          },
+                          backTo: '/consultor/dashboard',
+                          activeSidebarRoute: '/consultor/dashboard',
+                        },
+                      });
+                    }
+                  }}
                 >
-                  <div className={`dashboard-list-badge accent-${accent}`}>
-                    <GraduationCap size={18} strokeWidth={2} />
+                  <div className="dashboard-list-badge">
+                    <BadgeImage
+                      src={badgeImage || ''}
+                      alt={title}
+                      className="dashboard-list-badge-img"
+                      levelKey={levelKey || ''}
+                      typeId={typeId || ''}
+                    />
                   </div>
                   <div className="dashboard-list-content">
                     <strong>{title}</strong>
@@ -391,40 +420,40 @@ function DashboardC() {
         </div>
 
         <SeeMore_PopUp
-          isOpen={isProgressModalOpen}
-          onClose={() => setIsProgressModalOpen(false)}
-          title={t('dashboard_in_progress')}
-          items={inProgressItems}
-          renderItem={(item) => {
-            const ProgressIcon = item.icon || AlertTriangle;
-
-            return (
-              <article className="dashboard-list-item">
-                <div className={`dashboard-list-badge accent-${item.accent}`}>
-                  <Sparkles size={18} strokeWidth={2} />
-                </div>
-                <div className="dashboard-list-content">
-                  <strong>{item.title}</strong>
-                  <span>{item.subtitle || t(item.subtitleKey)}</span>
-                </div>
-                <div className={`dashboard-list-action accent-${item.accent}`}>
-                  <ProgressIcon size={18} strokeWidth={2} />
-                </div>
-              </article>
-            );
-          }}
-          emptyMessage={t('dashboard_empty_progress', 'Sem itens em progresso para mostrar.')}
-        />
-
-        <SeeMore_PopUp
           isOpen={isSuggestionsModalOpen}
           onClose={() => setIsSuggestionsModalOpen(false)}
           title={t('dashboard_suggestions')}
-          items={suggestionItems}
-          renderItem={({ title, subtitleKey, accent }) => (
-            <article className="dashboard-list-item dashboard-suggestion-item">
-              <div className={`dashboard-list-badge accent-${accent}`}>
-                <GraduationCap size={18} strokeWidth={2} />
+          items={allSuggestionItems}
+          renderItem={({ title, subtitleKey, accent, badgeDbId, badgeImage, levelKey, typeId }) => (
+            <article
+              className="dashboard-list-item dashboard-suggestion-item"
+              style={{ cursor: badgeDbId ? 'pointer' : 'default' }}
+              onClick={() => {
+                if (badgeDbId) {
+                  setIsSuggestionsModalOpen(false);
+                  navigate(`/consultor/badge/${badgeDbId}`, {
+                    state: {
+                      badge: {
+                        badgeDbId,
+                        name: title,
+                        levelKey: levelKey || '',
+                        badgeImage: badgeImage || '',
+                      },
+                      backTo: '/consultor/dashboard',
+                      activeSidebarRoute: '/consultor/dashboard',
+                    },
+                  });
+                }
+              }}
+            >
+              <div className="dashboard-list-badge">
+                <BadgeImage
+                  src={badgeImage || ''}
+                  alt={title}
+                  className="dashboard-list-badge-img"
+                  levelKey={levelKey || ''}
+                  typeId={typeId || ''}
+                />
               </div>
               <div className="dashboard-list-content">
                 <strong>{title}</strong>
@@ -433,7 +462,7 @@ function DashboardC() {
               <ChevronsRight className="dashboard-item-chevron" size={18} />
             </article>
           )}
-          emptyMessage={t('dashboard_empty_suggestions', 'Sem sugestões para mostrar.')}
+          emptyMessage={t('dashboard_empty_suggestions', 'Sem sugestoes para mostrar.')}
         />
 
         <BadgeCongratulationsModal

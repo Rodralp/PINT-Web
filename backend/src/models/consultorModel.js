@@ -1982,6 +1982,8 @@ const buildBadgeSuggestions = async (accountId, limit = 3) => {
         SELECT DISTINCT ON (b.nbadge)
           b.nbadge,
           b.b_nome,
+          b.imagem,
+          t.tipo,
           a.narea,
           a.area,
           n.nivel
@@ -1992,6 +1994,8 @@ const buildBadgeSuggestions = async (accountId, limit = 3) => {
           ON ncb.nnivel = n.nnivel
         INNER JOIN badge AS b
           ON b.nbadge = ncb.nbadge
+        LEFT JOIN tipo AS t
+          ON t.ntipo = b.ntipo
         WHERE a.narea IN (:areaIds)
           AND (b.validade IS NULL OR b.validade > CURRENT_DATE)
         ORDER BY b.nbadge ASC
@@ -2049,7 +2053,7 @@ const buildBadgeSuggestions = async (accountId, limit = 3) => {
     rows.sort((left, right) => {
       const leftTemplate = resolveBadgeTemplate(left.nivel);
       const rightTemplate = resolveBadgeTemplate(right.nivel);
-      return rightTemplate.points - leftTemplate.points;
+      return leftTemplate.points - rightTemplate.points;
     });
   }
 
@@ -2070,7 +2074,10 @@ const buildBadgeSuggestions = async (accountId, limit = 3) => {
       }
 
       const latestRequestStatus = requestStatusByBadge.get(badgeId);
-      return !hasActiveBadgeRequest(latestRequestStatus);
+      if (latestRequestStatus === 'pendente-tm' || latestRequestStatus === 'pendente-sll') {
+        return false;
+      }
+      return true;
     });
 
     if (!matchedRow) {
@@ -2078,50 +2085,25 @@ const buildBadgeSuggestions = async (accountId, limit = 3) => {
     }
 
     const template = resolveBadgeTemplate(matchedRow.nivel);
+    const isSpecialType = isSpecialTypeName(matchedRow.tipo);
     suggestedBadgeIds.add(Number(matchedRow.nbadge));
     suggestions.push({
       title: matchedRow.b_nome || matchedRow.area || area.area || 'Badge',
       subtitleKey: template.levelKey,
       accent: suggestionAccentPalette[index % suggestionAccentPalette.length],
       badgeDbId: Number(matchedRow.nbadge),
+      badgeImage: resolveBadgeImage(matchedRow.imagem, template.badgeImage, isSpecialType),
+      levelKey: isSpecialType ? null : template.levelKey,
+      typeId: isSpecialType ? 'special' : template.levelKey,
+      isSpecial: isSpecialType,
     });
   }
 
-  if (suggestions.length < safeLimit) {
-    for (let areaIndex = 0; areaIndex < preferredAreas.length; areaIndex += 1) {
-      if (suggestions.length >= safeLimit) {
-        break;
-      }
-
-      const area = preferredAreas[areaIndex];
-      const areaRows = candidateRowsByArea.get(Number(area.narea)) || [];
-
-      for (const row of areaRows) {
-        if (suggestions.length >= safeLimit) {
-          break;
-        }
-
-        const badgeId = Number(row.nbadge);
-        if (suggestedBadgeIds.has(badgeId) || obtainedBadgeIds.has(badgeId)) {
-          continue;
-        }
-
-        const latestRequestStatus = requestStatusByBadge.get(badgeId);
-        if (hasActiveBadgeRequest(latestRequestStatus)) {
-          continue;
-        }
-
-        const template = resolveBadgeTemplate(row.nivel);
-        suggestedBadgeIds.add(badgeId);
-        suggestions.push({
-          title: row.b_nome || row.area || area.area || 'Badge',
-          subtitleKey: template.levelKey,
-          accent: suggestionAccentPalette[suggestions.length % suggestionAccentPalette.length],
-          badgeDbId: badgeId,
-        });
-      }
-    }
-  }
+  suggestions.sort((left, right) => {
+    const leftPoints = resolveBadgeTemplate(left.levelKey).points;
+    const rightPoints = resolveBadgeTemplate(right.levelKey).points;
+    return leftPoints - rightPoints;
+  });
 
   return suggestions;
 };
@@ -2677,6 +2659,15 @@ export const consultorModel = {
 
   async getBadgeSuggestions(accountId, limit) {
     const data = await buildBadgeSuggestions(accountId, limit);
+    const badgeIds = data.map((s) => s.badgeDbId).filter((id) => id > 0);
+    if (badgeIds.length > 0) {
+      const imageMap = await loadBadgeImagesBatch(badgeIds).catch(() => ({}));
+      for (const item of data) {
+        if (imageMap[item.badgeDbId]) {
+          item.badgeImage = imageMap[item.badgeDbId];
+        }
+      }
+    }
     return clone(data);
   },
 
@@ -2885,4 +2876,7 @@ export const consultorModel = {
   },
 
   sendAllExpirationNotifications,
+  resolveBadgeImage,
+  resolveBadgeTemplate,
+  isSpecialTypeName,
 };

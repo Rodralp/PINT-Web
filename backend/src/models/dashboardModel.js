@@ -1,6 +1,10 @@
 import { QueryTypes } from 'sequelize';
 import { consultorModel } from './consultorModel.js';
+import { adminBadgeModel } from './adminBadgeModel.js';
 import { sequelize } from '../config/database.js';
+
+const { loadBadgeImagesBatch } = adminBadgeModel;
+const { resolveBadgeImage, resolveBadgeTemplate, isSpecialTypeName } = consultorModel;
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
@@ -587,13 +591,22 @@ export const dashboardModel = {
               p.npedido,
               p.nbadge,
               b.b_nome,
+              b.imagem,
               p.data_submissao,
-              COALESCE(e.estado, 'pendente') AS estado
+              COALESCE(e.estado, 'pendente') AS estado,
+              n.nivel,
+              t.tipo
             FROM pedidos AS p
             INNER JOIN badge AS b
               ON b.nbadge = p.nbadge
             LEFT JOIN estado AS e
               ON e.nestado = p.estado
+            LEFT JOIN nivel_contem_b AS ncb
+              ON ncb.nbadge = b.nbadge
+            LEFT JOIN nivel AS n
+              ON n.nnivel = ncb.nnivel
+            LEFT JOIN tipo AS t
+              ON t.ntipo = b.ntipo
             WHERE p.nutilizador = :accountId
               AND LOWER(COALESCE(e.estado, '')) <> 'aprovado'
             ORDER BY p.data_submissao DESC, p.npedido DESC
@@ -634,14 +647,27 @@ export const dashboardModel = {
 
       const timelineValues = buildDailySeries(timelineRows, CONSULTOR_TIMELINE_DAYS);
 
+      const inProgressBadgeIds = (inProgressRows || []).map((r) => Number(r.nbadge)).filter(Boolean);
+      const inProgressImageMap = inProgressBadgeIds.length > 0
+        ? await loadBadgeImagesBatch(inProgressBadgeIds).catch(() => ({}))
+        : {};
+
       const inProgressItems = (inProgressRows || []).map((row) => {
         const estado = normalizeRequestState(row.estado);
+        const badgeId = Number(row.nbadge);
+        const isSpecial = isSpecialTypeName(row.tipo);
+        const template = resolveBadgeTemplate(row.nivel, 0, row.tipo);
+        const resolvedImage = resolveBadgeImage(row.imagem, template.badgeImage, isSpecial);
         return {
           title: row.b_nome || 'Badge',
           subtitle: mapRequestStateToSubtitle(estado),
           accent: estado === 'aprovado' ? 'success' : estado === 'evidencias_insuficientes' ? 'amber' : 'warning',
           iconKey: mapRequestStateToIconKey(estado),
-          badgeDbId: row.nbadge ? Number(row.nbadge) : null,
+          badgeDbId: badgeId,
+          badgeImage: inProgressImageMap[badgeId] || resolvedImage,
+          levelKey: isSpecial ? null : template.levelKey,
+          typeId: isSpecial ? 'special' : template.levelKey,
+          isSpecial,
         };
       });
 
