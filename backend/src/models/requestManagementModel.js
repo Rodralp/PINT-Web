@@ -296,7 +296,9 @@ const mapRowStatus = (estadoNome, obtido, role) => {
   }
 
   if (isPendingSllState(estadoNome)) {
-    return (role === 'service-line-leader' || role === 'admin-gestor') ? 'validacao' : 'pendente';
+    if (role === 'service-line-leader' || role === 'admin-gestor') return 'validacao';
+    if (role === 'talent-manager') return 'aprovado';
+    return 'pendente';
   }
 
   return 'pendente';

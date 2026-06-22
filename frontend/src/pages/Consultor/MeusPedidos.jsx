@@ -16,24 +16,25 @@ const statusConfig = {
   aprovado: {
     label: 'Aprovado',
     cardClass: 'status-card approved',
-    badgeClass: 'request-status approved',
+    badgeClass: 'success',
     Icon: CheckCircle2,
   },
   pendente: {
     label: 'Pendente',
     cardClass: 'status-card pending',
-    badgeClass: 'request-status pending',
+    badgeClass: 'warning',
     Icon: Search,
   },
   rejeitado: {
     label: 'Rejeitado',
     cardClass: 'status-card rejected',
-    badgeClass: 'request-status rejected',
+    badgeClass: 'danger',
     Icon: AlertTriangle,
   },
   validacao: {
     label: 'Em Validação',
     cardClass: 'status-card in-review',
+    badgeClass: 'warning',
     Icon: SearchCheck,
   },
 };

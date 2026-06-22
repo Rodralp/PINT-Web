@@ -4,6 +4,10 @@
   font-size: 13px;
 }
 
+.catalog-controls {
+  grid-template-columns: 1fr auto;
+}
+
 /* ── Card Grid ────────────────────────── */
 .ranking-grid {
   margin-top: 14px;

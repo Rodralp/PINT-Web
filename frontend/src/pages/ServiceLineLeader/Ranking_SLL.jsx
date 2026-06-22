@@ -14,8 +14,19 @@ const sortOptions = [
   { id: 'points_desc', label: 'Pontos (Maior para Menor)' },
   { id: 'points_asc', label: 'Pontos (Menor para Maior)' },
   { id: 'badges_desc', label: 'Badges (Maior para Menor)' },
+  { id: 'badges_asc', label: 'Badges (Menor para Maior)' },
   { id: 'name_asc', label: 'Nome (A-Z)' },
+  { id: 'name_desc', label: 'Nome (Z-A)' },
 ];
+
+const sortButtonLabels = {
+  points_desc: 'Pontos ↓',
+  points_asc: 'Pontos ↑',
+  badges_desc: 'Badges ↓',
+  badges_asc: 'Badges ↑',
+  name_asc: 'Nome A-Z',
+  name_desc: 'Nome Z-A',
+};
 
 const ITEMS_PER_PAGE = 12;
 
@@ -189,20 +200,63 @@ function RankingSLL() {
   const sortedConsultants = useMemo(() => {
     return [...filteredConsultants].sort((a, b) => {
       if (sortBy === 'points_asc') {
-        return a.points - b.points || a.name.localeCompare(b.name);
+        return a.points - b.points || a.badges - b.badges || a.name.localeCompare(b.name);
       }
 
       if (sortBy === 'badges_desc') {
-        return b.badges - a.badges || b.points - a.points;
+        return b.badges - a.badges || b.points - a.points || a.name.localeCompare(b.name);
+      }
+
+      if (sortBy === 'badges_asc') {
+        return a.badges - b.badges || a.points - b.points || a.name.localeCompare(b.name);
       }
 
       if (sortBy === 'name_asc') {
         return a.name.localeCompare(b.name);
       }
 
-      return b.points - a.points || b.badges - a.badges;
+      if (sortBy === 'name_desc') {
+        return b.name.localeCompare(a.name);
+      }
+
+      return b.points - a.points || b.badges - a.badges || a.name.localeCompare(b.name);
     });
   }, [filteredConsultants, sortBy]);
+
+  const rankMode = useMemo(
+    () => (sortBy === 'badges_desc' || sortBy === 'badges_asc' ? 'badges' : 'points'),
+    [sortBy],
+  );
+
+  const rankingByConsultantId = useMemo(() => {
+    const rankingReference = [...filteredConsultants].sort((a, b) => {
+      if (rankMode === 'badges') {
+        return b.badges - a.badges || b.points - a.points || a.name.localeCompare(b.name);
+      }
+
+      return b.points - a.points || b.badges - a.badges || a.name.localeCompare(b.name);
+    });
+
+    const rankingMap = {};
+    let previous = null;
+    let currentRank = 0;
+
+    rankingReference.forEach((item) => {
+      const hasSameScoreAsPrevious =
+        previous
+        && previous.points === item.points
+        && previous.badges === item.badges;
+
+      if (!hasSameScoreAsPrevious) {
+        currentRank += 1;
+      }
+
+      rankingMap[item.id] = currentRank;
+      previous = item;
+    });
+
+    return rankingMap;
+  }, [filteredConsultants, rankMode]);
 
   const totalPages = Math.max(1, Math.ceil(sortedConsultants.length / ITEMS_PER_PAGE));
   const safePage = Math.min(page, totalPages);
@@ -211,13 +265,13 @@ function RankingSLL() {
     const start = (safePage - 1) * ITEMS_PER_PAGE;
     const end = start + ITEMS_PER_PAGE;
 
-    return sortedConsultants.slice(start, end).map((item, index) => ({
+    return sortedConsultants.slice(start, end).map((item) => ({
       ...item,
-      rank: start + index + 1,
+      rank: rankingByConsultantId[item.id] || 0,
     }));
-  }, [sortedConsultants, safePage]);
+  }, [sortedConsultants, safePage, rankingByConsultantId]);
 
-  const activeSortLabel = sortOptions.find((item) => item.id === sortBy)?.label || sortOptions[0].label;
+  const activeSortLabel = sortButtonLabels[sortBy] || 'Pontos ↓';
   const hasActiveSort = sortBy !== defaultSort;
 
   useEffect(() => {

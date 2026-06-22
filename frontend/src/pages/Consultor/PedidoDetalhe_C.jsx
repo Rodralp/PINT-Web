@@ -16,6 +16,7 @@ import Layout from '../../components/Layout';
 import BadgeImage from '../../components/BadgeImage';
 import { fetchPedidoDetail } from '../../services/consultorService';
 import '../../css/Shared/GestaoPedidosDetalhe.css';
+import '../../css/TalentManager/GestaoPedidos_TM.css';
 
 const statusMeta = {
   pendente: {
