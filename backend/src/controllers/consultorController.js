@@ -383,11 +383,7 @@ export const getUserImage = async (req, res) => {
 
   try {
     const imageData = await utilizadorImagemModel.loadUserImage(accountId);
-    if (!imageData) {
-      res.status(404).json({ message: 'No image found for this user.' });
-      return;
-    }
-    res.status(200).json({ image: imageData });
+    res.status(200).json({ image: imageData || null });
   } catch (error) {
     res.status(500).json({ message: error?.message || 'Failed to fetch user image.' });
   }
