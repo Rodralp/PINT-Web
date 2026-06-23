@@ -84,6 +84,34 @@ const normalizeLevelTitle = (value) => {
   return withoutPathPrefix.replace(/^nivel\s+/i, '').trim();
 };
 
+const badgeLevelTemplates = [
+  {
+    levelKey: 'badge_level_junior',
+    points: 100,
+    badgeImage: '/badges/J%C3%BAnior.png',
+  },
+  {
+    levelKey: 'badge_level_intermediate',
+    points: 150,
+    badgeImage: '/badges/Interm%C3%A9dio.png',
+  },
+  {
+    levelKey: 'badge_level_senior',
+    points: 200,
+    badgeImage: '/badges/S%C3%A9nior.png',
+  },
+  {
+    levelKey: 'badge_level_specialist',
+    points: 250,
+    badgeImage: '/badges/Especialista.png',
+  },
+  {
+    levelKey: 'badge_level_knowledge_lead',
+    points: 300,
+    badgeImage: '/badges/L%C3%ADder%20de%20Conhecimento.png',
+  },
+];
+
 const resolveLevelTemplate = (levelName) => {
   const normalized = String(levelName || '').trim().toLowerCase();
 
