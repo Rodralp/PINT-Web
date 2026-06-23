@@ -481,7 +481,7 @@ const getManagerDashboardDataFromDb = async (role, accountId) => {
 
   const topConsultores = (Array.isArray(topConsultoresRows) ? topConsultoresRows : []).map((row, index) => ({
     id: Number(row.id),
-    name: row.name || 'Consultor',
+    name: row.name || '',
     email: row.email || '',
     iconKey: mapTopConsultorIconKey(index),
     rank: index + 1,
@@ -492,7 +492,7 @@ const getManagerDashboardDataFromDb = async (role, accountId) => {
 
   const recentActivities = (Array.isArray(activitiesRows) ? activitiesRows : []).map((row, index) => ({
     id: index + 1,
-    title: row.title || 'Atividade recente',
+    title: row.title || '',
     timeframe: buildTimeframeFromDate(row.activity_date),
     iconKey: row.icon_key || 'fileText',
   }));
@@ -659,7 +659,7 @@ export const dashboardModel = {
         const template = resolveBadgeTemplate(row.nivel, 0, row.tipo);
         const resolvedImage = resolveBadgeImage(row.imagem, template.badgeImage, isSpecial);
         return {
-          title: row.b_nome || 'Badge',
+          title: row.b_nome || '',
           subtitle: mapRequestStateToSubtitle(estado),
           accent: estado === 'aprovado' ? 'success' : estado === 'evidencias_insuficientes' ? 'amber' : 'warning',
           iconKey: mapRequestStateToIconKey(estado),
@@ -677,11 +677,11 @@ export const dashboardModel = {
 
       const newSpecialBadges = (Array.isArray(newSpecialBadgeRows) ? newSpecialBadgeRows : []).map((row) => ({
         nbadge: Number(row.nbadge),
-        name: row.b_nome || 'Badge Especial',
+        name: row.b_nome || '',
         description: row.b_descricao || '',
         points: Number(row.pontos) || 0,
         image: row.imagem || null,
-        tipo: row.tipo || 'Especial',
+        tipo: row.tipo || '',
         date: row.data_obtencao || null,
       }));
 

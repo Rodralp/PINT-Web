@@ -519,7 +519,7 @@ const loadBadgeRequirements = async (badgeId, transaction) => {
 
   return (rows || []).map((row) => ({
     id: `req-${Number(row.nreq)}`,
-    title: row.requisito || 'Requisito',
+    title: row.requisito || '',
     description: row.r_descricao || '',
     image: row.imagem || null,
   }));

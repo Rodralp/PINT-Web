@@ -1,12 +1,26 @@
 import { consultorService } from '../services/consultorService.js';
 import { adminBadgeModel } from '../models/adminBadgeModel.js';
 import { utilizadorImagemModel } from '../models/utilizadorImagemModel.js';
+import { sequelize } from '../config/database.js';
+import { QueryTypes } from 'sequelize';
 import fs from 'fs';
 import path from 'path';
 
 const parseAccountId = (value) => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+export const getBadgeTypes = async (_req, res) => {
+  try {
+    const rows = await sequelize.query(
+      `SELECT ntipo, tipo, pontos, level_key FROM tipo ORDER BY ntipo ASC`,
+      { type: QueryTypes.SELECT },
+    );
+    res.status(200).json(rows);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch badge types.', error: error.message });
+  }
 };
 
 export const getCatalogBadges = async (req, res) => {
