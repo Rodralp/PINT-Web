@@ -12,7 +12,8 @@ const parseAccountId = (value) => {
 export const getCatalogBadges = async (req, res) => {
   try {
     const includeExpired = req.query.includeExpired === 'true';
-    const data = await consultorService.getCatalogBadges(includeExpired);
+    const accountId = parseAccountId(req.query?.accountId);
+    const data = await consultorService.getCatalogBadges(includeExpired, accountId);
     res.status(200).json(data);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch catalog badges.', error: error.message });

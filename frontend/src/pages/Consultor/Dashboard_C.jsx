@@ -5,6 +5,7 @@ import Layout from '../../components/Layout';
 import SeeMore_PopUp from '../../components/SeeMore_PopUp';
 import BadgeCongratulationsModal from '../../components/BadgeCongratulationsModal';
 import BadgeImage from '../../components/BadgeImage';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import { fetchConsultorDashboard } from '../../services/dashboardService';
 import { fetchBadgeSuggestions } from '../../services/consultorService';
 import {
@@ -83,6 +84,7 @@ function DashboardC() {
   const [isSuggestionsModalOpen, setIsSuggestionsModalOpen] = useState(false);
   const [congratsBadge, setCongratsBadge] = useState(null);
   const [congratsQueue, setCongratsQueue] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const timelineData = useMemo(() => buildTimelineData(timelineValues, locale), [timelineValues, locale]);
   const [visibleTimelinePoints, setVisibleTimelinePoints] = useState(timelineData.length);
 
@@ -165,9 +167,12 @@ function DashboardC() {
             setCongratsBadge(unseenBadges[0]);
           }
         }
+
+        setIsLoading(false);
       } catch {
         if (isMounted) {
           setDashboardStatusMessage('');
+          setIsLoading(false);
         }
       }
     };
@@ -233,6 +238,14 @@ function DashboardC() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <Layout>
+        <LoadingSpinner fullPage message="A carregar dashboard..." />
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="dashboard-consultor-page">
@@ -293,7 +306,7 @@ function DashboardC() {
             {dashboardStats.map((item) => {
               const StatIcon = item.icon;
 
-              return (
+  return (
                 <section key={item.titleKey} className={`dashboard-card dashboard-stat-card tone-${item.tone}`}>
                   <div className="dashboard-card-title">{t(item.titleKey)}</div>
                 <div className="dashboard-stat-body">

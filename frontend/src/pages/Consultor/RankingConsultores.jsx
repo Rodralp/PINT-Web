@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import Pagination from '../../components/Pagination';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import { fetchRankingConsultores } from '../../services/consultorService';
 import '../../css/Consultor/Ranking_C.css';
 
@@ -19,6 +20,7 @@ const buildAvatarUrl = (consultant) =>
 
 function RankingConsultores() {
   const [consultants, setConsultants] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeServiceLine, setActiveServiceLine] = useState('all');
   const [sortBy, setSortBy] = useState('points_desc');
@@ -38,10 +40,12 @@ function RankingConsultores() {
         const data = await fetchRankingConsultores();
         if (isMounted && Array.isArray(data)) {
           setConsultants(data);
+          setIsLoading(false);
         }
       } catch {
         if (isMounted) {
           setConsultants([]);
+          setIsLoading(false);
         }
       }
     };
@@ -202,6 +206,14 @@ function RankingConsultores() {
     setShowSortDropdown(false);
     setPage(1);
   };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <LoadingSpinner fullPage message="A carregar ranking..." />
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

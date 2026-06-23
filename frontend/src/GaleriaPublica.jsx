@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import BadgeImage from './components/BadgeImage';
+import LoadingSpinner from './components/LoadingSpinner';
 import { fetchCatalogBadges, fetchRankingConsultores } from './services/consultorService';
 import './css/GaleriaPublica.css';
 import './css/Consultor/CatalogoBadges_C.css';
@@ -92,6 +93,7 @@ function GaleriaPublica() {
   });
   const [badges, setBadges] = useState([]);
   const [consultores, setConsultores] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [columnsCount, setColumnsCount] = useState(getColumnsCount);
   const [consultorPage, setConsultorPage] = useState(1);
@@ -126,6 +128,7 @@ function GaleriaPublica() {
 
         setBadges(normalizeBadges(badgesData));
         setConsultores(normalizeConsultores(consultoresData));
+        setIsLoading(false);
       } catch {
         if (!isMounted) {
           return;
@@ -133,6 +136,7 @@ function GaleriaPublica() {
 
         setBadges([]);
         setConsultores([]);
+        setIsLoading(false);
       }
     };
 
@@ -215,6 +219,15 @@ function GaleriaPublica() {
       handleOpenConsultorProfile(consultor);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="gp-root">
+        <Navbar />
+        <LoadingSpinner fullPage message="A carregar galeria..." />
+      </div>
+    );
+  }
 
   return (
     <div className="gp-root">

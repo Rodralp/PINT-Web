@@ -3,6 +3,7 @@ import { Clock3, Download, FileDown, Filter, Search, SlidersHorizontal, Trophy }
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
 import BadgeImage from '../../components/BadgeImage';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import Pagination from '../../components/Pagination';
 import { fetchCatalogBadges } from '../../services/consultorService';
 import '../../css/Consultor/Exportacoes_C.css';
@@ -478,6 +479,14 @@ function Exportacoes() {
       alert('Erro ao gerar certificado. Por favor, tente novamente.');
     }
   };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <LoadingSpinner fullPage message="A carregar exportações..." />
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

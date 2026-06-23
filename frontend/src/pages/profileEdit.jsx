@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Layout from '../components/Layout'
 import BadgeImage from '../components/BadgeImage'
+import LoadingSpinner from '../components/LoadingSpinner'
 import apiClient from '../services/apiClient'
 import { fetchMyBadges } from '../services/consultorService'
 import '../css/AdminGestor/BadgeAdmin.css'
@@ -57,6 +58,7 @@ export default function ProfileEdit() {
 
   const [statusMessage, setStatusMessage] = useState('')
   const [saving, setSaving] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     let isMounted = true
@@ -100,6 +102,10 @@ export default function ProfileEdit() {
           }
         } catch { /* no image */ }
       } catch { /* silent */ }
+
+      if (isMounted) {
+        setIsLoading(false)
+      }
     }
 
     loadData()
@@ -210,6 +216,14 @@ export default function ProfileEdit() {
 
     setSaving(false)
     navigate('/profile')
+  }
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <LoadingSpinner fullPage message="A carregar dados do perfil..." />
+      </Layout>
+    )
   }
 
   return (

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Trophy, Award, Users, FileCheck2, FileText, CheckCircle2 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import SeeMore_PopUp from '../../components/SeeMore_PopUp';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import { fetchTalentManagerDashboard } from '../../services/dashboardService';
 import '../../css/TalentManager/Dashboard_TM.css';
 
@@ -63,6 +64,7 @@ function DashboardTM() {
   const [topConsultores, setTopConsultores] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
   const [dashboardStatusMessage, setDashboardStatusMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const [isActivitiesModalOpen, setIsActivitiesModalOpen] = useState(false);
   const badgesTimelineData = useMemo(
     () => buildDailyTimelineData(badgesTimelineValues, 'day-month'),
@@ -104,10 +106,12 @@ function DashboardTM() {
         setRecentActivities(Array.isArray(data.recentActivities) ? data.recentActivities : []);
 
         setDashboardStatusMessage('');
+        setIsLoading(false);
       } catch (error) {
         console.error('❌ Error loading dashboard data:', error);
         if (isMounted) {
           setDashboardStatusMessage('');
+          setIsLoading(false);
         }
       }
     };
@@ -173,6 +177,14 @@ function DashboardTM() {
 
     return { xPercentage, yPercentage };
   });
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <LoadingSpinner fullPage message="A carregar dashboard..." />
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -319,21 +331,25 @@ function DashboardTM() {
                       <div key={consultor.id} className="consultor-card">
                         <div className="consultor-header">
                           <div className="consultor-avatar">
-                            {consultor.avatar ? (
-                              <img src={consultor.avatar} alt={consultor.name} className="consultor-avatar-img" />
-                            ) : (
-                              <Users size={24} className="icon-color" />
-                            )}
+                            <img
+                              src={consultor.avatar || `/avatars/default-avatar.svg`}
+                              alt={consultor.name}
+                              className="consultor-avatar-img"
+                              onError={(e) => { e.currentTarget.src = `/avatars/default-avatar.svg`; }}
+                            />
                           </div>
                           <div className="consultor-info">
                             <div className="consultor-name">
-                              <span className="consultor-rank">#{consultor.rank}</span>
                               {consultor.name}
                             </div>
                             <div className="consultor-email">{consultor.email}</div>
                           </div>
                         </div>
                         <div className="consultor-stats">
+                          <div className="stat">
+                            <span className="stat-label">Rank</span>
+                            <span className="stat-value">#{consultor.rank}</span>
+                          </div>
                           <div className="stat">
                             <span className="stat-label">Pontos</span>
                             <span className="stat-value">{consultor.points}</span>

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import Pagination from '../../components/Pagination';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import { fetchMyRequests } from '../../services/consultorService';
 import '../../css/Consultor/MeusPedidos.css';
 
@@ -62,6 +63,7 @@ function MeusPedidos() {
   }, []);
   const [activeFilters, setActiveFilters] = useState(filtersFromUrl);
   const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -71,10 +73,12 @@ function MeusPedidos() {
         const data = await fetchMyRequests();
         if (isMounted && Array.isArray(data)) {
           setAllRequests(data);
+          setIsLoading(false);
         }
       } catch {
         if (isMounted) {
           setAllRequests([]);
+          setIsLoading(false);
         }
       }
     };
@@ -128,6 +132,14 @@ function MeusPedidos() {
       state: { request },
     });
   };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <LoadingSpinner fullPage message="A carregar pedidos..." />
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import Pagination from '../../components/Pagination';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import { fetchRankingConsultoresSLL } from '../../services/serviceLineLeaderService';
 import '../../css/Consultor/Ranking_C.css';
 
@@ -127,6 +128,7 @@ const resolveServiceLineStats = (consultant, currentServiceLine) => {
 function RankingSLL() {
   const loginData = useMemo(() => getStoredLoginData(), []);
   const [consultants, setConsultants] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('points_desc');
   const [showSortDropdown, setShowSortDropdown] = useState(false);
@@ -147,10 +149,12 @@ function RankingSLL() {
         const data = await fetchRankingConsultoresSLL(accountId);
         if (isMounted && Array.isArray(data)) {
           setConsultants(data);
+          setIsLoading(false);
         }
       } catch {
         if (isMounted) {
           setConsultants([]);
+          setIsLoading(false);
         }
       }
     };
@@ -298,6 +302,14 @@ function RankingSLL() {
     setShowSortDropdown(false);
     setPage(1);
   };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <LoadingSpinner fullPage message="A carregar ranking..." />
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

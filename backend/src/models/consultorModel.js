@@ -2555,7 +2555,7 @@ const getPedidoDetail = async (accountId, pedidoId) => {
 };
 
 export const consultorModel = {
-  async getCatalogBadges(includeExpired = false) {
+  async getCatalogBadges(includeExpired = false, accountId = null) {
     try { await adminBadgeModel.checkAndExpireBadges(); } catch (e) { console.error('Error checking expired badges:', e); }
     const whereClause = includeExpired ? '' : 'WHERE b.validade IS NULL OR b.validade > CURRENT_DATE';
     const rawBadges = await sequelize.query(
@@ -2589,21 +2589,76 @@ export const consultorModel = {
       { type: QueryTypes.SELECT }
     );
 
+    let userObtainedMap = new Map();
+    let userRequestMap = new Map();
+
+    if (accountId) {
+      const utilizadorId = Number(accountId);
+      const [obtainedRows, requestRows] = await Promise.all([
+        sequelize.query(
+          `
+            SELECT cb.nbadge
+            FROM c_obtem_b AS cb
+            INNER JOIN badge AS b ON b.nbadge = cb.nbadge
+            WHERE cb.nutilizador = :utilizadorId
+              AND (b.validade IS NULL OR b.validade > CURRENT_DATE)
+          `,
+          { replacements: { utilizadorId }, type: QueryTypes.SELECT }
+        ),
+        sequelize.query(
+          `
+            SELECT DISTINCT ON (p.nbadge)
+              p.nbadge,
+              e.estado
+            FROM pedidos AS p
+            INNER JOIN estado AS e ON e.nestado = p.estado
+            INNER JOIN badge AS b ON b.nbadge = p.nbadge
+            WHERE p.nutilizador = :utilizadorId
+              AND (b.validade IS NULL OR b.validade > CURRENT_DATE)
+            ORDER BY p.nbadge, p.data_submissao DESC, p.npedido DESC
+          `,
+          { replacements: { utilizadorId }, type: QueryTypes.SELECT }
+        ),
+      ]);
+
+      for (const row of obtainedRows) {
+        userObtainedMap.set(Number(row.nbadge), true);
+      }
+      for (const row of requestRows) {
+        userRequestMap.set(Number(row.nbadge), row.estado);
+      }
+    }
+
     const items = rawBadges.map((row) => {
       const isSpecial = isSpecialTypeName(row.tipo);
       const template = resolveBadgeTemplate(row.nivel, 0, row.tipo);
       const resolvedPoints = Number(row.pontos) > 0 ? Number(row.pontos) : template.points;
       const name = row.b_nome || row.area || 'Badge';
+      const badgeId = Number(row.nbadge);
+
+      let stateId = 'candidatura_aberta';
+      let status = 'visualizar';
+
+      if (accountId) {
+        if (userObtainedMap.has(badgeId)) {
+          stateId = 'aprovado';
+          status = 'obtido';
+        } else if (userRequestMap.has(badgeId)) {
+          const estado = userRequestMap.get(badgeId);
+          stateId = mapPedidoEstadoToMyBadgeState(estado);
+          status = mapPedidoEstadoToMyRequestStatus(estado);
+        }
+      }
 
       return {
         id: `badge-${row.nbadge}`,
-        badgeDbId: Number(row.nbadge),
+        badgeDbId: badgeId,
         levelId: row.nnivel ? Number(row.nnivel) : null,
         area: row.area || row.b_nome || 'Diversos',
         name,
         description: row.b_descricao || '',
-        stateId: 'candidatura_aberta',
-        status: 'visualizar',
+        stateId,
+        status,
         levelKey: isSpecial ? null : template.levelKey,
         typeId: isSpecial ? 'special' : template.levelKey,
         isSpecial,
