@@ -293,44 +293,49 @@ function GaleriaPublica() {
                 </article>
               ))}
             </section>*/
-            <div className="catalog-grid">
-              {displayedBadges.map((item) => (
-                <article
-                  key={item.id}
-                  className="catalog-card"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleOpenBadgeDetails(item)}
-                  onKeyDown={(event) => handleCardKeyDown(event, item)}
-                >
-                  <div className="catalog-badge-frame">
-                    <BadgeImage
-                      className="catalog-badge-image"
-                      src={item.badgeImage}
-                      alt={item.levelKey ? t(item.levelKey) : item.levelLabel}
-                      frameSrc={item.badgeFrameImage}
-                      levelKey={item.levelKey}
-                      typeId={item.typeId}
-                      levelLabel={item.levelLabel}
-                    />
-                  </div>
-
-                  <div className="catalog-card-title">{item.name || item.area || 'Badge'}</div>
-                  <div className="catalog-card-level">{item.levelKey ? t(item.levelKey) : item.levelLabel}</div>
-
-                  <div className="catalog-card-meta">
-                    <div className="catalog-meta-row">
-                      <Trophy size={14} />
-                      <span>{item.points} {t('points')}</span>
+            <>
+              <div className="catalog-grid">
+                {displayedBadges.map((item) => (
+                  <article
+                    key={item.id}
+                    className="catalog-card"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleOpenBadgeDetails(item)}
+                    onKeyDown={(event) => handleCardKeyDown(event, item)}
+                  >
+                    <div className="catalog-badge-frame">
+                      <BadgeImage
+                        className="catalog-badge-image"
+                        src={item.badgeImage}
+                        alt={item.levelKey ? t(item.levelKey) : item.levelLabel}
+                        frameSrc={item.badgeFrameImage}
+                        levelKey={item.levelKey}
+                        typeId={item.typeId}
+                        levelLabel={item.levelLabel}
+                      />
                     </div>
-                    <div className="catalog-meta-row">
-                      <Clock3 size={14} />
-                      <span>{item.date}</span>
+
+                    <div className="catalog-card-title">{item.name || item.area || 'Badge'}</div>
+                    <div className="catalog-card-level">{item.levelKey ? t(item.levelKey) : item.levelLabel}</div>
+
+                    <div className="catalog-card-meta">
+                      <div className="catalog-meta-row">
+                        <Trophy size={14} />
+                        <span>{item.points} {t('points')}</span>
+                      </div>
+                      <div className="catalog-meta-row">
+                        <Clock3 size={14} />
+                        <span>{item.date}</span>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
-            </div>
+                  </article>
+                ))}
+              </div>
+              {displayedBadges.length === 0 && (
+                <div className="catalog-empty-state">Nenhum badge encontrado.</div>
+              )}
+            </>
           ) : (
             <>
               <section className="catalog-grid gp-consultor-grid" aria-label={t('public_gallery_consultores')}>
