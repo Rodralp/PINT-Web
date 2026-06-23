@@ -201,6 +201,7 @@ function Exportacoes() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('badges');
   const [badgeItems, setBadgeItems] = useState([]);
+  const [statusMessage, setStatusMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('todos');
@@ -240,9 +241,11 @@ function Exportacoes() {
         } else {
           setBadgeItems([]);
         }
+        setStatusMessage('');
       } catch {
         if (isMounted) {
           setBadgeItems([]);
+          setStatusMessage('Não foi possível carregar os badges. Tente novamente em alguns segundos.');
         }
       } finally {
         if (isMounted) {
@@ -494,6 +497,12 @@ function Exportacoes() {
         <header className="page-header exports-header">
           <h1>{t('exports_title')}</h1>
         </header>
+
+        {statusMessage && (
+          <div className="alert alert-warning py-2" role="status">
+            {statusMessage}
+          </div>
+        )}
 
         <div className="exports-tabs" role="tablist" aria-label={t('exports_title')}>
           <button

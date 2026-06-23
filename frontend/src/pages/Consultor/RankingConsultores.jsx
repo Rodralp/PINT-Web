@@ -21,6 +21,7 @@ const buildAvatarUrl = (consultant) =>
 function RankingConsultores() {
   const [consultants, setConsultants] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [statusMessage, setStatusMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeServiceLine, setActiveServiceLine] = useState('all');
   const [sortBy, setSortBy] = useState('points_desc');
@@ -40,11 +41,13 @@ function RankingConsultores() {
         const data = await fetchRankingConsultores();
         if (isMounted && Array.isArray(data)) {
           setConsultants(data);
+          setStatusMessage('');
           setIsLoading(false);
         }
       } catch {
         if (isMounted) {
           setConsultants([]);
+          setStatusMessage('Não foi possível carregar o ranking. Tente novamente em alguns segundos.');
           setIsLoading(false);
         }
       }
@@ -223,6 +226,11 @@ function RankingConsultores() {
         </header>
 
         <section className="shell">
+          {statusMessage && (
+            <div className="alert alert-warning py-2" role="status">
+              {statusMessage}
+            </div>
+          )}
           <div className="toolbar catalog-controls">
             <div className="search-wrap">
               <Search size={20} />

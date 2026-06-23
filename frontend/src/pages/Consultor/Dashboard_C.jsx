@@ -171,7 +171,7 @@ function DashboardC() {
         setIsLoading(false);
       } catch {
         if (isMounted) {
-          setDashboardStatusMessage('');
+          setDashboardStatusMessage('Não foi possível carregar o dashboard. Tente novamente em alguns segundos.');
           setIsLoading(false);
         }
       }

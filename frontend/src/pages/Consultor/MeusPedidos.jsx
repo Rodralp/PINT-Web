@@ -52,6 +52,7 @@ function MeusPedidos() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [allRequests, setAllRequests] = useState([]);
+  const [statusMessage, setStatusMessage] = useState('');
   const filtersFromUrl = useMemo(() => {
     const param = searchParams.get('filters');
     if (param) {
@@ -73,11 +74,13 @@ function MeusPedidos() {
         const data = await fetchMyRequests();
         if (isMounted && Array.isArray(data)) {
           setAllRequests(data);
+          setStatusMessage('');
           setIsLoading(false);
         }
       } catch {
         if (isMounted) {
           setAllRequests([]);
+          setStatusMessage('Não foi possível carregar os pedidos. Tente novamente em alguns segundos.');
           setIsLoading(false);
         }
       }
@@ -147,6 +150,12 @@ function MeusPedidos() {
         <header className="page-header orders-header">
           <h1>Meus Pedidos</h1>
         </header>
+
+        {statusMessage && (
+          <div className="alert alert-warning py-2" role="status">
+            {statusMessage}
+          </div>
+        )}
 
         <div className="status-grid orders-status-grid">
           <article className="status-card default submitted">

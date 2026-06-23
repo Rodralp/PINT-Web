@@ -157,7 +157,7 @@ function Profile() {
         setStatusMessage('');
       } catch {
         if (isMounted) {
-          setStatusMessage('');
+          setStatusMessage('Não foi possível carregar o perfil. Tente novamente em alguns segundos.');
         }
       }
 

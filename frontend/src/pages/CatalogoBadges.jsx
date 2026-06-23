@@ -154,7 +154,7 @@ function CatalogoBadges() {
       } catch {
         if (isMounted) {
           setBadgeItems([]);
-          setStatusMessage('');
+          setStatusMessage('Não foi possível carregar os badges. Tente novamente em alguns segundos.');
           setIsLoading(false);
         }
       }

@@ -129,6 +129,7 @@ function RankingSLL() {
   const loginData = useMemo(() => getStoredLoginData(), []);
   const [consultants, setConsultants] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [statusMessage, setStatusMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('points_desc');
   const [showSortDropdown, setShowSortDropdown] = useState(false);
@@ -149,11 +150,13 @@ function RankingSLL() {
         const data = await fetchRankingConsultoresSLL(accountId);
         if (isMounted && Array.isArray(data)) {
           setConsultants(data);
+          setStatusMessage('');
           setIsLoading(false);
         }
       } catch {
         if (isMounted) {
           setConsultants([]);
+          setStatusMessage('Não foi possível carregar o ranking. Tente novamente em alguns segundos.');
           setIsLoading(false);
         }
       }
@@ -319,6 +322,11 @@ function RankingSLL() {
         </header>
 
         <section className="shell">
+          {statusMessage && (
+            <div className="alert alert-warning py-2" role="status">
+              {statusMessage}
+            </div>
+          )}
           <div className="toolbar catalog-controls">
             <div className="search-wrap">
               <Search size={20} />

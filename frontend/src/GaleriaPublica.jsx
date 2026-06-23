@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import { Clock3, Search, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Clock3, Search, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -76,14 +76,6 @@ const normalizeConsultores = (items) => {
   }));
 };
 
-function getColumnsCount() {
-  const width = window.innerWidth;
-  if (width > 1400) return 5;
-  if (width > 1200) return 4;
-  if (width > 900) return 3;
-  return 2;
-}
-
 function GaleriaPublica() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -95,22 +87,7 @@ function GaleriaPublica() {
   const [consultores, setConsultores] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [columnsCount, setColumnsCount] = useState(getColumnsCount);
-  const [consultorPage, setConsultorPage] = useState(1);
 
-  useEffect(() => {
-    const handleResize = () => {
-      setColumnsCount(getColumnsCount());
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
-    setConsultorPage(1);
-  }, [searchTerm]);
 
   useEffect(() => {
     let isMounted = true;
@@ -181,12 +158,6 @@ function GaleriaPublica() {
     ));
   }, [sortedConsultores, normalizedSearch]);
 
-  const consultorItemsPerPage = columnsCount * 2;
-  const consultorTotalPages = Math.max(1, Math.ceil(filteredConsultores.length / consultorItemsPerPage));
-  const pagedConsultores = useMemo(() => {
-    const start = (consultorPage - 1) * consultorItemsPerPage;
-    return filteredConsultores.slice(start, start + consultorItemsPerPage);
-  }, [filteredConsultores, consultorPage, consultorItemsPerPage]);
 
   const displayedBadges = filteredBadges;
 
@@ -339,7 +310,7 @@ function GaleriaPublica() {
           ) : (
             <>
               <section className="catalog-grid gp-consultor-grid" aria-label={t('public_gallery_consultores')}>
-                {pagedConsultores.map((consultor) => (
+                {filteredConsultores.map((consultor) => (
                   <article
                     key={consultor.id}
                     className="catalog-card gp-consultor-card"
@@ -371,19 +342,6 @@ function GaleriaPublica() {
               {filteredConsultores.length === 0 && (
                 <div className="catalog-empty-state">Nenhum consultor encontrado.</div>
               )}
-              <div className="catalog-pagination" role="navigation" aria-label={t('pagination')}>
-                <button type="button" className="catalog-page-btn ghost" onClick={() => setConsultorPage((p) => Math.max(1, p - 1))} disabled={consultorPage === 1}>
-                  <ChevronLeft size={16} />
-                </button>
-                {Array.from({ length: consultorTotalPages }, (_, i) => i + 1).map((pn) => (
-                  <button key={pn} type="button" className={`catalog-page-btn ${pn === consultorPage ? 'active' : ''}`} onClick={() => setConsultorPage(pn)}>
-                    {pn}
-                  </button>
-                ))}
-                <button type="button" className="catalog-page-btn ghost" onClick={() => setConsultorPage((p) => Math.min(consultorTotalPages, p + 1))} disabled={consultorPage === consultorTotalPages}>
-                  <ChevronRight size={16} />
-                </button>
-              </div>
             </>
           )}
         </section>
