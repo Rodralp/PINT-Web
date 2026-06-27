@@ -1,6 +1,5 @@
 import app from './app.js';
-import { connectToDatabase, syncDatabase, setupExtraTables } from './config/database.js';
-import { applySchema } from './config/schema.js';
+import { connectToDatabase, syncDatabase } from './config/database.js';
 import { seedDatabase } from './config/seedData.js';
 
 const PORT = Number(globalThis.process?.env?.PORT) || 4000;
@@ -11,8 +10,7 @@ const SIDE_EFFECT_INTERVAL_MS = 60_000;
 const startServer = async () => {
   try {
     await connectToDatabase();
-    await applySchema();
-    await setupExtraTables();
+    await import('./models/sql/associations.js');
     await syncDatabase();
     await seedDatabase();
 
