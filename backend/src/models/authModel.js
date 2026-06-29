@@ -1,8 +1,11 @@
-import { QueryTypes } from 'sequelize';
+import { QueryTypes, Op } from 'sequelize';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { sequelize } from '../config/database.js';
 import { Account } from './sql/Account.js';
+import { Preferencia } from './sql/Preferencia.js';
+import { ServiceLine } from './sql/ServiceLine.js';
+import { SllLeaderSl } from './sql/SllLeaderSl.js';
 import { communicationModel } from './communicationModel.js';
 import { sendEmail } from '../services/emailService.js';
 import { emailTemplates } from '../services/emailTemplates.js';
@@ -80,34 +83,19 @@ const syncServiceLineAssignments = async (transaction, accountId, roles, service
       .filter((value) => Number.isInteger(value) && value > 0),
   )];
 
-  await sequelize.query(
-    `
-      DELETE FROM sll_leader_sl
-      WHERE nutilizador = :accountId
-    `,
-    {
-      replacements: { accountId: Number(accountId) },
-      transaction,
-    },
-  );
+  await SllLeaderSl.destroy({
+    where: { nutilizador: Number(accountId) },
+    transaction,
+  });
 
   if (!roles.includes('service-line-leader') || normalizedServiceLineIds.length === 0) {
     return;
   }
 
   for (const serviceLineId of normalizedServiceLineIds) {
-    await sequelize.query(
-      `
-        INSERT INTO sll_leader_sl (nutilizador, nsline)
-        VALUES (:accountId, :serviceLineId)
-      `,
-      {
-        replacements: {
-          accountId: Number(accountId),
-          serviceLineId,
-        },
-        transaction,
-      },
+    await SllLeaderSl.create(
+      { nutilizador: Number(accountId), nsline: serviceLineId },
+      { transaction },
     );
   }
 };
@@ -148,19 +136,11 @@ const getHasPreferences = async (accountId) => {
     return false;
   }
 
-  const [row] = await sequelize.query(
-    `
-      SELECT COUNT(*)::int AS total
-      FROM preferencias
-      WHERE nutilizador = :accountId
-    `,
-    {
-      replacements: { accountId: Number(accountId) },
-      type: QueryTypes.SELECT,
-    },
-  );
+  const total = await Preferencia.count({
+    where: { nutilizador: Number(accountId) },
+  });
 
-  return Number(row?.total) > 0;
+  return total > 0;
 };
 
 export const authModel = {
@@ -307,18 +287,14 @@ export const authModel = {
   },
 
   async listServiceLines() {
-    const rows = await sequelize.query(
-      `
-        SELECT nsline AS id, sline AS name
-        FROM service_line
-        ORDER BY sline ASC
-      `,
-      { type: QueryTypes.SELECT },
-    );
+    const rows = await ServiceLine.findAll({
+      attributes: ['nsline', 'sline'],
+      order: [['sline', 'ASC']],
+    });
 
     return rows.map((row) => ({
-      id: Number(row.id),
-      name: row.name,
+      id: Number(row.nsline),
+      name: row.sline,
     }));
   },
 
@@ -404,22 +380,13 @@ export const authModel = {
 
     // Validação: uma service line só pode ter um SLL
     if (normalizedRoles.includes('service-line-leader') && normalizedServiceLineIds.length === 1) {
-      const existingSll = await sequelize.query(
-        `
-          SELECT s.nutilizador, u.nome
-          FROM sll_leader_sl s
-          JOIN utilizador u ON u.nutilizador = s.nutilizador
-          WHERE s.nsline = :serviceLineId
-          LIMIT 1
-        `,
-        {
-          replacements: { serviceLineId: normalizedServiceLineIds[0] },
-          type: QueryTypes.SELECT,
-        },
-      );
+      const existingSll = await SllLeaderSl.findOne({
+        where: { nsline: normalizedServiceLineIds[0] },
+      });
 
-      if (existingSll && existingSll.length > 0) {
-        const error = new Error(`Esta Service Line já tem um Service Line Leader: ${existingSll[0].nome}`);
+      if (existingSll) {
+        const leader = await Account.findByPk(existingSll.nutilizador, { attributes: ['nome'] });
+        const error = new Error(`Esta Service Line já tem um Service Line Leader: ${leader?.nome || 'Desconhecido'}`);
         error.statusCode = 409;
         throw error;
       }
@@ -508,23 +475,16 @@ export const authModel = {
 
     // Validação: uma service line só pode ter um SLL
     if (normalizedRoles.includes('service-line-leader') && normalizedServiceLineIds.length === 1) {
-      const existingSll = await sequelize.query(
-        `
-          SELECT s.nutilizador, u.nome
-          FROM sll_leader_sl s
-          JOIN utilizador u ON u.nutilizador = s.nutilizador
-          WHERE s.nsline = :serviceLineId
-            AND s.nutilizador <> :accountId
-          LIMIT 1
-        `,
-        {
-          replacements: { serviceLineId: normalizedServiceLineIds[0], accountId: parsedAccountId },
-          type: QueryTypes.SELECT,
+      const existingSll = await SllLeaderSl.findOne({
+        where: {
+          nsline: normalizedServiceLineIds[0],
+          nutilizador: { [Op.ne]: parsedAccountId },
         },
-      );
+      });
 
-      if (existingSll && existingSll.length > 0) {
-        const error = new Error(`Esta Service Line já tem um Service Line Leader: ${existingSll[0].nome}`);
+      if (existingSll) {
+        const leader = await Account.findByPk(existingSll.nutilizador, { attributes: ['nome'] });
+        const error = new Error(`Esta Service Line já tem um Service Line Leader: ${leader?.nome || 'Desconhecido'}`);
         error.statusCode = 409;
         throw error;
       }
@@ -624,23 +584,17 @@ export const authModel = {
     if (normalizedDecision === 'approve') {
       // Approve: set status to 'ativo'
       // Fetch user info before approval for email
-      const [userInfo] = await sequelize.query(
-        'SELECT nome, email FROM utilizador WHERE nutilizador = :accountId LIMIT 1',
-        {
-          replacements: { accountId: Number(accountId) },
-          type: QueryTypes.SELECT,
-        }
-      );
+      const userAccount = await Account.findByPk(Number(accountId), { attributes: ['nome', 'email'] });
 
       const result = this.updateAdminUserStatus(accountId, { status: 'ativo' });
 
       // Send approval email
-      if (userInfo?.email) {
+      if (userAccount?.email) {
         try {
           await sendEmail({
-            to: userInfo.email,
+            to: userAccount.email,
             subject: 'Conta Aprovada - PINT',
-            html: emailTemplates.registrationApproved({ userName: userInfo.nome || 'Utilizador' }),
+            html: emailTemplates.registrationApproved({ userName: userAccount.nome || 'Utilizador' }),
           });
         } catch (emailError) {
           console.error('Failed to send registration approval email.', emailError);
@@ -650,15 +604,11 @@ export const authModel = {
       return result;
     } else {
       // Reject: delete the user from database
-      const result = await sequelize.query(
-        'DELETE FROM utilizador WHERE nutilizador = :accountId',
-        {
-          replacements: { accountId: Number(accountId) },
-          type: QueryTypes.DELETE,
-        }
-      );
-      
-      if (result[0] === 0) {
+      const deleted = await Account.destroy({
+        where: { nutilizador: Number(accountId) },
+      });
+
+      if (!deleted) {
         const error = new Error('User not found.');
         error.statusCode = 404;
         throw error;
