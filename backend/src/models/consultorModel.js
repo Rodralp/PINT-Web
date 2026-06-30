@@ -11,6 +11,8 @@ import { Evidencia } from './sql/Evidencia.js';
 import { Motivo } from './sql/Motivo.js';
 import { Tipo } from './sql/Tipo.js';
 import { Vitrine } from './sql/Vitrine.js';
+import { Nivel } from './sql/Nivel.js';
+import { NivelContemBadge } from './sql/NivelContemBadge.js';
 import { sequelize } from '../config/database.js';
 import { adminBadgeModel } from './adminBadgeModel.js';
 const { loadBadgeImagesBatch } = adminBadgeModel;
@@ -2674,11 +2676,9 @@ export const consultorModel = {
       model: Badge,
       as: 'badge',
       attributes: ['b_nome', 'b_descricao', 'pontos', 'imagem', 'validade'],
-      include: [{
-        model: Tipo,
-        as: 'tipo',
-        attributes: ['tipo'],
-      }],
+      include: [
+        { model: Tipo, as: 'tipo', attributes: ['tipo'] },
+      ],
     }],
     attributes: ['nbadge', 'ordem'],
     order: [['ordem', 'ASC'], ['nbadge', 'ASC']],
@@ -2686,20 +2686,44 @@ export const consultorModel = {
     nest: true,
   });
 
-    const badgeIds = rows.map((r) => Number(r.nbadge)).filter(Boolean);
-    const imageMap = await loadBadgeImagesBatch(badgeIds);
+    const badgeIds = [...new Set(rows.map((r) => Number(r.nbadge)).filter(Boolean))];
+    const [imageMap, nivelMap] = await Promise.all([
+      loadBadgeImagesBatch(badgeIds),
+      badgeIds.length > 0
+        ? NivelContemBadge.findAll({
+            where: { nbadge: badgeIds },
+            attributes: ['nbadge', 'nnivel'],
+            raw: true,
+          }).then(async (links) => {
+            const nnivels = [...new Set(links.map((l) => Number(l.nnivel)).filter(Boolean))];
+            if (nnivels.length === 0) return {};
+            const niveis = await Nivel.findAll({ where: { nnivel: nnivels }, attributes: ['nnivel', 'nivel'], raw: true });
+            const lookup = {};
+            for (const n of niveis) lookup[n.nnivel] = n.nivel;
+            const map = {};
+            for (const link of links) {
+              if (!map[link.nbadge]) map[link.nbadge] = lookup[link.nnivel] || null;
+            }
+            return map;
+          }).catch(() => ({}))
+        : Promise.resolve({}),
+    ]);
 
     return rows.map((row) => {
       const nbadge = Number(row.nbadge);
+      const nivelName = nivelMap[nbadge] || null;
+      const typeName = row.badge?.tipo?.tipo || null;
+      const isSpecial = isSpecialTypeName(typeName);
+      const template = resolveBadgeTemplate(nivelName, 0, typeName);
       return {
         nbadge,
         ordem: Number(row.ordem) || 0,
         b_nome: row.badge?.b_nome,
         pontos: Number(row.badge?.pontos) || 0,
-        imagem: imageMap[nbadge] || row.badge?.imagem || null,
+        imagem: resolveBadgeImage(imageMap[nbadge] || row.badge?.imagem, template.badgeImage, isSpecial),
         validade: row.badge?.validade || null,
-        tipo: row.badge?.tipo?.tipo || null,
-        nivel: null,
+        tipo: typeName,
+        nivel: nivelName,
       };
     });
   },

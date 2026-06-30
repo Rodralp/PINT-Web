@@ -205,7 +205,7 @@ function Profile() {
               id: `vitrine-${v.nbadge}`,
               badgeDbId: v.nbadge,
               name: v.b_nome || 'Badge',
-              badgeImage: v.imagem || '/badges/default.png',
+              badgeImage: v.imagem,
               points: v.pontos || 0,
               isSpecial,
               levelKey: resolvedLevelId || undefined,
