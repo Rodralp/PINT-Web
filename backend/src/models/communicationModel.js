@@ -1,7 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { QueryTypes } from 'sequelize';
+import { QueryTypes, Op } from 'sequelize';
 import { sequelize } from '../config/database.js';
+import { Account } from './sql/Account.js';
+import { ServiceLine } from './sql/ServiceLine.js';
+import { BadgePertenceSL } from './sql/BadgePertenceSL.js';
+import { Log } from './sql/Log.js';
+import { Notificacao } from './sql/Notificacao.js';
+import { FicheiroLog } from './sql/FicheiroLog.js';
+import { ConfigGeral } from './sql/ConfigGeral.js';
+import { ConfigNotificacao } from './sql/ConfigNotificacao.js';
+import { ConfigNotificacaoUtilizador } from './sql/ConfigNotificacaoUtilizador.js';
 
 const uploadsDir = path.resolve(globalThis.process?.cwd?.() || '.', 'uploads');
 const allowedLogTypes = new Set(['mensagem', 'aviso', 'importante', 'evento']);
@@ -169,22 +178,14 @@ const parseGeneralBoolean = (value, fallback) => {
 
 const ensureUserNotificationDefaults = async (transaction) => {
   for (const item of userNotificationDefaults) {
-    await sequelize.query(
-      `
-        INSERT INTO config_geral (chave, valor, opcoes)
-        VALUES (:key, :value, ARRAY[:options]::TEXT[])
-        ON CONFLICT (chave) DO NOTHING
-      `,
-      {
-        replacements: {
-          key: item.generalKey,
-          value: toGeneralBooleanValue(item.fallback),
-          options: userNotificationOptions,
-        },
-        type: QueryTypes.INSERT,
-        transaction,
+    await ConfigGeral.findOrCreate({
+      where: { chave: item.generalKey },
+      defaults: {
+        chave: item.generalKey,
+        valor: toGeneralBooleanValue(item.fallback),
       },
-    );
+      transaction,
+    });
   }
 };
 
@@ -192,18 +193,12 @@ const loadUserNotificationDefaults = async (transaction) => {
   await ensureUserNotificationDefaults(transaction);
 
   const keys = userNotificationDefaults.map((item) => item.generalKey);
-  const rows = await sequelize.query(
-    `
-      SELECT chave, valor
-      FROM config_geral
-      WHERE chave IN (:keys)
-    `,
-    {
-      replacements: { keys },
-      type: QueryTypes.SELECT,
-      transaction,
-    },
-  );
+  const rows = await ConfigGeral.findAll({
+    where: { chave: { [Op.in]: keys } },
+    attributes: ['chave', 'valor'],
+    transaction,
+    raw: true,
+  });
 
   const valueByKey = new Map((rows || []).map((row) => [row.chave, row.valor]));
   const defaults = {};
@@ -216,10 +211,11 @@ const loadUserNotificationDefaults = async (transaction) => {
 };
 
 const ensureEventNotificationDefaults = async (transaction) => {
-  const rows = await sequelize.query(
-    'SELECT evento FROM config_notificacao',
-    { type: QueryTypes.SELECT, transaction },
-  );
+  const rows = await ConfigNotificacao.findAll({
+    attributes: ['evento'],
+    transaction,
+    raw: true,
+  });
   const existingEvents = new Set(
     (rows || []).map((row) => normalizeEventKey(row?.evento)),
   );
@@ -230,54 +226,32 @@ const ensureEventNotificationDefaults = async (transaction) => {
 
   for (const existingEvent of existingEvents) {
     if (!validEvents.has(existingEvent)) {
-      await sequelize.query(
-        'DELETE FROM config_notificacao WHERE LOWER(evento) = :evento',
-        { replacements: { evento: existingEvent }, type: QueryTypes.DELETE, transaction },
-      );
+      await ConfigNotificacao.destroy({
+        where: sequelize.where(sequelize.fn('LOWER', sequelize.col('evento')), existingEvent),
+        transaction,
+      });
     }
   }
 
   for (const item of eventNotificationDefaults) {
     const eventKey = normalizeEventKey(item.event);
     if (existingEvents.has(eventKey)) {
-      await sequelize.query(
-        `UPDATE config_notificacao SET admin = :admin, sll = :sll, tl = :tl, consultor = :consultor, email = :email, web_app = :webApp WHERE LOWER(evento) = :eventKey`,
-        {
-          replacements: {
-            admin: item.admin,
-            sll: item.sll,
-            tl: item.tl,
-            consultor: item.consultor,
-            email: item.email,
-            webApp: item.webApp,
-            eventKey,
-          },
-          type: QueryTypes.UPDATE,
-          transaction,
-        },
+      await ConfigNotificacao.update(
+        { admin: item.admin, sll: item.sll, tl: item.tl, consultor: item.consultor, email: item.email, web_app: item.webApp },
+        { where: sequelize.where(sequelize.fn('LOWER', sequelize.col('evento')), eventKey), transaction },
       );
       continue;
     }
 
-    await sequelize.query(
-      `
-        INSERT INTO config_notificacao (evento, admin, sll, tl, consultor, email, web_app)
-        VALUES (:event, :admin, :sll, :tl, :consultor, :email, :webApp)
-      `,
-      {
-        replacements: {
-          event: item.event,
-          admin: item.admin,
-          sll: item.sll,
-          tl: item.tl,
-          consultor: item.consultor,
-          email: item.email,
-          webApp: item.webApp,
-        },
-        type: QueryTypes.INSERT,
-        transaction,
-      },
-    );
+    await ConfigNotificacao.create({
+      evento: item.event,
+      admin: item.admin,
+      sll: item.sll,
+      tl: item.tl,
+      consultor: item.consultor,
+      email: item.email,
+      web_app: item.webApp,
+    }, { transaction });
 
     existingEvents.add(eventKey);
   }
@@ -286,19 +260,12 @@ const ensureEventNotificationDefaults = async (transaction) => {
 const fetchEventNotificationConfig = async (eventKey, transaction) => {
   await ensureEventNotificationDefaults(transaction);
 
-  const [row] = await sequelize.query(
-    `
-      SELECT evento, admin, sll, tl, consultor, email, web_app
-      FROM config_notificacao
-      WHERE LOWER(evento) = LOWER(:eventKey)
-      LIMIT 1
-    `,
-    {
-      replacements: { eventKey: String(eventKey || '').trim() },
-      type: QueryTypes.SELECT,
-      transaction,
-    },
-  );
+  const row = await ConfigNotificacao.findOne({
+    where: sequelize.where(sequelize.fn('LOWER', sequelize.col('evento')), String(eventKey || '').trim().toLowerCase()),
+    attributes: ['evento', 'admin', 'sll', 'tl', 'consultor', 'email', 'web_app'],
+    transaction,
+    raw: true,
+  });
 
   if (!row) {
     return null;
@@ -321,19 +288,15 @@ const listActiveUserIdsByRole = async (roleKey, transaction) => {
     return [];
   }
 
-  const rows = await sequelize.query(
-    `
-      SELECT nutilizador AS id
-      FROM utilizador
-      WHERE LOWER(status) = 'ativo'
-        AND LOWER(permissoes) LIKE :rolePattern
-    `,
-    {
-      replacements: { rolePattern: `%${normalizedRole}%` },
-      type: QueryTypes.SELECT,
-      transaction,
+  const rows = await Account.findAll({
+    where: {
+      status: 'ativo',
+      permissoes: { [Op.iLike]: `%${normalizedRole}%` },
     },
-  );
+    attributes: ['id'],
+    transaction,
+    raw: true,
+  });
 
   return rows.map((row) => Number(row.id)).filter((id) => Number.isInteger(id) && id > 0);
 };
@@ -344,19 +307,15 @@ const listActiveUserIdsByIds = async (ids, transaction) => {
     return [];
   }
 
-  const rows = await sequelize.query(
-    `
-      SELECT nutilizador AS id
-      FROM utilizador
-      WHERE nutilizador IN (:ids)
-        AND LOWER(status) = 'ativo'
-    `,
-    {
-      replacements: { ids: normalized },
-      type: QueryTypes.SELECT,
-      transaction,
+  const rows = await Account.findAll({
+    where: {
+      id: { [Op.in]: normalized },
+      status: 'ativo',
     },
-  );
+    attributes: ['id'],
+    transaction,
+    raw: true,
+  });
 
   return rows.map((row) => Number(row.id)).filter((id) => Number.isInteger(id) && id > 0);
 };
@@ -395,19 +354,15 @@ const filterRecipientsByInAppPreference = async (recipientIds, transaction) => {
   const defaults = await loadUserNotificationDefaults(transaction);
   const defaultInApp = Boolean(defaults.inAppAlerts);
 
-  const rows = await sequelize.query(
-    `
-      SELECT nutilizador, valor
-      FROM config_notificacao_utilizador
-      WHERE chave = 'inAppAlerts'
-        AND nutilizador IN (:ids)
-    `,
-    {
-      replacements: { ids: normalizedIds },
-      type: QueryTypes.SELECT,
-      transaction,
+  const rows = await ConfigNotificacaoUtilizador.findAll({
+    where: {
+      chave: 'inAppAlerts',
+      nutilizador: { [Op.in]: normalizedIds },
     },
-  );
+    attributes: ['nutilizador', 'valor'],
+    transaction,
+    raw: true,
+  });
 
   const overrideById = new Map(
     rows.map((row) => [Number(row.nutilizador), Boolean(row.valor)]),
@@ -430,42 +385,26 @@ const insertLogEntry = async ({ actorId, title, message, type, priority, transac
   const trimmedMessage = String(message || '').trim();
   const summary = buildSummary(trimmedMessage);
 
-  const [row] = await sequelize.query(
-    `
-      INSERT INTO logs (nutilizador, data_log, tipo_log, titulo, mensagem, resumo, prioridade)
-      VALUES (:actorId, CURRENT_DATE, :type, :title, :message, :summary, :priority)
-      RETURNING nlog
-    `,
-    {
-      replacements: {
-        actorId: parsedActorId,
-        type: normalizeLogType(type),
-        title: trimmedTitle,
-        message: trimmedMessage,
-        summary,
-        priority: normalizePriority(priority),
-      },
-      type: QueryTypes.SELECT,
-      transaction,
-    },
-  );
+  const log = await Log.create({
+    nutilizador: parsedActorId,
+    data_log: new Date(),
+    tipo_log: normalizeLogType(type),
+    titulo: trimmedTitle,
+    mensagem: trimmedMessage,
+    resumo: summary,
+    prioridade: normalizePriority(priority),
+  }, { transaction });
 
-  return row?.nlog ? Number(row.nlog) : null;
+  return log?.nlog ? Number(log.nlog) : null;
 };
 
 const listUserNotificationOverrides = async (accountId, transaction) => {
-  const rows = await sequelize.query(
-    `
-      SELECT chave, valor
-      FROM config_notificacao_utilizador
-      WHERE nutilizador = :accountId
-    `,
-    {
-      replacements: { accountId: Number(accountId) },
-      type: QueryTypes.SELECT,
-      transaction,
-    },
-  );
+  const rows = await ConfigNotificacaoUtilizador.findAll({
+    where: { nutilizador: Number(accountId) },
+    attributes: ['chave', 'valor'],
+    transaction,
+    raw: true,
+  });
 
   const overrides = {};
   (rows || []).forEach((row) => {
@@ -540,20 +479,17 @@ export const communicationModel = {
       };
     });
 
-    const serviceLineRows = await sequelize.query(
-      `
-        SELECT nsline AS id, sline AS name
-        FROM service_line
-        ORDER BY sline ASC
-      `,
-      { type: QueryTypes.SELECT },
-    );
+    const serviceLineRows = await ServiceLine.findAll({
+      attributes: ['nsline', 'sline'],
+      order: [['sline', 'ASC']],
+      raw: true,
+    });
 
     return {
       recipients,
       serviceLines: serviceLineRows.map((row) => ({
-        id: Number(row.id),
-        name: row.name,
+        id: Number(row.nsline),
+        name: row.sline,
       })),
     };
   },
@@ -587,25 +523,15 @@ export const communicationModel = {
     const transaction = await sequelize.transaction();
 
     try {
-      const [createdLog] = await sequelize.query(
-        `
-          INSERT INTO logs (nutilizador, data_log, tipo_log, titulo, mensagem, resumo, prioridade)
-          VALUES (:accountId, CURRENT_DATE, :type, :title, :message, :summary, :priority)
-          RETURNING nlog, data_log
-        `,
-        {
-          replacements: {
-            accountId: parsedAccountId,
-            type: normalizedType,
-            title: trimmedTitle,
-            message: trimmedMessage,
-            summary,
-            priority: normalizedPriority,
-          },
-          type: QueryTypes.SELECT,
-          transaction,
-        },
-      );
+      const createdLog = await Log.create({
+        nutilizador: parsedAccountId,
+        data_log: new Date(),
+        tipo_log: normalizedType,
+        titulo: trimmedTitle,
+        mensagem: trimmedMessage,
+        resumo: summary,
+        prioridade: normalizedPriority,
+      }, { transaction });
 
       const logId = Number(createdLog?.nlog);
       if (!logId) {
@@ -615,20 +541,11 @@ export const communicationModel = {
       }
 
       for (const recipientId of normalizedRecipients) {
-        await sequelize.query(
-          `
-            INSERT INTO notificacao (nutilizador, nlog, lida)
-            VALUES (:recipientId, :logId, FALSE)
-          `,
-          {
-            replacements: {
-              recipientId,
-              logId,
-            },
-            type: QueryTypes.INSERT,
-            transaction,
-          },
-        );
+        await Notificacao.create({
+          nutilizador: recipientId,
+          nlog: logId,
+          lida: false,
+        }, { transaction });
       }
 
       const safeFiles = Array.isArray(files) ? files : [];
@@ -639,24 +556,14 @@ export const communicationModel = {
           continue;
         }
 
-        await sequelize.query(
-          `
-            INSERT INTO ficheiro_log (nlog, nome_original, nome_armazenado, tipo, tamanho, caminho)
-            VALUES (:logId, :originalName, :storedName, :mimeType, :fileSize, :filePath)
-          `,
-          {
-            replacements: {
-              logId,
-              originalName,
-              storedName,
-              mimeType: String(file?.mimetype || ''),
-              fileSize: Number(file?.size) || 0,
-              filePath: `uploads/${storedName}`,
-            },
-            type: QueryTypes.INSERT,
-            transaction,
-          },
-        );
+        await FicheiroLog.create({
+          nlog: logId,
+          nome_original: originalName,
+          nome_armazenado: storedName,
+          tipo: String(file?.mimetype || ''),
+          tamanho: Number(file?.size) || 0,
+          caminho: `uploads/${storedName}`,
+        }, { transaction });
       }
 
       await transaction.commit();
@@ -749,20 +656,11 @@ export const communicationModel = {
 
       const inAppRecipients = await filterRecipientsByInAppPreference(recipients, transaction);
       for (const recipientId of inAppRecipients) {
-        await sequelize.query(
-          `
-            INSERT INTO notificacao (nutilizador, nlog, lida)
-            VALUES (:recipientId, :logId, FALSE)
-          `,
-          {
-            replacements: {
-              recipientId,
-              logId,
-            },
-            type: QueryTypes.INSERT,
-            transaction,
-          },
-        );
+        await Notificacao.create({
+          nutilizador: recipientId,
+          nlog: logId,
+          lida: false,
+        }, { transaction });
       }
 
       return { logId, recipients: inAppRecipients };
@@ -777,54 +675,35 @@ export const communicationModel = {
       throw error;
     }
 
-    const rows = await sequelize.query(
-      `
-        SELECT
-          l.nlog AS id,
-          l.titulo,
-          l.mensagem,
-          l.resumo,
-          l.tipo_log,
-          l.prioridade,
-          l.data_log,
-          u.nome AS author_name,
-          u.email AS author_email
-        FROM notificacao n
-        JOIN logs l ON l.nlog = n.nlog
-        LEFT JOIN utilizador u ON u.nutilizador = l.nutilizador
-        WHERE n.nutilizador = :accountId
-          AND LOWER(l.tipo_log) IN ('mensagem', 'aviso', 'importante')
-        ORDER BY l.data_log DESC, l.nlog DESC
-      `,
-      {
-        replacements: { accountId: parsedAccountId },
-        type: QueryTypes.SELECT,
-      },
-    );
+    const notificacoes = await Notificacao.findAll({
+      where: { nutilizador: parsedAccountId },
+      include: [{
+        model: Log,
+        as: 'log',
+        where: {
+          tipo_log: { [Op.in]: ['mensagem', 'aviso', 'importante'] },
+        },
+        required: true,
+        include: [{
+          model: Account,
+          as: 'utilizador',
+          attributes: ['nome', 'email'],
+          required: false,
+        }],
+      }],
+      order: [[{ model: Log, as: 'log' }, 'data_log', 'DESC']],
+    });
 
-    const logIds = rows.map((row) => Number(row.id)).filter((value) => Number.isInteger(value) && value > 0);
+    const logIds = notificacoes.map((n) => Number(n.nlog)).filter((value) => Number.isInteger(value) && value > 0);
     const attachmentsByLog = new Map();
 
     if (logIds.length > 0) {
-      const attachmentRows = await sequelize.query(
-        `
-          SELECT
-            nflog AS id,
-            nlog,
-            nome_original,
-            nome_armazenado,
-            tipo,
-            tamanho,
-            caminho
-          FROM ficheiro_log
-          WHERE nlog IN (:logIds)
-          ORDER BY nflog ASC
-        `,
-        {
-          replacements: { logIds },
-          type: QueryTypes.SELECT,
-        },
-      );
+      const attachmentRows = await FicheiroLog.findAll({
+        where: { nlog: { [Op.in]: logIds } },
+        attributes: ['nflog', 'nlog', 'nome_original', 'nome_armazenado', 'tipo', 'tamanho', 'caminho'],
+        order: [['nflog', 'ASC']],
+        raw: true,
+      });
 
       attachmentRows.forEach((row) => {
         const logId = Number(row.nlog);
@@ -833,7 +712,7 @@ export const communicationModel = {
         }
 
         attachmentsByLog.get(logId).push({
-          id: Number(row.id),
+          id: Number(row.nflog),
           logId,
           originalName: row.nome_original,
           storedName: row.nome_armazenado,
@@ -844,18 +723,22 @@ export const communicationModel = {
       });
     }
 
-    return rows.map((row) => ({
-      id: Number(row.id),
-      type: normalizeLogType(row.tipo_log),
-      title: row.titulo || '',
-      message: row.mensagem || '',
-      summary: row.resumo || buildSummary(row.mensagem || ''),
-      priority: Number(row.prioridade) || 2,
-      date: row.data_log,
-      author: row.author_name || '',
-      authorEmail: row.author_email || '',
-      attachments: attachmentsByLog.get(Number(row.id)) || [],
-    }));
+    return notificacoes.map((n) => {
+      const log = n.log;
+      const author = log?.utilizador;
+      return {
+        id: Number(log?.nlog),
+        type: normalizeLogType(log?.tipo_log),
+        title: log?.titulo || '',
+        message: log?.mensagem || '',
+        summary: log?.resumo || buildSummary(log?.mensagem || ''),
+        priority: Number(log?.prioridade) || 2,
+        date: log?.data_log,
+        author: author?.nome || '',
+        authorEmail: author?.email || '',
+        attachments: attachmentsByLog.get(Number(log?.nlog)) || [],
+      };
+    });
   },
 
   async getUserNotifications(accountId) {
@@ -866,41 +749,39 @@ export const communicationModel = {
       throw error;
     }
 
-    const rows = await sequelize.query(
-      `
-        SELECT
-          n.nnotificacao AS id,
-          n.lida,
-          l.nlog AS log_id,
-          l.titulo,
-          l.resumo,
-          l.mensagem,
-          l.tipo_log,
-          l.data_log,
-          u.nome AS author_name
-        FROM notificacao n
-        LEFT JOIN logs l ON l.nlog = n.nlog
-        LEFT JOIN utilizador u ON u.nutilizador = l.nutilizador
-        WHERE n.nutilizador = :accountId
-        ORDER BY l.data_log DESC NULLS LAST, n.nnotificacao DESC
-      `,
-      {
-        replacements: { accountId: parsedAccountId },
-        type: QueryTypes.SELECT,
-      },
-    );
+    const notificacoes = await Notificacao.findAll({
+      where: { nutilizador: parsedAccountId },
+      include: [{
+        model: Log,
+        as: 'log',
+        required: false,
+        include: [{
+          model: Account,
+          as: 'utilizador',
+          attributes: ['nome'],
+          required: false,
+        }],
+      }],
+      order: [
+        [{ model: Log, as: 'log' }, 'data_log', 'DESC'],
+        ['nnotificacao', 'DESC'],
+      ],
+    });
 
-    return rows.map((row) => ({
-      id: Number(row.id),
-      logId: row.log_id ? Number(row.log_id) : null,
-      isRead: Boolean(row.lida),
-      title: row.titulo || '',
-      summary: row.resumo || '',
-      message: row.mensagem || '',
-      type: normalizeLogType(row.tipo_log),
-      date: row.data_log,
-      author: row.author_name || '',
-    }));
+    return notificacoes.map((n) => {
+      const log = n.log;
+      return {
+        id: Number(n.nnotificacao),
+        logId: log ? Number(log.nlog) : null,
+        isRead: Boolean(n.lida),
+        title: log?.titulo || '',
+        summary: log?.resumo || '',
+        message: log?.mensagem || '',
+        type: normalizeLogType(log?.tipo_log),
+        date: log?.data_log,
+        author: log?.utilizador?.nome || '',
+      };
+    });
   },
 
   async markNotificationRead(accountId, notificationId) {
@@ -919,24 +800,17 @@ export const communicationModel = {
       throw error;
     }
 
-    const [updated] = await sequelize.query(
-      `
-        UPDATE notificacao
-        SET lida = TRUE
-        WHERE nnotificacao = :notificationId
-          AND nutilizador = :accountId
-        RETURNING nnotificacao
-      `,
+    const [affectedCount] = await Notificacao.update(
+      { lida: true },
       {
-        replacements: {
-          notificationId: parsedNotificationId,
-          accountId: parsedAccountId,
+        where: {
+          nnotificacao: parsedNotificationId,
+          nutilizador: parsedAccountId,
         },
-        type: QueryTypes.SELECT,
       },
     );
 
-    return updated ? Number(updated.nnotificacao) : null;
+    return affectedCount > 0 ? parsedNotificationId : null;
   },
 
   async getAnnouncementAttachment(accountId, logId, fileId) {
@@ -962,39 +836,35 @@ export const communicationModel = {
       throw error;
     }
 
-    const [row] = await sequelize.query(
-      `
-        SELECT
-          f.nflog AS id,
-          f.nlog,
-          f.nome_original,
-          f.nome_armazenado
-        FROM ficheiro_log f
-        JOIN notificacao n ON n.nlog = f.nlog
-        WHERE n.nutilizador = :accountId
-          AND f.nlog = :logId
-          AND f.nflog = :fileId
-        LIMIT 1
-      `,
-      {
-        replacements: {
-          accountId: parsedAccountId,
-          logId: parsedLogId,
-          fileId: parsedFileId,
-        },
-        type: QueryTypes.SELECT,
+    const notificacao = await Notificacao.findOne({
+      where: {
+        nutilizador: parsedAccountId,
+        nlog: parsedLogId,
       },
-    );
+      attributes: ['nlog'],
+    });
 
-    if (!row) {
+    if (!notificacao) {
+      return null;
+    }
+
+    const file = await FicheiroLog.findOne({
+      where: {
+        nflog: parsedFileId,
+        nlog: parsedLogId,
+      },
+      attributes: ['nflog', 'nlog', 'nome_original', 'nome_armazenado'],
+    });
+
+    if (!file) {
       return null;
     }
 
     return {
-      id: Number(row.id),
-      logId: Number(row.nlog),
-      originalName: row.nome_original,
-      storedName: row.nome_armazenado,
+      id: Number(file.nflog),
+      logId: Number(file.nlog),
+      originalName: file.nome_original,
+      storedName: file.nome_armazenado,
     };
   },
 
@@ -1033,41 +903,21 @@ export const communicationModel = {
         const shouldOverride = typeof value === 'boolean' && value !== defaults[item.field];
 
         if (!shouldOverride) {
-          await sequelize.query(
-            `
-              DELETE FROM config_notificacao_utilizador
-              WHERE nutilizador = :accountId
-                AND chave = :key
-            `,
-            {
-              replacements: {
-                accountId: parsedAccountId,
-                key: item.field,
-              },
-              type: QueryTypes.DELETE,
-              transaction,
+          await ConfigNotificacaoUtilizador.destroy({
+            where: {
+              nutilizador: parsedAccountId,
+              chave: item.field,
             },
-          );
+            transaction,
+          });
           continue;
         }
 
-        await sequelize.query(
-          `
-            INSERT INTO config_notificacao_utilizador (nutilizador, chave, valor)
-            VALUES (:accountId, :key, :value)
-            ON CONFLICT (nutilizador, chave)
-            DO UPDATE SET valor = EXCLUDED.valor
-          `,
-          {
-            replacements: {
-              accountId: parsedAccountId,
-              key: item.field,
-              value,
-            },
-            type: QueryTypes.INSERT,
-            transaction,
-          },
-        );
+        await ConfigNotificacaoUtilizador.upsert({
+          nutilizador: parsedAccountId,
+          chave: item.field,
+          valor: value,
+        }, { transaction });
       }
 
       const overrides = await listUserNotificationOverrides(parsedAccountId, transaction);
@@ -1098,11 +948,13 @@ export const communicationModel = {
       }
 
       if (config.sll) {
-        const serviceLineRows = await sequelize.query(
-          `SELECT DISTINCT nsline FROM b_pertence_sl WHERE nbadge = :badgeId`,
-          { replacements: { badgeId }, type: QueryTypes.SELECT, transaction }
-        );
-        for (const row of serviceLineRows) {
+        const slRows = await BadgePertenceSL.findAll({
+          where: { nbadge: badgeId },
+          attributes: [[sequelize.fn('DISTINCT', sequelize.col('nsline')), 'nsline']],
+          transaction,
+          raw: true,
+        });
+        for (const row of slRows) {
           const sllIds = await listSllIdsByServiceLine(row.nsline, transaction);
           sllIds.forEach((id) => recipientSet.add(id));
         }
@@ -1146,10 +998,11 @@ export const communicationModel = {
 
       const inAppRecipients = await filterRecipientsByInAppPreference(recipients, transaction);
       for (const recipientId of inAppRecipients) {
-        await sequelize.query(
-          `INSERT INTO notificacao (nutilizador, nlog, lida) VALUES (:recipientId, :logId, FALSE)`,
-          { replacements: { recipientId, logId }, type: QueryTypes.INSERT, transaction }
-        );
+        await Notificacao.create({
+          nutilizador: recipientId,
+          nlog: logId,
+          lida: false,
+        }, { transaction });
       }
 
       return { logId, recipients: inAppRecipients };
@@ -1188,10 +1041,11 @@ export const communicationModel = {
 
       const inAppRecipients = await filterRecipientsByInAppPreference(recipients, transaction);
       for (const recipientId of inAppRecipients) {
-        await sequelize.query(
-          `INSERT INTO notificacao (nutilizador, nlog, lida) VALUES (:recipientId, :logId, FALSE)`,
-          { replacements: { recipientId, logId }, type: QueryTypes.INSERT, transaction }
-        );
+        await Notificacao.create({
+          nutilizador: recipientId,
+          nlog: logId,
+          lida: false,
+        }, { transaction });
       }
 
       return { logId, recipients: inAppRecipients };

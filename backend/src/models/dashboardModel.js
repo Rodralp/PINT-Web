@@ -2,6 +2,8 @@ import { QueryTypes } from 'sequelize';
 import { consultorModel } from './consultorModel.js';
 import { adminBadgeModel } from './adminBadgeModel.js';
 import { sequelize } from '../config/database.js';
+import { Account } from './sql/Account.js';
+import { SllLeaderSl } from './sql/SllLeaderSl.js';
 
 const { loadBadgeImagesBatch } = adminBadgeModel;
 const { resolveBadgeImage, resolveBadgeTemplate, isSpecialTypeName } = consultorModel;
@@ -157,14 +159,8 @@ const normalizeServiceLineIds = (rows) => {
 };
 
 const getUtilizadorIdByAccountId = async (accountId) => {
-  const [row] = await sequelize.query(
-    `SELECT nutilizador FROM utilizador WHERE nutilizador = :accountId LIMIT 1`,
-    {
-      replacements: { accountId: Number(accountId) },
-      type: QueryTypes.SELECT,
-    }
-  );
-  return row ? Number(row.nutilizador) : null;
+  const account = await Account.findByPk(Number(accountId), { attributes: ['id'] });
+  return account?.id ? Number(account.id) : null;
 };
 
 const getServiceLineScopeForRole = async (role, accountId) => {
@@ -182,22 +178,16 @@ const getServiceLineScopeForRole = async (role, accountId) => {
     return { hasServiceLineScope: true, serviceLineIds: [-1] };
   }
 
-  const rows = await sequelize.query(
-    `
-      SELECT nsline
-      FROM sll_leader_sl
-      WHERE nutilizador = :utilizadorId
-      ORDER BY nsline ASC
-    `,
-    {
-      replacements: { utilizadorId },
-      type: QueryTypes.SELECT,
-    },
-  );
+  const slRows = await SllLeaderSl.findAll({
+    where: { nutilizador: utilizadorId },
+    attributes: ['nsline'],
+    order: [['nsline', 'ASC']],
+    raw: true,
+  });
 
   return {
     hasServiceLineScope: true,
-    serviceLineIds: normalizeServiceLineIds(rows),
+    serviceLineIds: normalizeServiceLineIds(slRows),
   };
 };
 
