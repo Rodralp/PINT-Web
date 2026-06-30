@@ -1,5 +1,6 @@
 import { Account } from '../models/sql/Account.js';
 import { Reminder } from '../models/sql/Reminder.js';
+import { ConfigGeral } from '../models/sql/ConfigGeral.js';
 import { QueryTypes } from 'sequelize';
 import { sequelize } from './database.js';
 
@@ -862,6 +863,9 @@ const seedBadgeRequirements = async (transaction) => {
 };
 
 export const seedDatabase = async () => {
+  const flag = await ConfigGeral.findOne({ where: { chave: 'seedDataExecutado', valor: 'true' } });
+  if (flag) return;
+
   const [accountsCount, remindersCount] = await Promise.all([Account.count(), Reminder.count()]);
 
   if (accountsCount === 0) {
@@ -893,4 +897,6 @@ export const seedDatabase = async () => {
   }
 
   await seedServiceLineData();
+
+  await ConfigGeral.upsert({ chave: 'seedDataExecutado', valor: 'true' });
 };

@@ -60,7 +60,7 @@ function DashboardSLL() {
   const novosConsultoresChartRef = useRef(null);
   const [badgesTimelineValues, setBadgesTimelineValues] = useState(defaultBadgesTimelineValues);
   const [novosConsultoresValues, setNovosConsultoresValues] = useState(defaultNovosConsultoresValues);
-  const [onlineUsers, setOnlineUsers] = useState(0);
+  const [consultoresCount, setConsultoresCount] = useState(0);
   const [pendingRequests, setPendingRequests] = useState(0);
   const [topConsultores, setTopConsultores] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
@@ -101,7 +101,7 @@ function DashboardSLL() {
             : defaultNovosConsultoresValues,
         );
 
-        setOnlineUsers(Number(data.onlineUsers) || 0);
+        setConsultoresCount(Number(data.consultoresCount) || 0);
         setPendingRequests(Number(data.pendingRequests) || 0);
         setTopConsultores(Array.isArray(data.topConsultores) ? data.topConsultores : []);
         setRecentActivities(Array.isArray(data.recentActivities) ? data.recentActivities : []);
@@ -256,12 +256,12 @@ function DashboardSLL() {
             <div className="col-12 col-lg-6 col-xl-2 d-flex tm-top-grid-col">
               <div className="tm-stats-grid w-100">
                 <section className="metric-card metric-card-stat">
-                  <div className="metric-card-title">Utilizadores Online</div>
+                  <div className="metric-card-title">Consultores da SL</div>
                   <div className="metric-stat-body">
                     <span className="metric-stat-icon">
                       <Users size={36} strokeWidth={2} />
                     </span>
-                    <strong>{onlineUsers}</strong>
+                    <strong>{consultoresCount}</strong>
                   </div>
                 </section>
 
