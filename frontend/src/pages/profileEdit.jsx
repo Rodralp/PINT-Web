@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Layout from '../components/Layout'
 import BadgeImage from '../components/BadgeImage'
+import LoadingSpinner from '../components/LoadingSpinner'
 import apiClient from '../services/apiClient'
 import { fetchMyBadges } from '../services/consultorService'
 import '../css/AdminGestor/BadgeAdmin.css'
@@ -57,6 +58,8 @@ export default function ProfileEdit() {
 
   const [statusMessage, setStatusMessage] = useState('')
   const [saving, setSaving] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     let isMounted = true
@@ -99,7 +102,14 @@ export default function ProfileEdit() {
             setAvatar(imgRes.data.image)
           }
         } catch { /* no image */ }
-      } catch { /* silent */ }
+        setLoadError('');
+      } catch {
+        setLoadError('Não foi possível carregar os dados. Tente novamente em alguns segundos.');
+      }
+
+      if (isMounted) {
+        setIsLoading(false)
+      }
     }
 
     loadData()
@@ -212,6 +222,14 @@ export default function ProfileEdit() {
     navigate('/profile')
   }
 
+  if (isLoading) {
+    return (
+      <Layout>
+        <LoadingSpinner fullPage message="A carregar dados do perfil..." />
+      </Layout>
+    )
+  }
+
   return (
     <Layout>
       <div className="badge-admin-page">
@@ -235,6 +253,10 @@ export default function ProfileEdit() {
             </button>
           </div>
         </header>
+
+        {loadError && (
+          <div className="badge-admin-alert" role="status">{loadError}</div>
+        )}
 
         {statusMessage && (
           <div className="badge-admin-alert" role="status">{statusMessage}</div>

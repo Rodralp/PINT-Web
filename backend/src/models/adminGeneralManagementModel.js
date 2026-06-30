@@ -1,5 +1,8 @@
-import { QueryTypes } from 'sequelize';
+import { Op } from 'sequelize';
 import { sequelize } from '../config/database.js';
+import { ConfigNotificacao } from './sql/ConfigNotificacao.js';
+import { RgpdTopico } from './sql/RgpdTopico.js';
+import { ConfigGeral } from './sql/ConfigGeral.js';
 
 const defaultNotificationRows = [
   {
@@ -172,10 +175,10 @@ const normalizeOptions = (value) => {
 };
 
 const ensureNotificationDefaults = async (transaction) => {
-  const rows = await sequelize.query(
-    'SELECT evento FROM config_notificacao',
-    { type: QueryTypes.SELECT, transaction },
-  );
+  const rows = await ConfigNotificacao.findAll({
+    attributes: ['evento'],
+    transaction,
+  });
   const existingEvents = new Set(
     (rows || []).map((row) => normalizeEventKey(row?.evento)),
   );
@@ -186,10 +189,10 @@ const ensureNotificationDefaults = async (transaction) => {
 
   for (const existingEvent of existingEvents) {
     if (!validEvents.has(existingEvent)) {
-      await sequelize.query(
-        'DELETE FROM config_notificacao WHERE LOWER(evento) = :evento',
-        { replacements: { evento: existingEvent }, type: QueryTypes.DELETE, transaction },
-      );
+      await ConfigNotificacao.destroy({
+        where: { evento: { [Op.iLike]: existingEvent } },
+        transaction,
+      });
     }
   }
 
@@ -199,24 +202,17 @@ const ensureNotificationDefaults = async (transaction) => {
       continue;
     }
 
-    await sequelize.query(
-      `
-        INSERT INTO config_notificacao (evento, admin, sll, tl, consultor, email, web_app)
-        VALUES (:event, :admin, :sll, :tl, :consultor, :email, :webApp)
-      `,
+    await ConfigNotificacao.create(
       {
-        replacements: {
-          event: item.event,
-          admin: item.admin,
-          sll: item.sll,
-          tl: item.tl,
-          consultor: item.consultor,
-          email: item.email,
-          webApp: item.webApp,
-        },
-        type: QueryTypes.INSERT,
-        transaction,
+        evento: item.event,
+        admin: item.admin,
+        sll: item.sll,
+        tl: item.tl,
+        consultor: item.consultor,
+        email: item.email,
+        web_app: item.webApp,
       },
+      { transaction },
     );
 
     existingEvents.add(eventKey);
@@ -224,52 +220,35 @@ const ensureNotificationDefaults = async (transaction) => {
 };
 
 const ensureRgpdDefaults = async (transaction) => {
-  const [row] = await sequelize.query(
-    'SELECT COUNT(*) AS total FROM rgpd_topico',
-    { type: QueryTypes.SELECT, transaction },
-  );
+  const total = await RgpdTopico.count({ transaction });
 
-  if (Number(row?.total) > 0) {
+  if (total > 0) {
     return;
   }
 
   for (const [index, item] of defaultRgpdTopics.entries()) {
-    await sequelize.query(
-      `
-        INSERT INTO rgpd_topico (titulo, corpo, ordem)
-        VALUES (:title, :body, :order)
-      `,
+    await RgpdTopico.create(
       {
-        replacements: {
-          title: item.title,
-          body: item.body,
-          order: index + 1,
-        },
-        type: QueryTypes.INSERT,
-        transaction,
+        titulo: item.title,
+        corpo: item.body,
+        ordem: index + 1,
       },
+      { transaction },
     );
   }
 };
 
 const ensureGeneralDefaults = async (transaction) => {
   for (const item of defaultGeneralSettings) {
-    await sequelize.query(
-      `
-        INSERT INTO config_geral (chave, valor, opcoes)
-        VALUES (:key, :value, ARRAY[:options]::TEXT[])
-        ON CONFLICT (chave) DO NOTHING
-      `,
-      {
-        replacements: {
-          key: item.key,
-          value: item.value,
-          options: item.options,
-        },
-        type: QueryTypes.INSERT,
-        transaction,
+    await ConfigGeral.findOrCreate({
+      where: { chave: item.key },
+      defaults: {
+        chave: item.key,
+        valor: item.value,
+        opcoes: item.options,
       },
-    );
+      transaction,
+    });
   }
 };
 
@@ -280,14 +259,10 @@ const ensureDefaults = async (transaction) => {
 };
 
 const listNotificationSettings = async (transaction) => {
-  const rows = await sequelize.query(
-    `
-      SELECT nconfig, evento, admin, sll, tl, consultor, email, web_app
-      FROM config_notificacao
-      ORDER BY nconfig ASC
-    `,
-    { type: QueryTypes.SELECT, transaction },
-  );
+  const rows = await ConfigNotificacao.findAll({
+    order: [['nconfig', 'ASC']],
+    transaction,
+  });
 
   return (rows || []).map((row) => ({
     id: Number(row?.nconfig),
@@ -302,14 +277,10 @@ const listNotificationSettings = async (transaction) => {
 };
 
 const listRgpdTopics = async (transaction) => {
-  const rows = await sequelize.query(
-    `
-      SELECT nrgpd, titulo, corpo, ordem
-      FROM rgpd_topico
-      ORDER BY ordem ASC, nrgpd ASC
-    `,
-    { type: QueryTypes.SELECT, transaction },
-  );
+  const rows = await RgpdTopico.findAll({
+    order: [['ordem', 'ASC'], ['nrgpd', 'ASC']],
+    transaction,
+  });
 
   return (rows || []).map((row) => ({
     id: Number(row?.nrgpd),
@@ -320,14 +291,10 @@ const listRgpdTopics = async (transaction) => {
 };
 
 const listGeneralSettings = async (transaction) => {
-  const rows = await sequelize.query(
-    `
-      SELECT nconfig, chave, valor, opcoes
-      FROM config_geral
-      ORDER BY nconfig ASC
-    `,
-    { type: QueryTypes.SELECT, transaction },
-  );
+  const rows = await ConfigGeral.findAll({
+    order: [['nconfig', 'ASC']],
+    transaction,
+  });
 
   return (rows || []).map((row) => ({
     id: Number(row?.nconfig),
@@ -400,20 +367,17 @@ export const adminGeneralManagementModel = {
       await ensureDefaults(transaction);
 
       for (const update of updates) {
-        await sequelize.query(
-          `
-            UPDATE config_notificacao
-            SET admin = :admin,
-                sll = :sll,
-                tl = :tl,
-                consultor = :consultor,
-                email = :email,
-                web_app = :webApp
-            WHERE nconfig = :id
-          `,
+        await ConfigNotificacao.update(
           {
-            replacements: update,
-            type: QueryTypes.UPDATE,
+            admin: update.admin,
+            sll: update.sll,
+            tl: update.tl,
+            consultor: update.consultor,
+            email: update.email,
+            web_app: update.webApp,
+          },
+          {
+            where: { nconfig: update.id },
             transaction,
           },
         );
@@ -432,15 +396,10 @@ export const adminGeneralManagementModel = {
       await ensureDefaults(transaction);
 
       for (const update of updates) {
-        await sequelize.query(
-          `
-            UPDATE rgpd_topico
-            SET corpo = :body
-            WHERE nrgpd = :id
-          `,
+        await RgpdTopico.update(
+          { corpo: update.body },
           {
-            replacements: update,
-            type: QueryTypes.UPDATE,
+            where: { nrgpd: update.id },
             transaction,
           },
         );
@@ -459,15 +418,10 @@ export const adminGeneralManagementModel = {
       await ensureDefaults(transaction);
 
       for (const update of updates) {
-        await sequelize.query(
-          `
-            UPDATE config_geral
-            SET valor = :value
-            WHERE nconfig = :id
-          `,
+        await ConfigGeral.update(
+          { valor: update.value },
           {
-            replacements: update,
-            type: QueryTypes.UPDATE,
+            where: { nconfig: update.id },
             transaction,
           },
         );

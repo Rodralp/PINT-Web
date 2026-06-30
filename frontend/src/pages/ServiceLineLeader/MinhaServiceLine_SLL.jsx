@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { fetchMyServiceLine } from '../../services/serviceLineLeaderService';
 import '../../css/Consultor/LearningPaths_C.css';
@@ -20,6 +21,7 @@ const getStoredLoginData = () => {
 
 function MinhaServiceLineSLL() {
   const loginData = useMemo(() => getStoredLoginData(), []);
+  const navigate = useNavigate();
   const [serviceLines, setServiceLines] = useState([]);
   const [expandedAreaIds, setExpandedAreaIds] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,6 +89,29 @@ function MinhaServiceLineSLL() {
       totalLevels,
       label: `${totalLevels} niveis disponiveis`,
     };
+  };
+
+  const openBadgeDetails = (serviceLine, area, level) => {
+    if (!level.badgeDbId) {
+      return;
+    }
+
+    navigate(`/service-line-leader/badge/${level.badgeDbId}`, {
+      state: {
+        badge: {
+          id: level.id,
+          badgeDbId: level.badgeDbId,
+          name: level.title,
+          area: area.name,
+          serviceLineName: serviceLine.name,
+          learningPathName: serviceLine.learningPath?.name || '',
+          levelKey: level.levelKey,
+          points: level.points,
+          badgeImage: level.badgeImage,
+        },
+        backTo: '/service-line-leader/minha-service-line',
+      },
+    });
   };
 
   return (
@@ -159,16 +184,19 @@ function MinhaServiceLineSLL() {
 
                               <div className="lp-level-list">
                                 {area.levels.map((level, index) => (
-                                  <div
+                                  <button
                                     key={`${areaRowId}-${level.id}-${index}`}
-                                    className="lp-level-row"
-                                    aria-label={`Nivel ${level.title}`}
+                                    type="button"
+                                    className={`lp-level-row lp-level-row-action ${level.badgeDbId ? '' : 'is-disabled'}`}
+                                    onClick={() => openBadgeDetails(serviceLine, area, level)}
+                                    disabled={!level.badgeDbId}
+                                    aria-label={`Ver badge ${level.title}`}
                                   >
                                     <div className="lp-level-copy">
                                       <strong>{level.title}</strong>
                                       <span>{level.subtitle}</span>
                                     </div>
-                                  </div>
+                                  </button>
                                 ))}
                               </div>
                             </div>

@@ -32,6 +32,13 @@ const defaultAccounts = [
     role: 'admin-gestor',
     status: 'ativo',
   },
+  {
+    nome: 'Testes',
+    email: 'testes@softinsa.pt',
+    senha: '12345678',
+    role: 'consultor;talent-manager;service-line-leader;admin-gestor',
+    status: 'ativo',
+  },
 ];
 
 const defaultReminders = [
@@ -70,22 +77,17 @@ const defaultServiceLines = [
   {
     name: 'Hybrid Cloud',
     description: 'Foco em arquitetura cloud hibrida, operacao e escalabilidade.',
-    areas: ['Cloud Architecture', 'Application Operations'],
+    areas: ['LowCode (Outsystems)'],
   },
   {
-    name: 'Data & AI',
-    description: 'Foco em dados, analitica avancada e modelos de IA.',
-    areas: ['Data Engineering', 'Machine Learning'],
+    name: 'Application Operations',
+    description: 'Foco em operacoes de aplicacoes, DevSecOps e automacao.',
+    areas: ['DevSecOps & IT Automation'],
   },
   {
-    name: 'Cybersecurity',
-    description: 'Foco em seguranca aplicacional, identidade e resposta a incidentes.',
-    areas: ['Secure Development', 'Threat Detection'],
-  },
-  {
-    name: 'Testing',
-    description: 'Foco em testes manuais e automatizados, quality assurance e performance.',
-    areas: ['Quality Assurance', 'Test Automation'],
+    name: 'Sourcing & Talent Management',
+    description: 'Foco em recrutamento, gestao de talento e desenvolvimento de carreiras.',
+    areas: ['Sourcing & Talent Management'],
   },
 ];
 
@@ -102,26 +104,36 @@ const defaultBadgeTypes = [
     ntipo: 1,
     tipo: 'Nível Júnior',
     matchers: ['junior'],
+    pontos: 100,
+    levelKey: 'badge_level_junior',
   },
   {
     ntipo: 2,
     tipo: 'Nível Intermédio',
     matchers: ['intermedio', 'interm'],
+    pontos: 150,
+    levelKey: 'badge_level_intermediate',
   },
   {
     ntipo: 3,
     tipo: 'Nível Sénior',
     matchers: ['senior'],
+    pontos: 200,
+    levelKey: 'badge_level_senior',
   },
   {
     ntipo: 4,
     tipo: 'Nível Especialista',
     matchers: ['especialista'],
+    pontos: 250,
+    levelKey: 'badge_level_specialist',
   },
   {
     ntipo: 5,
     tipo: 'Nível Lider de Conhecimento',
     matchers: ['lider de conhecimento', 'lider'],
+    pontos: 300,
+    levelKey: 'badge_level_knowledge_lead',
   },
 ];
 
@@ -145,7 +157,7 @@ const buildSimpleBadgeName = (areaName) =>
   String(areaName || 'Badge')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 25) || 'Badge';
+    .slice(0, 50) || 'Badge';
 
 const buildSimpleBadgeDescription = (areaName) =>
   `Badge da area ${buildSimpleBadgeName(areaName)}.`;
@@ -383,7 +395,7 @@ const ensureUtilizadorForAccounts = async (accounts, transaction) => {
 
 const assignServiceLineToEachLeader = async (accounts, serviceLineIds, transaction) => {
   const leaderAccounts = accounts.filter(isServiceLineLeader);
-  const globalAccessUserIds = new Set([5]);
+  const globalAccessUserIds = new Set();
 
   if (leaderAccounts.length === 0 || serviceLineIds.length === 0) {
     return;
@@ -516,11 +528,11 @@ const ensureBadgeTypes = async (transaction) => {
     await sequelize.query(
       `
         UPDATE tipo
-        SET tipo = :tipo
+        SET tipo = :tipo, pontos = :pontos, level_key = :levelKey
         WHERE ntipo = :ntipo
       `,
       {
-        replacements: { ntipo: badgeType.ntipo, tipo: badgeType.tipo },
+        replacements: { ntipo: badgeType.ntipo, tipo: badgeType.tipo, pontos: badgeType.pontos, levelKey: badgeType.levelKey },
         type: QueryTypes.UPDATE,
         transaction,
       },
@@ -646,8 +658,6 @@ const ensureEstadosAndMockData = async (accounts, transaction) => {
     normalizeRoles(account.role).includes('consultor'),
   );
 
-  const untouchedServiceLine = 'Testing';
-
   for (const account of consultorAccounts) {
     const utilizadorId = account.id;
     if (!utilizadorId) {
@@ -655,10 +665,6 @@ const ensureEstadosAndMockData = async (accounts, transaction) => {
     }
 
     for (const n of niveis) {
-      if (n.sline === untouchedServiceLine) {
-        continue;
-      }
-
       const nbadge = badgesByNivel[n.nnivel];
       if (!nbadge) {
         continue;
@@ -776,11 +782,82 @@ const seedServiceLineData = async () => {
     await assignServiceLineToEachLeader(accounts, serviceLineIds, transaction);
     
     await ensureEstadosAndMockData(accounts, transaction);
+    await seedBadgeRequirements(transaction);
 
     await transaction.commit();
   } catch (error) {
     await transaction.rollback();
     throw error;
+  }
+};
+
+const badgeRequirementsByLevel = {
+  junior: [
+    { requisito: 'Completar formacao basica', r_descricao: 'Demonstrar conhecimentos fundamentais da area.' },
+    { requisito: 'Participar em 3 projetos', r_descricao: 'Contribuir ativamente em pelo menos 3 projetos da equipa.' },
+    { requisito: 'Avaliacao do mentor', r_descricao: 'Obter avaliacao positiva do mentor atribuido.' },
+  ],
+  intermedio: [
+    { requisito: 'Implementar funcionalidade complexa', r_descricao: 'Desenvolver e entregar uma funcionalidade com complexidade intermedia.' },
+    { requisito: 'Rever codigo de 2 colegas', r_descricao: 'Realizar code review em pelo menos 2 projetos de colegas.' },
+    { requisito: 'Documentar processo tecnico', r_descricao: 'Criar documentacao tecnica para um modulo ou servico.' },
+  ],
+  senior: [
+    { requisito: 'Liderar sprint tecnico', r_descricao: 'Assumir responsabilidade tecnica num sprint completo.' },
+    { requisito: 'Mentorar 2 consultores', r_descricao: 'Acompanhar e orientar 2 consultores junior/intermedios.' },
+    { requisito: 'Apresentar session tech talk', r_descricao: 'Realizar uma apresentacao tecnica para a equipa.' },
+  ],
+  especialista: [
+    { requisito: 'Definir arquitetura de solucao', r_descricao: 'Projetar e documentar a arquitetura de uma solucao enterprise.' },
+    { requisito: 'Resolver incidente critico', r_descricao: 'Diagnosticar e resolver um incidente de producao de alta criticidade.' },
+    { requisito: 'Publicar artigo tecnico interno', r_descricao: 'Escrever e publicar um artigo tecnico na plataforma interna.' },
+  ],
+  lider: [
+    { requisito: 'Criar learning path', r_descricao: 'Desenvolver um percurso de aprendizagem para a equipa.' },
+    { requisito: 'Avaliar 5 consultores', r_descricao: 'Realizar avaliacoes tecnicas formais a pelo menos 5 consultores.' },
+    { requisito: 'Propor melhoria de processo', r_descricao: 'Identificar e propor pelo menos 2 melhorias nos processos da equipa.' },
+  ],
+};
+
+const resolveRequirementLevelKey = (levelTitle) => {
+  const normalized = String(levelTitle || '').trim().toLowerCase();
+  if (normalized.includes('junior')) return 'junior';
+  if (normalized.includes('intermedio') || normalized.includes('interm')) return 'intermedio';
+  if (normalized.includes('senior')) return 'senior';
+  if (normalized.includes('especialista')) return 'especialista';
+  if (normalized.includes('lider')) return 'lider';
+  return 'intermedio';
+};
+
+const seedBadgeRequirements = async (transaction) => {
+  const badges = await sequelize.query(
+    `
+      SELECT b.nbadge, b.b_nome, n.nivel
+      FROM badge b
+      LEFT JOIN nivel_contem_b ncb ON ncb.nbadge = b.nbadge
+      LEFT JOIN nivel n ON n.nnivel = ncb.nnivel
+      ORDER BY b.nbadge ASC
+    `,
+    { type: QueryTypes.SELECT, transaction },
+  );
+
+  for (const badge of badges) {
+    const [existingCount] = await sequelize.query(
+      `SELECT COUNT(*)::int AS cnt FROM requisitos WHERE nbadge = :nbadge`,
+      { replacements: { nbadge: badge.nbadge }, type: QueryTypes.SELECT, transaction },
+    );
+
+    if (existingCount?.cnt > 0) continue;
+
+    const levelKey = resolveRequirementLevelKey(badge.nivel);
+    const requirements = badgeRequirementsByLevel[levelKey] || badgeRequirementsByLevel.intermedio;
+
+    for (const req of requirements) {
+      await sequelize.query(
+        `INSERT INTO requisitos (requisito, r_descricao, nbadge) VALUES (:requisito, :r_descricao, :nbadge)`,
+        { replacements: { requisito: req.requisito, r_descricao: req.r_descricao, nbadge: badge.nbadge }, type: QueryTypes.INSERT, transaction },
+      );
+    }
   }
 };
 
