@@ -290,8 +290,11 @@ const listRgpdTopics = async (transaction) => {
   }));
 };
 
+const HIDDEN_SETTINGS = new Set(['seedDataExecutado']);
+
 const listGeneralSettings = async (transaction) => {
   const rows = await ConfigGeral.findAll({
+    where: { chave: { [Op.notIn]: [...HIDDEN_SETTINGS] } },
     order: [['nconfig', 'ASC']],
     transaction,
   });
