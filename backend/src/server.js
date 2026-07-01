@@ -4,6 +4,14 @@ import { seedDatabase } from './config/seedData.js';
 
 const PORT = Number(globalThis.process?.env?.PORT) || 4000;
 
+globalThis.process?.on?.('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection:', reason);
+});
+
+globalThis.process?.on?.('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
 let lastSideEffectRun = 0;
 const SIDE_EFFECT_INTERVAL_MS = 60_000;
 
@@ -15,15 +23,14 @@ const startServer = async () => {
     await seedDatabase();
 
     const { requestManagementModel } = await import('./models/requestManagementModel.js');
-    setInterval(async () => {
+    setInterval(() => {
       const now = Date.now();
       if (now - lastSideEffectRun < SIDE_EFFECT_INTERVAL_MS) return;
       lastSideEffectRun = now;
-      try {
-        await requestManagementModel.runScheduledSideEffects();
-      } catch (err) {
-        console.error('Scheduled side-effects error:', err);
-      }
+      requestManagementModel.runScheduledSideEffects()
+        .catch((err) => {
+          console.error('Scheduled side-effects error:', err);
+        });
     }, SIDE_EFFECT_INTERVAL_MS);
 
     app.listen(PORT, () => {
