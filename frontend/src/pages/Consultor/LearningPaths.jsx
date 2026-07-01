@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -14,43 +15,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import { fetchLearningPaths } from '../../services/consultorService';
 import '../../css/Consultor/LearningPaths_C.css';
 
-const statusConfig = {
-  obtido: {
-    label: 'Badge obtido',
-    className: 'status-obtido',
-    Icon: CheckCircle2,
-  },
-  candidatura_em_progresso: {
-    label: 'Candidatura em progresso',
-    className: 'status-progresso',
-    Icon: TimerReset,
-  },
-  'pendente-tm': {
-    label: 'Em Validacao',
-    className: 'status-validacao',
-    Icon: SearchCheck,
-  },
-  'pendente-sll': {
-    label: 'Em Validacao',
-    className: 'status-validacao',
-    Icon: SearchCheck,
-  },
-  evidencias_insuficientes: {
-    label: 'Evidencias insuficientes',
-    className: 'status-insuficiente',
-    Icon: AlertTriangle,
-  },
-  visualizar: {
-    label: 'Visualizar',
-    className: 'status-visualizar',
-    Icon: null,
-  },
-  sem_badge: {
-    label: 'Sem badge associado',
-    className: 'status-sem-badge',
-    Icon: AlertTriangle,
-  },
-};
+
 
 const flattenServiceLineLevels = (serviceLine) =>
   (serviceLine?.areas || []).flatMap((area) => area.levels || []);
@@ -66,13 +31,52 @@ const calculateProgress = (levels) => {
     obtidas,
     isComplete,
     percent,
-    label: isComplete ? 'Area Completada' : `${obtidas} de ${total} badges obtidas`,
   };
 };
 
 function LearningPaths() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const statusConfig = useMemo(() => ({
+    obtido: {
+      label: t('consultor_lp_status_badge_obtained'),
+      className: 'status-obtido',
+      Icon: CheckCircle2,
+    },
+    candidatura_em_progresso: {
+      label: t('consultor_lp_status_in_progress'),
+      className: 'status-progresso',
+      Icon: TimerReset,
+    },
+    'pendente-tm': {
+      label: t('consultor_lp_status_in_review'),
+      className: 'status-validacao',
+      Icon: SearchCheck,
+    },
+    'pendente-sll': {
+      label: t('consultor_lp_status_in_review'),
+      className: 'status-validacao',
+      Icon: SearchCheck,
+    },
+    evidencias_insuficientes: {
+      label: t('consultor_lp_status_insufficient'),
+      className: 'status-insuficiente',
+      Icon: AlertTriangle,
+    },
+    visualizar: {
+      label: t('consultor_lp_view'),
+      className: 'status-visualizar',
+      Icon: null,
+    },
+    sem_badge: {
+      label: t('consultor_lp_no_badge'),
+      className: 'status-sem-badge',
+      Icon: AlertTriangle,
+    },
+  }), [t]);
+
   const [learningPathsData, setLearningPathsData] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -105,6 +109,12 @@ function LearningPaths() {
 
     return selectedPath.serviceLines.find((item) => item.id === selectedServiceLineId) || null;
   }, [selectedPath, selectedServiceLineId]);
+
+  const getProgressLabel = ({ isComplete, obtidas, total }) => (
+    isComplete
+      ? t('consultor_lp_area_completed')
+      : t('consultor_lp_progress_count', { obtidas, total })
+  );
 
   const pageTitle = selectedServiceLine ? 'Service Line' : 'Learning Paths';
 
@@ -274,7 +284,7 @@ function LearningPaths() {
 
                               <div className="lp-service-line-main">
                                 <p>{serviceLine.description}</p>
-                                <span className="lp-progress-label">{progress.label}</span>
+                                <span className="lp-progress-label">{getProgressLabel(progress)}</span>
 
                                 <div className="lp-progress-track" aria-hidden="true">
                                   <span
@@ -356,7 +366,7 @@ function LearningPaths() {
                     <div id={`area-badges-${area.id}`} className="lp-area-badges">
                       <div className="lp-area-content-head">
                         <h3>Niveis</h3>
-                        <span className="lp-progress-label">{progress.label}</span>
+                        <span className="lp-progress-label">{getProgressLabel(progress)}</span>
                       </div>
 
                       <div className="lp-level-list">

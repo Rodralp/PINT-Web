@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Plus,
   AlarmClock,
@@ -16,11 +17,11 @@ import {
 } from '../../services/consultorService';
 import '../../css/Consultor/Lembretes.css';
 
-const monthLabels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+const MONTH_KEYS = ['lembretes_month_jan', 'lembretes_month_feb', 'lembretes_month_mar', 'lembretes_month_apr', 'lembretes_month_may', 'lembretes_month_jun', 'lembretes_month_jul', 'lembretes_month_aug', 'lembretes_month_sep', 'lembretes_month_oct', 'lembretes_month_nov', 'lembretes_month_dec'];
 
 const isIsoDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
-const formatReminderDate = (value) => {
+const formatReminderDate = (value, monthLabels) => {
   if (!isIsoDate(value)) {
     return value;
   }
@@ -60,6 +61,8 @@ const normalizeReminder = (reminder, fallbackId) => {
 };
 
 function Lembretes() {
+  const { t } = useTranslation();
+  const monthLabels = MONTH_KEYS.map((key) => t(key));
   const [reminders, setReminders] = useState([]);
   const [statusMessage, setStatusMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -88,7 +91,7 @@ function Lembretes() {
       } catch {
         if (isMounted) {
           setReminders([]);
-          setStatusMessage('Nao foi possivel carregar os lembretes da base de dados.');
+          setStatusMessage(t('error_generic'));
           setIsLoading(false);
         }
       }

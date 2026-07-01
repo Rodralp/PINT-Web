@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -13,46 +14,48 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import { fetchMyRequests } from '../../services/consultorService';
 import '../../css/Consultor/MeusPedidos.css';
 
-const statusConfig = {
-  aprovado: {
-    label: 'Aprovado',
-    cardClass: 'status-card approved',
-    badgeClass: 'success',
-    Icon: CheckCircle2,
-  },
-  pendente: {
-    label: 'Pendente',
-    cardClass: 'status-card pending',
-    badgeClass: 'warning',
-    Icon: Search,
-  },
-  rejeitado: {
-    label: 'Rejeitado',
-    cardClass: 'status-card rejected',
-    badgeClass: 'danger',
-    Icon: AlertTriangle,
-  },
-  validacao: {
-    label: 'Em Validação',
-    cardClass: 'status-card in-review',
-    badgeClass: 'warning',
-    Icon: SearchCheck,
-  },
-};
-
-const filters = [
-  { id: 'aprovado', label: 'Aprovado' },
-  { id: 'pendente', label: 'Pendente' },
-  { id: 'rejeitado', label: 'Rejeitado' },
-];
-
 const ITEMS_PER_PAGE = 10;
 
 function MeusPedidos() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [allRequests, setAllRequests] = useState([]);
   const [statusMessage, setStatusMessage] = useState('');
+
+  const statusConfig = {
+    aprovado: {
+      label: t('meus_pedidos_status_approved'),
+      cardClass: 'status-card approved',
+      badgeClass: 'success',
+      Icon: CheckCircle2,
+    },
+    pendente: {
+      label: t('meus_pedidos_status_pending'),
+      cardClass: 'status-card pending',
+      badgeClass: 'warning',
+      Icon: Search,
+    },
+    rejeitado: {
+      label: t('meus_pedidos_status_rejected'),
+      cardClass: 'status-card rejected',
+      badgeClass: 'danger',
+      Icon: AlertTriangle,
+    },
+    validacao: {
+      label: t('meus_pedidos_status_in_review'),
+      cardClass: 'status-card in-review',
+      badgeClass: 'warning',
+      Icon: SearchCheck,
+    },
+  };
+
+  const filters = useMemo(() => [
+    { id: 'aprovado', label: t('meus_pedidos_status_approved') },
+    { id: 'pendente', label: t('meus_pedidos_status_pending') },
+    { id: 'rejeitado', label: t('meus_pedidos_status_rejected') },
+  ], [t]);
+
   const filtersFromUrl = useMemo(() => {
     const param = searchParams.get('filters');
     if (param) {
@@ -61,7 +64,7 @@ function MeusPedidos() {
       return validIds.length > 0 ? validIds : filters.map((f) => f.id);
     }
     return filters.map((filter) => filter.id);
-  }, []);
+  }, [searchParams, filters]);
   const [activeFilters, setActiveFilters] = useState(filtersFromUrl);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -80,7 +83,7 @@ function MeusPedidos() {
       } catch {
         if (isMounted) {
           setAllRequests([]);
-          setStatusMessage('Não foi possível carregar os pedidos. Tente novamente em alguns segundos.');
+          setStatusMessage(t('error_generic'));
           setIsLoading(false);
         }
       }
