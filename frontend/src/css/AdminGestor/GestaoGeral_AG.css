@@ -1,5 +1,9 @@
 .page:has(.ag-general-tabs .ag-general-tab:first-of-type.active) .shell {
-  border-top-left-radius: 0;
+  border-top-left-radius: 0 !important;
+}
+
+.ag-general-shell {
+  border: none;
 }
 
 .ag-general-tabs {

@@ -344,7 +344,7 @@ function GestaoGeralAG() {
           ))}
         </div>
 
-        <section className="shell">
+        <section className="shell ag-general-shell">
 
           <div className="toolbar ag-general-toolbar">
             <label className="search-wrap ag-general-search" htmlFor="ag-general-search-input">

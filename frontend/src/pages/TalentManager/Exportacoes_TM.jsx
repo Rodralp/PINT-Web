@@ -1082,7 +1082,7 @@ function ExportacoesTM() {
           ))}
         </div>
 
-        <section className="shell">
+        <section className="shell tm-export-shell">
 
           <div className="toolbar tm-export-toolbar">
             <label className="search-wrap tm-export-search" htmlFor="tm-export-search-input">

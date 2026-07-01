@@ -550,7 +550,7 @@ function UtilizadoresAG() {
           </button>
         </div>
 
-        <section className="shell">
+        <section className="shell ag-users-shell">
           <div className="toolbar ag-users-toolbar">
             <label className="search-wrap ag-users-search" htmlFor="ag-users-search-input">
               <Search size={18} />

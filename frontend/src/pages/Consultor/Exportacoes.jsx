@@ -525,7 +525,7 @@ function Exportacoes() {
           </button>
         </div>
 
-        <section className="shell exports-shell">
+        <section className={`shell exports-shell${activeTab === 'badges' ? ' no-top-left-radius' : ''}`}>
 
           <div className="toolbar catalog-controls">
             <div className="search-wrap catalog-search-wrap">
