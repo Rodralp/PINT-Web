@@ -216,7 +216,7 @@ function PedidoDetalheC() {
 
           <aside className="tm-order-sidebar">
             <div className="tm-order-submission-card">
-              <h3>Submissão por:</h3>
+              <h3>{t('request_detail_submitted_by')}</h3>
               <div className="tm-order-person-card">
                 <div className="tm-order-person-avatar">{String(request.submittedBy || 'U').slice(0, 1)}</div>
                 <div>
@@ -231,7 +231,7 @@ function PedidoDetalheC() {
 
             {showReviewer ? (
               <div className="tm-order-evaluated-card">
-                <h3>Avaliado por:</h3>
+                <h3>{t('request_detail_verdict_by')}</h3>
                 <div className="tm-order-person-card compact">
                   <div className="tm-order-person-avatar evaluated">{(request.reviewerName || '?').slice(0, 1)}</div>
                   <div>
@@ -246,7 +246,7 @@ function PedidoDetalheC() {
               </div>
             ) : (
               <div className="tm-order-evaluated-card">
-                <h3>Estado da Candidatura:</h3>
+                <h3>{t('request_detail_verdict')}</h3>
                 <p>{request.reviewerNote || 'A aguardar validação.'}</p>
               </div>
             )}

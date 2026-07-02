@@ -142,7 +142,7 @@ function MeusPedidos() {
   if (isLoading) {
     return (
       <Layout>
-        <LoadingSpinner fullPage message="A carregar pedidos..." />
+        <LoadingSpinner fullPage message={t('loading')} />
       </Layout>
     );
   }
@@ -151,7 +151,7 @@ function MeusPedidos() {
     <Layout>
       <div className="page orders-page">
         <header className="page-header orders-header">
-          <h1>Meus Pedidos</h1>
+          <h1>{t('meus_pedidos_title')}</h1>
         </header>
 
         {statusMessage && (
@@ -166,7 +166,7 @@ function MeusPedidos() {
               <Clock3 size={26} strokeWidth={2} />
             </div>
             <div className="status-card-content">
-              <span>Todos</span>
+              <span>{t('meus_pedidos_all')}</span>
               <strong>{counts.submitted}</strong>
             </div>
           </article>
@@ -204,9 +204,9 @@ function MeusPedidos() {
 
         <section className="shell orders-shell">
           <div className="orders-shell-header">
-            <h2>Histórico de Candidaturas de Badges</h2>
+            <h2>{t('meus_pedidos_history_title')}</h2>
             <div className="orders-filter-row">
-              <span>Filtrar por:</span>
+              <span>{t('meus_pedidos_filter_by')}</span>
               {filters.map((filter) => (
                 <button
                   key={filter.id}
@@ -225,17 +225,17 @@ function MeusPedidos() {
             <table className="table orders-table">
               <thead>
                 <tr>
-                  <th>Badge Pedida</th>
-                  <th>Nível</th>
-                  <th>Data do Pedido</th>
-                  <th>Estado do Pedido</th>
-                  <th>Detalhes do Pedido</th>
+                  <th>{t('meus_pedidos_badge_requested')}</th>
+                  <th>{t('meus_pedidos_level')}</th>
+                  <th>{t('meus_pedidos_request_date')}</th>
+                  <th>{t('meus_pedidos_request_status')}</th>
+                  <th>{t('meus_pedidos_request_details')}</th>
                 </tr>
               </thead>
               <tbody>
                 {pagedRequests.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="orders-empty-row">Sem pedidos para os filtros escolhidos.</td>
+                    <td colSpan={5} className="orders-empty-row">{t('no_items')}</td>
                   </tr>
                 )}
 
@@ -258,7 +258,7 @@ function MeusPedidos() {
                           className="btn-outline orders-view-btn"
                           onClick={() => handleOpenRequestDetails(request)}
                         >
-                          Ver
+                          {t('view')}
                         </button>
                       </td>
                     </tr>

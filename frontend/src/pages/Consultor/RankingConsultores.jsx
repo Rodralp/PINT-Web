@@ -337,7 +337,7 @@ function RankingConsultores() {
                         <p>{consultant.points}</p>
                       </div>
                       <div>
-                        <small>Badges</small>
+                        <small>{t('dashboard_badges_short')}</small>
                         <p>
                           <Award size={13} />
                           {consultant.badges}
@@ -351,7 +351,7 @@ function RankingConsultores() {
           </div>
 
           {sortedConsultants.length === 0 && (
-            <div className="empty-state ranking-empty-state">Nao ha consultores para os filtros escolhidos.</div>
+            <div className="empty-state ranking-empty-state">{t('no_items')}</div>
           )}
 
           <Pagination page={page} totalPages={totalPages} setPage={setPage} />
