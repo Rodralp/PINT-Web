@@ -593,7 +593,11 @@ function ExportacoesSLL() {
           status: normalizeRequestExportStatus(request),
         }));
 
-        const formattedBadges = (Array.isArray(badgesData) ? badgesData : []).map((badge, index) => {
+        const scopedBadgesData = (Array.isArray(badgesData) ? badgesData : []).filter(
+          (badge) => normalizeServiceLine(badge?.serviceLineName) === normalizeServiceLine(serviceLineName),
+        );
+
+        const formattedBadges = scopedBadgesData.map((badge, index) => {
           const isSpecial = Boolean(badge?.isSpecial) || badge?.typeId === 'special' || !badge?.levelKey;
           const levelKey = isSpecial ? null : (badge?.levelKey || badge?.typeId || null);
           const levelLabel = isSpecial ? 'Especial' : (badge?.levelLabel || badge?.level || translateLevel(levelKey) || 'Badge');
