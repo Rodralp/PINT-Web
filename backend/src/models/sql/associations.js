@@ -27,7 +27,6 @@ import { Notificacao } from './Notificacao.js';
 import { Preferencia } from './Preferencia.js';
 import { ConfigNotificacao } from './ConfigNotificacao.js';
 import { RgpdTopico } from './RgpdTopico.js';
-import { ConfigGeral } from './ConfigGeral.js';
 import { ConfigNotificacaoUtilizador } from './ConfigNotificacaoUtilizador.js';
 import { AGereN } from './AGereN.js';
 import { AGereArea } from './AGereArea.js';

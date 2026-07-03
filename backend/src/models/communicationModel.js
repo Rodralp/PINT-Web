@@ -8,7 +8,6 @@ import { BadgePertenceSL } from './sql/BadgePertenceSL.js';
 import { Log } from './sql/Log.js';
 import { Notificacao } from './sql/Notificacao.js';
 import { FicheiroLog } from './sql/FicheiroLog.js';
-import { ConfigGeral } from './sql/ConfigGeral.js';
 import { ConfigNotificacao } from './sql/ConfigNotificacao.js';
 import { ConfigNotificacaoUtilizador } from './sql/ConfigNotificacaoUtilizador.js';
 
@@ -67,9 +66,9 @@ const normalizeRecipientIds = (ids) => {
 const normalizeEventKey = (value) => String(value ?? '').trim().toLowerCase();
 
 const userNotificationDefaults = [
-  { field: 'emailUpdates', generalKey: 'Notificacoes email', fallback: true },
-  { field: 'inAppAlerts', generalKey: 'Notificacoes in-app', fallback: true },
-  { field: 'weeklySummary', generalKey: 'Resumo semanal', fallback: false },
+  { field: 'emailUpdates', fallback: true },
+  { field: 'inAppAlerts', fallback: true },
+  { field: 'weeklySummary', fallback: false },
 ];
 
 const userNotificationOptions = ['Ativo', 'Inativo'];
@@ -101,37 +100,11 @@ const parseGeneralBoolean = (value, fallback) => {
   return fallback;
 };
 
-const ensureUserNotificationDefaults = async (transaction) => {
-  for (const item of userNotificationDefaults) {
-    await ConfigGeral.findOrCreate({
-      where: { chave: item.generalKey },
-      defaults: {
-        chave: item.generalKey,
-        valor: toGeneralBooleanValue(item.fallback),
-      },
-      transaction,
-    });
-  }
-};
-
-const loadUserNotificationDefaults = async (transaction) => {
-  await ensureUserNotificationDefaults(transaction);
-
-  const keys = userNotificationDefaults.map((item) => item.generalKey);
-  const rows = await ConfigGeral.findAll({
-    where: { chave: { [Op.in]: keys } },
-    attributes: ['chave', 'valor'],
-    transaction,
-    raw: true,
-  });
-
-  const valueByKey = new Map((rows || []).map((row) => [row.chave, row.valor]));
+const loadUserNotificationDefaults = async () => {
   const defaults = {};
-
   userNotificationDefaults.forEach((item) => {
-    defaults[item.field] = parseGeneralBoolean(valueByKey.get(item.generalKey), item.fallback);
+    defaults[item.field] = Boolean(item.fallback);
   });
-
   return defaults;
 };
 

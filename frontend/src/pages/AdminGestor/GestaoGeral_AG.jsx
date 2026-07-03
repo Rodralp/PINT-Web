@@ -4,7 +4,6 @@ import { Search } from 'lucide-react';
 import Layout from '../../components/Layout';
 import {
   fetchAdminGeneralManagement,
-  updateAdminGeneralSettings,
   updateAdminNotificationSettings,
   updateAdminRgpdTopics,
 } from '../../services/adminGeneralManagementService';
@@ -13,7 +12,6 @@ import '../../css/AdminGestor/GestaoGeral_AG.css';
 const tabs = [
   { id: 'notificacoes', labelKey: 'gestao_geral_tab_notifications' },
   { id: 'rgpd', labelKey: 'gestao_geral_tab_rgpd' },
-  { id: 'geral', labelKey: 'gestao_geral_tab_general' },
 ];
 
 const initialNotificationRows = [
@@ -140,46 +138,12 @@ const rgpdTopics = [
   },
 ];
 
-const generalSettings = [
-  {
-    id: 1,
-    key: 'gestao_geral_default_theme',
-    value: 'Claro',
-    options: ['Claro', 'Escuro', 'Automático'],
-  },
-  {
-    id: 2,
-    key: 'gestao_geral_default_language',
-    value: 'Português (PT)',
-    options: ['Português (PT)', 'English (EN)', 'Español (ES)'],
-  },
-  {
-    id: 3,
-    key: 'gestao_geral_email_notifications',
-    value: 'Ativo',
-    options: ['Ativo', 'Inativo'],
-  },
-  {
-    id: 4,
-    key: 'gestao_geral_inapp_notifications',
-    value: 'Ativo',
-    options: ['Ativo', 'Inativo'],
-  },
-  {
-    id: 5,
-    key: 'gestao_geral_weekly_summary',
-    value: 'Inativo',
-    options: ['Ativo', 'Inativo'],
-  },
-];
-
 function GestaoGeralAG() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('notificacoes');
   const [searchTerm, setSearchTerm] = useState('');
   const [notificationRows, setNotificationRows] = useState([]);
   const [rgpdRows, setRgpdRows] = useState([]);
-  const [generalRows, setGeneralRows] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
@@ -205,11 +169,6 @@ function GestaoGeralAG() {
           ? data.rgpd
           : rgpdTopics,
       );
-      setGeneralRows(
-        Array.isArray(data?.settings) && data.settings.length > 0
-          ? data.settings
-          : generalSettings,
-      );
       setStatusMessage('');
       setErrorMessage('');
     } catch (error) {
@@ -219,7 +178,6 @@ function GestaoGeralAG() {
 
       setNotificationRows(initialNotificationRows);
       setRgpdRows(rgpdTopics);
-      setGeneralRows(generalSettings);
       setErrorMessage(error?.message || t('gestao_geral_load_error'));
     } finally {
       if (isMountedRef.current) {
@@ -259,20 +217,8 @@ function GestaoGeralAG() {
     );
   }, [rgpdRows, searchTerm]);
 
-  const filteredGeneralSettings = useMemo(() => {
-    const normalizedTerm = searchTerm.trim().toLowerCase();
-
-    if (!normalizedTerm) {
-      return generalRows;
-    }
-
-    return generalRows.filter(
-      (item) => item.key.toLowerCase().includes(normalizedTerm) || item.value.toLowerCase().includes(normalizedTerm),
-    );
-  }, [generalRows, searchTerm]);
-
   const searchPlaceholder =
-    activeTab === 'rgpd' ? t('gestao_geral_search_topic') : activeTab === 'geral' ? t('gestao_geral_search_setting') : t('gestao_geral_search_event');
+    activeTab === 'rgpd' ? t('gestao_geral_search_topic') : t('gestao_geral_search_event');
 
   const toggleNotificationColumn = (rowId, columnKey) => {
     setNotificationRows((current) =>
@@ -282,10 +228,6 @@ function GestaoGeralAG() {
 
   const updateRgpdField = (rowId, field, value) => {
     setRgpdRows((current) => current.map((row) => (row.id === rowId ? { ...row, [field]: value } : row)));
-  };
-
-  const updateGeneralOption = (rowId, value) => {
-    setGeneralRows((current) => current.map((row) => (row.id === rowId ? { ...row, value } : row)));
   };
 
   const handleCancelChanges = () => {
@@ -309,11 +251,6 @@ function GestaoGeralAG() {
         const data = await updateAdminRgpdTopics(rgpdRows);
         if (Array.isArray(data?.rgpd)) {
           setRgpdRows(data.rgpd);
-        }
-      } else {
-        const data = await updateAdminGeneralSettings(generalRows);
-        if (Array.isArray(data?.settings)) {
-          setGeneralRows(data.settings);
         }
       }
 
@@ -521,36 +458,6 @@ function GestaoGeralAG() {
                     aria-label={t('gestao_geral_aria_rgpd', { id: item.id })}
                     rows={5}
                   />
-                </article>
-              ))}
-            </div>
-          )}
-
-          {activeTab === 'geral' && (
-            <div className="ag-settings-wrap">
-              {isLoading && (
-                <p className="ag-rgpd-empty">{t('gestao_geral_loading')}</p>
-              )}
-
-              {!isLoading && filteredGeneralSettings.length === 0 && (
-                <p className="ag-rgpd-empty">{t('gestao_geral_no_settings')}</p>
-              )}
-
-              {!isLoading && filteredGeneralSettings.map((item) => (
-                <article key={item.id} className="ag-setting-row">
-                  <span className="ag-setting-key-label">{t(item.key)}</span>
-                  <select
-                    className="ag-setting-value-input"
-                    value={item.value}
-                    onChange={(event) => updateGeneralOption(item.id, event.target.value)}
-                    aria-label={`Valor da definição ${item.id}`}
-                  >
-                    {(Array.isArray(item.options) ? item.options : []).map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
                 </article>
               ))}
             </div>
