@@ -22,7 +22,7 @@ const initialNotificationRows = [
     sll: true,
     tl: false,
     consultor: false,
-    email: false,
+    email: true,
     hasEmail: true,
     webApp: true,
   },
@@ -406,14 +406,14 @@ function GestaoGeralAG() {
                         />
                       </td>
                       <td>
-                        <input
-                          type="checkbox"
-                          checked={row.email}
-                          disabled={!row.hasEmail}
-                          onChange={() => toggleNotificationColumn(row.id, 'email')}
-                          aria-label={t('gestao_geral_aria_email', { name: row.event })}
-                          className={!row.hasEmail ? 'ag-email-disabled' : ''}
-                        />
+                        {row.hasEmail ? (
+                          <input
+                            type="checkbox"
+                            checked={row.email}
+                            onChange={() => toggleNotificationColumn(row.id, 'email')}
+                            aria-label={t('gestao_geral_aria_email', { name: row.event })}
+                          />
+                        ) : null}
                       </td>
                       <td>
                         <input

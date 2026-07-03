@@ -10,7 +10,7 @@ const defaultNotificationRows = [
     sll: true,
     tl: false,
     consultor: false,
-    email: false,
+    email: true,
     webApp: true,
   },
   {
