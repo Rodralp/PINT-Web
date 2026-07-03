@@ -162,6 +162,12 @@
   accent-color: #1b84f4;
 }
 
+.ag-general-table input[type='checkbox'].ag-email-disabled {
+  accent-color: #cbd5e1;
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .ag-general-empty-row {
   text-align: center;
   color: #7a869b;

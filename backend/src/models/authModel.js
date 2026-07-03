@@ -590,14 +590,17 @@ export const authModel = {
 
       // Send approval email
       if (userAccount?.email) {
-        try {
-          await sendEmail({
-            to: userAccount.email,
-            subject: 'Conta Aprovada - PINT',
-            html: emailTemplates.registrationApproved({ userName: userAccount.nome || 'Utilizador' }),
-          });
-        } catch (emailError) {
-          console.error('Failed to send registration approval email.', emailError);
+        const emailEnabled = await communicationModel.isEmailEnabledForEvent('Novo registo');
+        if (emailEnabled) {
+          try {
+            await sendEmail({
+              to: userAccount.email,
+              subject: 'Conta Aprovada - PINT',
+              html: emailTemplates.registrationApproved({ userName: userAccount.nome || 'Utilizador' }),
+            });
+          } catch (emailError) {
+            console.error('Failed to send registration approval email.', emailError);
+          }
         }
       }
 

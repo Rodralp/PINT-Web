@@ -1040,26 +1040,32 @@ const applyDecision = async ({ role, actorUtilizadorId, request, decision, comme
 
       if (consultorAccount?.email) {
         if (shouldNotifyApproval) {
-          await sendEmail({
-            to: consultorAccount.email,
-            subject: 'Pedido Aprovado - PINT',
-            html: emailTemplates.requestApproved({
-              userName: consultorAccount.nome || 'Consultor',
-              badgeName,
-            }),
-          });
+          const emailEnabled = await communicationModel.isEmailEnabledForEvent('Pedido aprovado');
+          if (emailEnabled) {
+            await sendEmail({
+              to: consultorAccount.email,
+              subject: 'Pedido Aprovado - PINT',
+              html: emailTemplates.requestApproved({
+                userName: consultorAccount.nome || 'Consultor',
+                badgeName,
+              }),
+            });
+          }
         }
 
         if (shouldNotifyRejection) {
-          await sendEmail({
-            to: consultorAccount.email,
-            subject: 'Pedido Rejeitado - PINT',
-            html: emailTemplates.requestRejected({
-              userName: consultorAccount.nome || 'Consultor',
-              badgeName,
-              comment: finalDescription,
-            }),
-          });
+          const emailEnabled = await communicationModel.isEmailEnabledForEvent('Pedido rejeitado');
+          if (emailEnabled) {
+            await sendEmail({
+              to: consultorAccount.email,
+              subject: 'Pedido Rejeitado - PINT',
+              html: emailTemplates.requestRejected({
+                userName: consultorAccount.nome || 'Consultor',
+                badgeName,
+                comment: finalDescription,
+              }),
+            });
+          }
         }
       }
     } catch (emailError) {

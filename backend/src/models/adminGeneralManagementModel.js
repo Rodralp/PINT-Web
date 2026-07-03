@@ -65,7 +65,7 @@ const defaultNotificationRows = [
     sll: false,
     tl: false,
     consultor: true,
-    email: true,
+    email: false,
     webApp: true,
   },
   {
@@ -78,6 +78,12 @@ const defaultNotificationRows = [
     webApp: true,
   },
 ];
+
+const EMAIL_SUPPORTED_EVENTS = new Set([
+  'novo registo',
+  'pedido aprovado',
+  'pedido rejeitado',
+]);
 
 const defaultRgpdTopics = [
   {
@@ -272,6 +278,7 @@ const listNotificationSettings = async (transaction) => {
     tl: Boolean(row?.tl),
     consultor: Boolean(row?.consultor),
     email: Boolean(row?.email),
+    hasEmail: EMAIL_SUPPORTED_EVENTS.has(normalizeEventKey(row?.evento)),
     webApp: Boolean(row?.web_app),
   }));
 };
