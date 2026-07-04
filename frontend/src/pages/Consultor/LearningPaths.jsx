@@ -113,7 +113,7 @@ function LearningPaths() {
   const getProgressLabel = ({ isComplete, obtidas, total }) => (
     isComplete
       ? t('consultor_lp_area_completed')
-      : t('consultor_lp_progress_count', { obtidas, total })
+      : t('consultor_lp_progress_count', { count: obtidas, total })
   );
 
   const pageTitle = selectedServiceLine ? t('consultor_lp_service_line') : t('consultor_lp_title');

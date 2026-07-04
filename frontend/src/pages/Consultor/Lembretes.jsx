@@ -264,7 +264,7 @@ function Lembretes() {
                     <p>{reminder.description}</p>
                     <div className="reminder-date">
                       <CalendarDays size={14} />
-                      <span>{formatReminderDate(reminder.date)}</span>
+                      <span>{formatReminderDate(reminder.date, monthLabels)}</span>
                     </div>
                   </div>
 

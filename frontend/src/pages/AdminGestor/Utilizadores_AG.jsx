@@ -776,7 +776,7 @@ function UtilizadoresAG() {
                       checked={createForm.roles.includes(roleId)}
                       onChange={() => toggleRole('create', roleId)}
                     />
-                    <span>{roleLabel}</span>
+                    <span>{t(roleLabel)}</span>
                   </label>
                 ))}
               </div>
@@ -849,7 +849,7 @@ function UtilizadoresAG() {
                       checked={permissionsForm.roles.includes(roleId)}
                       onChange={() => toggleRole('permissions', roleId)}
                     />
-                    <span>{roleLabel}</span>
+                    <span>{t(roleLabel)}</span>
                   </label>
                 ))}
               </div>
