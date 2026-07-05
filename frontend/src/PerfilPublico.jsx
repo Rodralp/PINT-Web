@@ -305,20 +305,33 @@ function PerfilPublico() {
 									<h3>Vitrine</h3>
 								</div>
 								<div className="pp-vitrine-grid">
-									{vitrineItems.map((badge) => (
-										<div key={badge.id} className="pp-vitrine-item" title={badge.name}>
-											<div className="pp-vitrine-badge-img">
-												<BadgeImage
-													src={badge.badgeImage}
-													alt={badge.name || 'Badge'}
-													levelKey={badge.levelKey}
-													typeId={badge.typeId}
-													levelLabel={badge.levelLabel}
-												/>
-											</div>
-											<span className="pp-vitrine-badge-name">{badge.name}</span>
+								{vitrineItems.map((badge) => (
+									<div
+										key={badge.id}
+										className="pp-vitrine-item"
+										title={badge.name}
+										role="button"
+										tabIndex={0}
+										onClick={() => navigate(`/galeria-publica/badge/${encodeURIComponent(badge.badgeDbId)}`, { state: { badge } })}
+										onKeyDown={(e) => {
+											if (e.key === 'Enter' || e.key === ' ') {
+												e.preventDefault();
+												navigate(`/galeria-publica/badge/${encodeURIComponent(badge.badgeDbId)}`, { state: { badge } });
+											}
+										}}
+									>
+										<div className="pp-vitrine-badge-img">
+											<BadgeImage
+												src={badge.badgeImage}
+												alt={badge.name || 'Badge'}
+												levelKey={badge.levelKey}
+												typeId={badge.typeId}
+												levelLabel={badge.levelLabel}
+											/>
 										</div>
-									))}
+										<span className="pp-vitrine-badge-name">{badge.name}</span>
+									</div>
+								))}
 								</div>
 							</section>
 						)}
