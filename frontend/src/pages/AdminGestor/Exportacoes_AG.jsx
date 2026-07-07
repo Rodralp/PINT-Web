@@ -1257,7 +1257,7 @@ function ExportacoesAG() {
                   const isSelected = selectedBadgeIds.includes(item.id);
                   const badgeTitle = item.name || item.area || 'Badge';
                   const levelLabel = item.isSpecial ? 'Especial' : item.levelLabel || item.level;
-                  const expirationInfo = getExpirationStatus(item.validade);
+                  const expirationInfo = getExpirationStatus(item.validade, t);
 
                   return (
                     <article
