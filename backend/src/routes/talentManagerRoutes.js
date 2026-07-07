@@ -6,6 +6,7 @@ import {
   getDetalhesConsultorTM,
   getDetalhesBadgeTM,
   getDetalhesServiceLineTM,
+  getHistoricoPorEstadoTM,
 } from '../controllers/talentManagerController.js';
 
 const router = Router();
@@ -16,5 +17,10 @@ router.get('/historico/consultores', getHistoricoConsultores);
 router.get('/historico/consultor', getDetalhesConsultorTM);
 router.get('/historico/badge', getDetalhesBadgeTM);
 router.get('/historico/service-line', getDetalhesServiceLineTM);
+
+router.get('/historico/service-line-estado', getHistoricoPorEstadoTM);
+router.get('/historico/area-estado', getHistoricoPorEstadoTM);
+router.get('/historico/badge-estado', getHistoricoPorEstadoTM);
+router.get('/historico/consultor-estado', getHistoricoPorEstadoTM);
 
 export default router;

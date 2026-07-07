@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { createPortal } from 'react-dom';
 import { Search, Eye, X } from 'lucide-react';
 import Layout from '../../components/Layout';
 import Pagination from '../../components/Pagination';
@@ -9,28 +9,22 @@ import {
   fetchHistoricoServiceLines,
   fetchHistoricoBadges,
   fetchHistoricoConsultores,
-  fetchDetalhesConsultor,
-  fetchDetalhesBadge,
   fetchDetalhesServiceLine,
+  fetchHistoricoPorEstadoTM,
 } from '../../services/talentManagerService';
 import '../../css/TalentManager/Exportacoes_TM.css';
+import '../../css/TalentManager/historico-actions.css';
 import '../../css/Shared/HistoricoPages.css';
 
 const ITEMS_PER_PAGE = 10;
 
 const normalizeLevelTitle = (value) => {
   const raw = String(value || '').trim();
-  if (!raw) {
-    return '-';
-  }
-
+  if (!raw) return '-';
   if (raw.includes(' - ')) {
     const suffix = raw.split(' - ').slice(1).join(' - ').trim();
-    if (suffix) {
-      return suffix;
-    }
+    if (suffix) return suffix;
   }
-
   return raw.replace(/^nivel\s+/i, '').trim() || raw;
 };
 
@@ -52,6 +46,9 @@ function HistoricoTM() {
   const [serviceLines, setServiceLines] = useState([]);
   const [badges, setBadges] = useState([]);
   const [consultores, setConsultores] = useState([]);
+  const [expandedSLId, setExpandedSLId] = useState(null);
+  const [slAreas, setSlAreas] = useState({});
+  const [slAreasLoading, setSlAreasLoading] = useState({});
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState(null);
@@ -89,10 +86,7 @@ function HistoricoTM() {
     };
 
     loadData();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
   useEffect(() => {
@@ -103,10 +97,8 @@ function HistoricoTM() {
     const query = searchQuery.toLowerCase().trim();
 
     if (activeTab === 'service-lines') {
-      return serviceLines.filter((item) =>
-        item.name?.toLowerCase().includes(query));
+      return serviceLines.filter((item) => item.name?.toLowerCase().includes(query));
     }
-
     if (activeTab === 'badges') {
       return badges.filter((item) =>
         item.name?.toLowerCase().includes(query)
@@ -114,7 +106,6 @@ function HistoricoTM() {
         || item.serviceLine?.toLowerCase().includes(query),
       );
     }
-
     if (activeTab === 'consultores') {
       return consultores.filter((item) =>
         item.name?.toLowerCase().includes(query)
@@ -122,34 +113,49 @@ function HistoricoTM() {
         || item.serviceLine?.toLowerCase().includes(query),
       );
     }
-
     return [];
   }, [activeTab, searchQuery, serviceLines, badges, consultores]);
 
   const totalPages = Math.max(1, Math.ceil(filteredData.length / ITEMS_PER_PAGE));
   const pagedData = useMemo(() => {
     const start = (page - 1) * ITEMS_PER_PAGE;
-    const end = start + ITEMS_PER_PAGE;
-    return filteredData.slice(start, end);
+    return filteredData.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredData, page]);
 
-  const openModal = async (type, id) => {
+  const toggleExpandSL = async (slId) => {
+    if (expandedSLId === slId) {
+      setExpandedSLId(null);
+      return;
+    }
+    setExpandedSLId(slId);
+    if (slAreas[slId]) return;
+
+    setSlAreasLoading((prev) => ({ ...prev, [slId]: true }));
+    try {
+      const data = await fetchDetalhesServiceLine(slId);
+      setSlAreas((prev) => ({ ...prev, [slId]: data?.areas || [] }));
+    } catch {
+      setSlAreas((prev) => ({ ...prev, [slId]: [] }));
+    } finally {
+      setSlAreasLoading((prev) => ({ ...prev, [slId]: false }));
+    }
+  };
+
+  const openModal = async (type, entityId, extraParams = {}) => {
     setModalType(type);
     setModalOpen(true);
     setModalLoading(true);
 
     try {
-      let data;
-      if (type === 'consultor') {
-        data = await fetchDetalhesConsultor(id);
-      } else if (type === 'badge') {
-        data = await fetchDetalhesBadge(id);
-      } else if (type === 'serviceLine') {
-        data = await fetchDetalhesServiceLine(id);
-      }
-      setModalData(data);
+      let estado = 'pendente';
+      if (type.includes('Pendentes')) estado = 'pendente';
+      else if (type.includes('Aceites')) estado = 'aceite';
+      else if (type.includes('Rejeitados')) estado = 'rejeitado';
+
+      const data = await fetchHistoricoPorEstadoTM(type, estado, entityId, extraParams);
+      setModalData(Array.isArray(data) ? data : []);
     } catch {
-      setModalData(null);
+      setModalData([]);
     } finally {
       setModalLoading(false);
     }
@@ -178,14 +184,43 @@ function HistoricoTM() {
     return <span className={className}>{mappedStatus || '-'}</span>;
   };
 
+  const renderEstadoButtons = (type, entityId, extraParams = {}) => (
+    <div className="historico-actions-group">
+      <button
+        type="button"
+        className="action-btn tm-export-control-btn historico-action-btn"
+        onClick={() => openModal(`${type}Pendentes`, entityId, extraParams)}
+      >
+        <Eye size={16} />
+        {t('ver_pendentes')}
+      </button>
+      <button
+        type="button"
+        className="action-btn tm-export-control-btn historico-action-btn"
+        onClick={() => openModal(`${type}Aceites`, entityId, extraParams)}
+      >
+        <Eye size={16} />
+        {t('ver_aceites')}
+      </button>
+      <button
+        type="button"
+        className="action-btn tm-export-control-btn historico-action-btn"
+        onClick={() => openModal(`${type}Rejeitados`, entityId, extraParams)}
+      >
+        <Eye size={16} />
+        {t('ver_rejeitados')}
+      </button>
+    </div>
+  );
+
   return (
     <Layout>
-      <div className="page historico-page">
-        <header className="page-header">
+      <div className="page tm-export-page historico-page">
+        <header className="page-header tm-export-header">
           <h1>{t('historico_title_tm')}</h1>
         </header>
 
-        <div className="shell">
+        <div className="shell tm-export-shell">
           <div className="tm-export-tabs">
             {tabs.map((tab) => (
               <button
@@ -199,17 +234,19 @@ function HistoricoTM() {
             ))}
           </div>
 
-          <div className="toolbar tm-export-toolbar">
-            <div className="search-wrap tm-export-search">
-              <Search size={18} />
-              <input
-                type="text"
-                placeholder={t('search_placeholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+          {activeTab !== 'service-lines' && (
+            <div className="toolbar tm-export-toolbar historico-toolbar-single">
+              <div className="search-wrap tm-export-search">
+                <Search size={18} />
+                <input
+                  type="text"
+                  placeholder={t('search_placeholder')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {isLoading && <LoadingSpinner message={t('loading')} />}
           {errorMessage && <p className="lp-progress-label">{errorMessage}</p>}
@@ -217,46 +254,78 @@ function HistoricoTM() {
           {!isLoading && !errorMessage && (
             <>
               {activeTab === 'service-lines' && (
-                <div className="table-wrap orders-table-wrap">
-                  <table className="table orders-table">
-                    <thead>
-                      <tr>
-                        <th>{t('service_line')}</th>
-                        <th>{t('badges')}</th>
-                        <th>{t('obtained_badges')}</th>
-                        <th>{t('dashboard_in_progress')}</th>
-                        <th>{t('total_consultors')}</th>
-                        <th>{t('actions')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pagedData.length === 0 && (
+                <>
+                  <div className="table-wrap orders-table-wrap">
+                    <table className="table orders-table">
+                      <thead>
                         <tr>
-                          <td colSpan={6} className="empty-state orders-empty-row">{t('no_items')}</td>
+                          <th>{t('header_service_line')}</th>
+                          <th>{t('header_total_badges')}</th>
+                          <th>{t('header_consultants')}</th>
+                          <th>{t('header_actions')}</th>
                         </tr>
-                      )}
-                      {pagedData.map((item) => (
-                        <tr key={item.id}>
-                          <td><strong>{item.name}</strong></td>
-                          <td>{item.totalBadges || 0}</td>
-                          <td>{item.obtidas || 0}</td>
-                          <td>{item.emProgresso || 0}</td>
-                          <td>{item.totalConsultores || 0}</td>
-                          <td>
-                            <button
-                              type="button"
-                              className="action-btn tm-export-control-btn historico-action-btn"
-                              onClick={() => openModal('serviceLine', item.id)}
-                            >
-                              <Eye size={16} />
-                              {t('notifications_view_button')}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {pagedData.length === 0 && (
+                          <tr>
+                            <td colSpan={4} className="empty-state orders-empty-row">{t('no_items')}</td>
+                          </tr>
+                        )}
+                        {pagedData.map((item) => (
+                          <tr key={item.id}>
+                            <td>
+                              <strong
+                                style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                                onClick={() => toggleExpandSL(item.id)}
+                              >
+                                {item.name}
+                              </strong>
+                            </td>
+                            <td>{item.totalBadges || 0}</td>
+                            <td>{item.totalConsultores || 0}</td>
+                            <td>{renderEstadoButtons('serviceLine', item.id, { serviceLineId: item.id })}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {expandedSLId && (
+                    <>
+                      <h3 className="historico-section-title">{t('historico_areas_title')}</h3>
+                      <div className="table-wrap orders-table-wrap">
+                        <table className="table orders-table">
+                          <thead>
+                            <tr>
+                              <th>{t('header_area')}</th>
+                              <th>{t('header_total_badges')}</th>
+                              <th>{t('header_actions')}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {slAreasLoading[expandedSLId] && (
+                              <tr>
+                                <td colSpan={3} className="empty-state orders-empty-row">{t('loading')}</td>
+                              </tr>
+                            )}
+                            {!slAreasLoading[expandedSLId] && (slAreas[expandedSLId] || []).length === 0 && (
+                              <tr>
+                                <td colSpan={3} className="empty-state orders-empty-row">{t('no_items')}</td>
+                              </tr>
+                            )}
+                            {(slAreas[expandedSLId] || []).map((area) => (
+                              <tr key={area.id}>
+                                <td><strong>{area.name}</strong></td>
+                                <td>{area.totalBadges || 0}</td>
+                                <td>{renderEstadoButtons('area', area.id)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
+                </>
               )}
 
               {activeTab === 'badges' && (
@@ -264,18 +333,16 @@ function HistoricoTM() {
                   <table className="table orders-table">
                     <thead>
                       <tr>
-                        <th>{t('badge')}</th>
-                        <th>{t('area')}</th>
-                        <th>{t('level')}</th>
-                        <th>{t('total_consultors')}</th>
-                        <th>{t('dashboard_in_progress')}</th>
-                        <th>{t('actions')}</th>
+                        <th>{t('header_badge')}</th>
+                        <th>{t('header_area')}</th>
+                        <th>{t('header_level')}</th>
+                        <th>{t('header_actions')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {pagedData.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="empty-state orders-empty-row">{t('no_badges_found')}</td>
+                          <td colSpan={4} className="empty-state orders-empty-row">{t('no_items')}</td>
                         </tr>
                       )}
                       {pagedData.map((item) => (
@@ -283,18 +350,7 @@ function HistoricoTM() {
                           <td><strong>{item.name}</strong></td>
                           <td>{item.area || '-'}</td>
                           <td>{normalizeLevelTitle(item.level)}</td>
-                          <td>{item.consultoresObtidos || 0}</td>
-                          <td>{item.emProgresso || 0}</td>
-                          <td>
-                            <button
-                              type="button"
-                              className="action-btn tm-export-control-btn historico-action-btn"
-                              onClick={() => openModal('badge', item.id)}
-                            >
-                              <Eye size={16} />
-                              {t('notifications_view_button')}
-                            </button>
-                          </td>
+                          <td>{renderEstadoButtons('badge', item.id)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -307,19 +363,17 @@ function HistoricoTM() {
                   <table className="table orders-table">
                     <thead>
                       <tr>
-                        <th>{t('users_role_consultor')}</th>
-                        <th>{t('email_label')}</th>
-                        <th>{t('points_label')}</th>
-                        <th>{t('obtained_badges')}</th>
-                        <th>{t('dashboard_in_progress')}</th>
-                        <th>{t('status')}</th>
-                        <th>{t('actions')}</th>
+                        <th>{t('header_consultant')}</th>
+                        <th>{t('header_email')}</th>
+                        <th>{t('header_points')}</th>
+                        <th>{t('header_status')}</th>
+                        <th>{t('header_actions')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {pagedData.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="empty-state orders-empty-row">{t('dashboard_no_consultor_data')}</td>
+                          <td colSpan={5} className="empty-state orders-empty-row">{t('no_items')}</td>
                         </tr>
                       )}
                       {pagedData.map((item) => (
@@ -327,7 +381,7 @@ function HistoricoTM() {
                           <td>
                             <div className="consultant-cell">
                               <img
-                                src={item.avatar || `/avatars/default-avatar.svg`}
+                                src={item.avatar || '/avatars/default-avatar.svg'}
                                 alt={item.name}
                                 className="consultant-avatar-small"
                               />
@@ -336,19 +390,8 @@ function HistoricoTM() {
                           </td>
                           <td>{item.email}</td>
                           <td>{item.points || 0}</td>
-                          <td>{item.badgesObtidas || 0}</td>
-                          <td>{item.badgesEmProgresso || 0}</td>
                           <td>{renderStatusBadge(item.status)}</td>
-                          <td>
-                            <button
-                              type="button"
-                              className="action-btn tm-export-control-btn historico-action-btn"
-                              onClick={() => openModal('consultor', item.id)}
-                            >
-                              <Eye size={16} />
-                              {t('notifications_view_button')}
-                            </button>
-                          </td>
+                          <td>{renderEstadoButtons('consultor', item.id)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -367,9 +410,18 @@ function HistoricoTM() {
               <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                   <h2>
-                    {modalType === 'consultor' && t('details')}
-                    {modalType === 'badge' && t('details')}
-                    {modalType === 'serviceLine' && t('details')}
+                    {modalType?.includes('serviceLine') && modalType?.includes('Pendentes') && t('modal_pending_service_line')}
+                    {modalType?.includes('serviceLine') && modalType?.includes('Aceites') && t('modal_accepted_service_line')}
+                    {modalType?.includes('serviceLine') && modalType?.includes('Rejeitados') && t('modal_rejected_service_line')}
+                    {modalType?.includes('area') && modalType?.includes('Pendentes') && t('modal_pending_area')}
+                    {modalType?.includes('area') && modalType?.includes('Aceites') && t('modal_accepted_area')}
+                    {modalType?.includes('area') && modalType?.includes('Rejeitados') && t('modal_rejected_area')}
+                    {modalType?.includes('badge') && modalType?.includes('Pendentes') && t('modal_pending_badge')}
+                    {modalType?.includes('badge') && modalType?.includes('Aceites') && t('modal_accepted_badge')}
+                    {modalType?.includes('badge') && modalType?.includes('Rejeitados') && t('modal_rejected_badge')}
+                    {modalType?.includes('consultor') && modalType?.includes('Pendentes') && t('modal_pending_consultant')}
+                    {modalType?.includes('consultor') && modalType?.includes('Aceites') && t('modal_accepted_consultant')}
+                    {modalType?.includes('consultor') && modalType?.includes('Rejeitados') && t('modal_rejected_consultant')}
                   </h2>
                   <button type="button" className="modal-close" onClick={closeModal}>
                     <X size={24} />
@@ -377,196 +429,99 @@ function HistoricoTM() {
                 </div>
                 <div className="modal-body">
                   {modalLoading && <p>{t('loading')}</p>}
-                  {!modalLoading && modalData && (
-                    <>
-                      {modalType === 'consultor' && modalData.consultor && (
-                        <div className="modal-section">
-                          <div className="modal-info">
-                            <h3>{modalData.consultor.name}</h3>
-                            <p>{modalData.consultor.email}</p>
-                            <p><strong>{t('points_label')}:</strong> {modalData.consultor.totalPoints}</p>
-                          </div>
-                          <h4>{t('obtained_badges')} ({modalData.badgesObtidos?.length || 0})</h4>
-                          {modalData.badgesObtidos?.length > 0 ? (
-                            <table className="table orders-table">
-                              <thead>
-                                <tr>
-                                  <th>{t('badge')}</th>
-                                  <th>{t('area')}</th>
-                                  <th>{t('service_line')}</th>
-                                  <th>{t('points_label')}</th>
-                                  <th>{t('date')}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {modalData.badgesObtidos.map((badge) => (
-                                  <tr key={badge.id}>
-                                    <td>{badge.name}</td>
-                                    <td>{badge.areaName || '-'}</td>
-                                    <td>{badge.serviceLineName || '-'}</td>
-                                    <td>{badge.points}</td>
-                                    <td>{badge.obtainedDate ? new Date(badge.obtainedDate).toLocaleDateString() : '-'}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          ) : (
-                            <p>{t('no_badges_obtained')}</p>
-                          )}
-                          <h4 style={{ marginTop: '20px' }}>{t('dashboard_in_progress')} ({modalData.badgesEmProgresso?.length || 0})</h4>
-                          {modalData.badgesEmProgresso?.length > 0 ? (
-                            <table className="table orders-table">
-                              <thead>
-                                <tr>
-                                  <th>{t('badge')}</th>
-                                  <th>{t('area')}</th>
-                                  <th>{t('service_line')}</th>
-                                  <th>{t('status')}</th>
-                                  <th>{t('date')}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {modalData.badgesEmProgresso.map((badge) => (
-                                  <tr key={badge.id}>
-                                    <td>{badge.name}</td>
-                                    <td>{badge.areaName || '-'}</td>
-                                    <td>{badge.serviceLineName || '-'}</td>
-                                    <td>{renderStatusBadge(badge.status)}</td>
-                                    <td>{badge.requestDate ? new Date(badge.requestDate).toLocaleDateString() : '-'}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          ) : (
-                            <p>{t('no_items')}</p>
-                          )}
-                        </div>
+                  {!modalLoading && (
+                    <div className="modal-section">
+                      {Array.isArray(modalData) && modalData.length > 0 ? (
+                        <table className="table orders-table">
+                          <thead>
+                            <tr>
+                              {modalType?.includes('serviceLine') && (
+                                <>
+                                  <th>{t('header_id')}</th>
+                                  <th>{t('header_service_line')}</th>
+                                  <th>{t('header_description')}</th>
+                                  <th>{t('header_date')}</th>
+                                  <th>{t('header_status')}</th>
+                                </>
+                              )}
+                              {modalType?.includes('area') && (
+                                <>
+                                  <th>{t('header_id')}</th>
+                                  <th>{t('header_area')}</th>
+                                  <th>{t('header_badge')}</th>
+                                  <th>{t('header_consultant')}</th>
+                                  <th>{t('header_date')}</th>
+                                  <th>{t('header_status')}</th>
+                                </>
+                              )}
+                              {modalType?.includes('badge') && (
+                                <>
+                                  <th>{t('header_id')}</th>
+                                  <th>{t('header_badge')}</th>
+                                  <th>{t('header_consultant')}</th>
+                                  <th>{t('header_date')}</th>
+                                  <th>{t('header_status')}</th>
+                                </>
+                              )}
+                              {modalType?.includes('consultor') && (
+                                <>
+                                  <th>{t('header_id')}</th>
+                                  <th>{t('header_consultant')}</th>
+                                  <th>{t('header_badge')}</th>
+                                  <th>{t('header_date')}</th>
+                                  <th>{t('header_status')}</th>
+                                </>
+                              )}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {modalData.map((item) => (
+                              <tr key={item.id}>
+                                {modalType?.includes('serviceLine') && (
+                                  <>
+                                    <td>{item.id}</td>
+                                    <td>{item.name}</td>
+                                    <td>{item.descricao}</td>
+                                    <td>{item.data}</td>
+                                    <td>{renderStatusBadge(item.estado)}</td>
+                                  </>
+                                )}
+                                {modalType?.includes('area') && (
+                                  <>
+                                    <td>{item.id}</td>
+                                    <td>{item.name}</td>
+                                    <td>{item.badge}</td>
+                                    <td>{item.consultor}</td>
+                                    <td>{item.data}</td>
+                                    <td>{renderStatusBadge(item.estado)}</td>
+                                  </>
+                                )}
+                                {modalType?.includes('badge') && (
+                                  <>
+                                    <td>{item.id}</td>
+                                    <td>{item.name}</td>
+                                    <td>{item.consultor}</td>
+                                    <td>{item.data}</td>
+                                    <td>{renderStatusBadge(item.estado)}</td>
+                                  </>
+                                )}
+                                {modalType?.includes('consultor') && (
+                                  <>
+                                    <td>{item.id}</td>
+                                    <td>{item.name}</td>
+                                    <td>{item.badge}</td>
+                                    <td>{item.data}</td>
+                                    <td>{renderStatusBadge(item.estado)}</td>
+                                  </>
+                                )}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <p>{t('no_items')}</p>
                       )}
-
-                      {modalType === 'badge' && modalData.badge && (
-                        <div className="modal-section">
-                          <div className="modal-info">
-                            <h3>{modalData.badge.name}</h3>
-                            <p><strong>{t('area')}:</strong> {modalData.badge.areaName || '-'}</p>
-                            <p><strong>{t('service_line')}:</strong> {modalData.badge.serviceLineName || '-'}</p>
-                            <p><strong>{t('level')}:</strong> {normalizeLevelTitle(modalData.badge.level)}</p>
-                            <p><strong>{t('points_label')}:</strong> {modalData.badge.points}</p>
-                          </div>
-                          <h4>{t('total_consultors')} ({modalData.totalObtidos})</h4>
-                          {modalData.consultoresObtidos?.length > 0 ? (
-                            <table className="table orders-table">
-                              <thead>
-                                <tr>
-                                  <th>{t('users_role_consultor')}</th>
-                                  <th>{t('service_line')}</th>
-                                  <th>{t('date')}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {modalData.consultoresObtidos.map((c) => (
-                                  <tr key={c.id}>
-                                    <td>{c.name}</td>
-                                    <td>{c.serviceLineName || '-'}</td>
-                                    <td>{c.obtainedDate ? new Date(c.obtainedDate).toLocaleDateString() : '-'}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          ) : (
-                            <p>{t('dashboard_no_consultor_data')}</p>
-                          )}
-                          <h4 style={{ marginTop: '20px' }}>{t('dashboard_in_progress')} ({modalData.totalEmProgresso})</h4>
-                          {modalData.consultoresEmProgresso?.length > 0 ? (
-                            <table className="table orders-table">
-                              <thead>
-                                <tr>
-                                  <th>{t('users_role_consultor')}</th>
-                                  <th>{t('service_line')}</th>
-                                  <th>{t('status')}</th>
-                                  <th>{t('date')}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {modalData.consultoresEmProgresso.map((c) => (
-                                  <tr key={c.id}>
-                                    <td>{c.name}</td>
-                                    <td>{c.serviceLineName || '-'}</td>
-                                    <td>{renderStatusBadge(c.status)}</td>
-                                    <td>{c.requestDate ? new Date(c.requestDate).toLocaleDateString() : '-'}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          ) : (
-                            <p>{t('dashboard_no_consultor_data')}</p>
-                          )}
-                        </div>
-                      )}
-
-                      {modalType === 'serviceLine' && modalData.serviceLine && (
-                        <div className="modal-section">
-                          <div className="modal-info">
-                            <h3>{modalData.serviceLine.name}</h3>
-                            <p><strong>{t('badges')}:</strong> {modalData.serviceLine.totalBadges}</p>
-                            <p><strong>{t('obtained_badges')}:</strong> {modalData.serviceLine.obtidas}</p>
-                            <p><strong>{t('dashboard_in_progress')}:</strong> {modalData.serviceLine.emProgresso}</p>
-                            <p><strong>{t('total_consultors')}:</strong> {modalData.serviceLine.totalConsultores}</p>
-                          </div>
-                          <h4>{t('area')}</h4>
-                          {modalData.areas?.length > 0 ? (
-                            <table className="table orders-table">
-                              <thead>
-                                <tr>
-                                  <th>{t('area')}</th>
-                                  <th>{t('badges')}</th>
-                                  <th>{t('obtained_badges')}</th>
-                                  <th>{t('dashboard_in_progress')}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {modalData.areas.map((area) => (
-                                  <tr key={area.id}>
-                                    <td>{area.name}</td>
-                                    <td>{area.totalBadges || 0}</td>
-                                    <td>{area.obtidas || 0}</td>
-                                    <td>{area.emProgresso || 0}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          ) : (
-                            <p>{t('no_items')}</p>
-                          )}
-                          <h4 style={{ marginTop: '20px' }}>{t('total_consultors')} ({modalData.consultores?.length || 0})</h4>
-                          {modalData.consultores?.length > 0 ? (
-                            <table className="table orders-table">
-                              <thead>
-                                <tr>
-                                  <th>{t('users_role_consultor')}</th>
-                                  <th>{t('email_label')}</th>
-                                  <th>{t('points_label')}</th>
-                                  <th>{t('obtained_badges')}</th>
-                                  <th>{t('dashboard_in_progress')}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {modalData.consultores.map((c) => (
-                                  <tr key={c.id}>
-                                    <td>{c.name}</td>
-                                    <td>{c.email}</td>
-                                    <td>{c.points || 0}</td>
-                                    <td>{c.badgesObtidas || 0}</td>
-                                    <td>{c.badgesEmProgresso || 0}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          ) : (
-                            <p>{t('dashboard_no_consultor_data')}</p>
-                          )}
-                        </div>
-                      )}
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
