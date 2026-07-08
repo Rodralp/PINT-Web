@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
-import { Search, Eye, X } from 'lucide-react';
+import { Search, Eye, X, Clock3 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import Pagination from '../../components/Pagination';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -11,6 +11,7 @@ import {
   fetchHistoricoConsultores,
   fetchDetalhesServiceLine,
   fetchHistoricoPorEstadoTM,
+  fetchHistoricoCandidaturaTM,
 } from '../../services/talentManagerService';
 import '../../css/TalentManager/Exportacoes_TM.css';
 import '../../css/TalentManager/historico-actions.css';
@@ -54,6 +55,11 @@ function HistoricoTM() {
   const [modalType, setModalType] = useState(null);
   const [modalData, setModalData] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
+
+  const [historicoOpen, setHistoricoOpen] = useState(false);
+  const [historicoPedidoId, setHistoricoPedidoId] = useState(null);
+  const [historicoData, setHistoricoData] = useState([]);
+  const [historicoLoading, setHistoricoLoading] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -165,6 +171,47 @@ function HistoricoTM() {
     setModalOpen(false);
     setModalType(null);
     setModalData(null);
+  };
+
+  const openHistoricoCandidatura = async (pedidoId) => {
+    setHistoricoPedidoId(pedidoId);
+    setHistoricoOpen(true);
+    setHistoricoLoading(true);
+    try {
+      const data = await fetchHistoricoCandidaturaTM(pedidoId);
+      setHistoricoData(Array.isArray(data) ? data : []);
+    } catch {
+      setHistoricoData([]);
+    } finally {
+      setHistoricoLoading(false);
+    }
+  };
+
+  const closeHistorico = () => {
+    setHistoricoOpen(false);
+    setHistoricoPedidoId(null);
+    setHistoricoData([]);
+  };
+
+  const descriptionMap = {
+    'Candidatura criada.': 'desc_candidatura_criada',
+    'Candidatura submetida para validação.': 'desc_candidatura_submetida',
+    'Candidatura validada pelo Talent Manager e enviada para SLL.': 'desc_validada_tm_sll',
+    'Candidatura rejeitada pelo Talent Manager.': 'desc_rejeitada_tm',
+    'Candidatura rejeitada pelo Service Line Leader.': 'desc_rejeitada_sll',
+    'Candidatura rejeitada pelo Administrador/Gestor.': 'desc_rejeitada_admin',
+    'Candidatura devolvida ao consultor pelo Talent Manager.': 'desc_devolvida_tm',
+    'Candidatura devolvida ao consultor pelo Service Line Leader.': 'desc_devolvida_sll',
+    'Candidatura devolvida ao consultor pelo Administrador/Gestor.': 'desc_devolvida_admin',
+    'Candidatura aprovada pelo Service Line Leader.': 'desc_aprovada_sll',
+    'Candidatura aprovada pelo Administrador/Gestor.': 'desc_aprovada_admin',
+    'Candidatura rejeitada automaticamente porque a badge expirou.': 'desc_rejeitada_auto_badge',
+    'Badge especial atribuída automaticamente por trigger.': 'desc_badge_especial',
+  };
+
+  const translateDescription = (desc) => {
+    if (!desc) return '';
+    return t(descriptionMap[desc] || desc);
   };
 
   const renderStatusBadge = (status) => {
@@ -442,6 +489,7 @@ function HistoricoTM() {
                                   <th>{t('header_description')}</th>
                                   <th>{t('header_date')}</th>
                                   <th>{t('header_status')}</th>
+                                  <th>{t('header_actions')}</th>
                                 </>
                               )}
                               {modalType?.includes('area') && (
@@ -452,6 +500,7 @@ function HistoricoTM() {
                                   <th>{t('header_consultant')}</th>
                                   <th>{t('header_date')}</th>
                                   <th>{t('header_status')}</th>
+                                  <th>{t('header_actions')}</th>
                                 </>
                               )}
                               {modalType?.includes('badge') && (
@@ -461,6 +510,7 @@ function HistoricoTM() {
                                   <th>{t('header_consultant')}</th>
                                   <th>{t('header_date')}</th>
                                   <th>{t('header_status')}</th>
+                                  <th>{t('header_actions')}</th>
                                 </>
                               )}
                               {modalType?.includes('consultor') && (
@@ -470,6 +520,7 @@ function HistoricoTM() {
                                   <th>{t('header_badge')}</th>
                                   <th>{t('header_date')}</th>
                                   <th>{t('header_status')}</th>
+                                  <th>{t('header_actions')}</th>
                                 </>
                               )}
                             </tr>
@@ -484,6 +535,16 @@ function HistoricoTM() {
                                     <td>{item.descricao}</td>
                                     <td>{item.data}</td>
                                     <td>{renderStatusBadge(item.estado)}</td>
+                                    <td>
+                                      <button
+                                        type="button"
+                                        className="action-btn tm-export-control-btn historico-action-btn"
+                                        onClick={() => openHistoricoCandidatura(item.id)}
+                                      >
+                                        <Clock3 size={16} />
+                                        {t('ver_historico')}
+                                      </button>
+                                    </td>
                                   </>
                                 )}
                                 {modalType?.includes('area') && (
@@ -494,6 +555,16 @@ function HistoricoTM() {
                                     <td>{item.consultor}</td>
                                     <td>{item.data}</td>
                                     <td>{renderStatusBadge(item.estado)}</td>
+                                    <td>
+                                      <button
+                                        type="button"
+                                        className="action-btn tm-export-control-btn historico-action-btn"
+                                        onClick={() => openHistoricoCandidatura(item.id)}
+                                      >
+                                        <Clock3 size={16} />
+                                        {t('ver_historico')}
+                                      </button>
+                                    </td>
                                   </>
                                 )}
                                 {modalType?.includes('badge') && (
@@ -503,6 +574,16 @@ function HistoricoTM() {
                                     <td>{item.consultor}</td>
                                     <td>{item.data}</td>
                                     <td>{renderStatusBadge(item.estado)}</td>
+                                    <td>
+                                      <button
+                                        type="button"
+                                        className="action-btn tm-export-control-btn historico-action-btn"
+                                        onClick={() => openHistoricoCandidatura(item.id)}
+                                      >
+                                        <Clock3 size={16} />
+                                        {t('ver_historico')}
+                                      </button>
+                                    </td>
                                   </>
                                 )}
                                 {modalType?.includes('consultor') && (
@@ -512,12 +593,60 @@ function HistoricoTM() {
                                     <td>{item.badge}</td>
                                     <td>{item.data}</td>
                                     <td>{renderStatusBadge(item.estado)}</td>
+                                    <td>
+                                      <button
+                                        type="button"
+                                        className="action-btn tm-export-control-btn historico-action-btn"
+                                        onClick={() => openHistoricoCandidatura(item.id)}
+                                      >
+                                        <Clock3 size={16} />
+                                        {t('ver_historico')}
+                                      </button>
+                                    </td>
                                   </>
                                 )}
                               </tr>
                             ))}
                           </tbody>
                         </table>
+                      ) : (
+                        <p>{t('no_items')}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>,
+            document.body
+          )}
+
+          {historicoOpen && createPortal(
+            <div className="modal-overlay" onClick={closeHistorico}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2>{t('historico_candidatura')} #{historicoPedidoId}</h2>
+                  <button type="button" className="modal-close" onClick={closeHistorico}>
+                    <X size={24} />
+                  </button>
+                </div>
+                <div className="modal-body">
+                  {historicoLoading && <p>{t('loading')}</p>}
+                  {!historicoLoading && (
+                    <div className="modal-section">
+                      {historicoData.length > 0 ? (
+                        <div className="candidacy-timeline">
+                          {historicoData.map((entry, idx) => (
+                            <div key={entry.id || idx} className="candidacy-timeline-entry">
+                              <div className="candidacy-timeline-dot" />
+                              <div className="candidacy-timeline-content">
+                                <p><strong>{t(`estado_${entry.estado}`)}</strong></p>
+                                <p>{t('by')}: {entry.utilizadorNome}</p>
+                                <p>{t('date')}: {entry.dataEstado ? new Date(entry.dataEstado).toLocaleString() : '-'}</p>
+                                {entry.descricao && <p>{translateDescription(entry.descricao)}</p>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       ) : (
                         <p>{t('no_items')}</p>
                       )}

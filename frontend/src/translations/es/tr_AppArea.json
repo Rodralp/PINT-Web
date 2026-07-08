@@ -953,5 +953,32 @@
   "badge_copy_link": "Copiar enlace",
   "badge_submitting": "Enviando...",
   "badge_start_application": "Iniciar Solicitud",
-  "badge_submit": "Enviar"
+  "badge_submit": "Enviar",
+
+  "ver_historico": "Ver Historial",
+  "historico_candidatura": "Historial de Solicitud",
+  "by": "Por",
+
+  "estado_candidatura_em_progresso": "Solicitud en progreso",
+  "estado_pendente-tm": "Pendiente (Talent Manager)",
+  "estado_pendente-sll": "Pendiente (Service Line Leader)",
+  "estado_rejeitado": "Rechazado",
+  "estado_aprovado": "Aprobado",
+  "estado_em_validacao": "En Revisión",
+  "estado_em_validacao_sll": "En Revisión (SLL)",
+  "estado_evidencias_insuficientes": "Evidencias Insuficientes",
+
+  "desc_candidatura_criada": "Solicitud creada.",
+  "desc_candidatura_submetida": "Solicitud enviada para validación.",
+  "desc_validada_tm_sll": "Solicitud validada por Talent Manager y enviada a SLL.",
+  "desc_rejeitada_tm": "Solicitud rechazada por Talent Manager.",
+  "desc_rejeitada_sll": "Solicitud rechazada por Service Line Leader.",
+  "desc_rejeitada_admin": "Solicitud rechazada por Administrador/Gestor.",
+  "desc_devolvida_tm": "Solicitud devuelta al consultor por Talent Manager.",
+  "desc_devolvida_sll": "Solicitud devuelta al consultor por Service Line Leader.",
+  "desc_devolvida_admin": "Solicitud devuelta al consultor por Administrador/Gestor.",
+  "desc_aprovada_sll": "Solicitud aprobada por Service Line Leader.",
+  "desc_aprovada_admin": "Solicitud aprobada por Administrador/Gestor.",
+  "desc_rejeitada_auto_badge": "Solicitud rechazada automáticamente porque la insignia expiró.",
+  "desc_badge_especial": "Insignia especial asignada automáticamente por trigger."
 }

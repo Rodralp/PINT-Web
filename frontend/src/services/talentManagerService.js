@@ -103,3 +103,8 @@ export async function fetchHistoricoPorEstadoTM(type, estado, entityId, extraPar
   const response = await apiClient.get(`${endpoint}?${params}`);
   return response.data;
 }
+
+export async function fetchHistoricoCandidaturaTM(pedidoId) {
+  const response = await apiClient.get(`/talent-manager/historico/candidatura?pedidoId=${encodeURIComponent(pedidoId)}`);
+  return response.data;
+}

@@ -953,5 +953,32 @@
   "badge_copy_link": "Copy link",
   "badge_submitting": "Submitting...",
   "badge_start_application": "Start Application",
-  "badge_submit": "Submit"
+  "badge_submit": "Submit",
+
+  "ver_historico": "View History",
+  "historico_candidatura": "Candidacy History",
+  "by": "By",
+
+  "estado_candidatura_em_progresso": "Application in progress",
+  "estado_pendente-tm": "Pending (Talent Manager)",
+  "estado_pendente-sll": "Pending (Service Line Leader)",
+  "estado_rejeitado": "Rejected",
+  "estado_aprovado": "Approved",
+  "estado_em_validacao": "Under Review",
+  "estado_em_validacao_sll": "Under Review (SLL)",
+  "estado_evidencias_insuficientes": "Insufficient Evidence",
+
+  "desc_candidatura_criada": "Application created.",
+  "desc_candidatura_submetida": "Application submitted for validation.",
+  "desc_validada_tm_sll": "Application validated by Talent Manager and sent to SLL.",
+  "desc_rejeitada_tm": "Application rejected by Talent Manager.",
+  "desc_rejeitada_sll": "Application rejected by Service Line Leader.",
+  "desc_rejeitada_admin": "Application rejected by Admin/Manager.",
+  "desc_devolvida_tm": "Application returned to consultant by Talent Manager.",
+  "desc_devolvida_sll": "Application returned to consultant by Service Line Leader.",
+  "desc_devolvida_admin": "Application returned to consultant by Admin/Manager.",
+  "desc_aprovada_sll": "Application approved by Service Line Leader.",
+  "desc_aprovada_admin": "Application approved by Admin/Manager.",
+  "desc_rejeitada_auto_badge": "Application automatically rejected because the badge expired.",
+  "desc_badge_especial": "Special badge automatically assigned by trigger."
 }

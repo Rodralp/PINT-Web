@@ -954,5 +954,32 @@
   "badge_copy_link": "Copiar link",
   "badge_submitting": "A submeter...",
   "badge_start_application": "Iniciar Candidatura",
-  "badge_submit": "Submeter"
+  "badge_submit": "Submeter",
+
+  "ver_historico": "Ver Histórico",
+  "historico_candidatura": "Histórico de Candidatura",
+  "by": "Por",
+
+  "estado_candidatura_em_progresso": "Candidatura em progresso",
+  "estado_pendente-tm": "Pendente (Talent Manager)",
+  "estado_pendente-sll": "Pendente (Service Line Leader)",
+  "estado_rejeitado": "Rejeitado",
+  "estado_aprovado": "Aprovado",
+  "estado_em_validacao": "Em Validação",
+  "estado_em_validacao_sll": "Em Validação (SLL)",
+  "estado_evidencias_insuficientes": "Evidências Insuficientes",
+
+  "desc_candidatura_criada": "Candidatura criada.",
+  "desc_candidatura_submetida": "Candidatura submetida para validação.",
+  "desc_validada_tm_sll": "Candidatura validada pelo Talent Manager e enviada para SLL.",
+  "desc_rejeitada_tm": "Candidatura rejeitada pelo Talent Manager.",
+  "desc_rejeitada_sll": "Candidatura rejeitada pelo Service Line Leader.",
+  "desc_rejeitada_admin": "Candidatura rejeitada pelo Administrador/Gestor.",
+  "desc_devolvida_tm": "Candidatura devolvida ao consultor pelo Talent Manager.",
+  "desc_devolvida_sll": "Candidatura devolvida ao consultor pelo Service Line Leader.",
+  "desc_devolvida_admin": "Candidatura devolvida ao consultor pelo Administrador/Gestor.",
+  "desc_aprovada_sll": "Candidatura aprovada pelo Service Line Leader.",
+  "desc_aprovada_admin": "Candidatura aprovada pelo Administrador/Gestor.",
+  "desc_rejeitada_auto_badge": "Candidatura rejeitada automaticamente porque a badge expirou.",
+  "desc_badge_especial": "Badge especial atribuída automaticamente por trigger."
 }

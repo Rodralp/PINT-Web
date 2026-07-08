@@ -13,6 +13,7 @@ import { Tipo } from './sql/Tipo.js';
 import { Vitrine } from './sql/Vitrine.js';
 import { Nivel } from './sql/Nivel.js';
 import { NivelContemBadge } from './sql/NivelContemBadge.js';
+import { PedidoHistorico } from './sql/PedidoHistorico.js';
 import { sequelize } from '../config/database.js';
 import { adminBadgeModel } from './adminBadgeModel.js';
 const { loadBadgeImagesBatch } = adminBadgeModel;
@@ -593,6 +594,14 @@ export const syncSpecialBadgesForConsultor = async (utilizadorId) => {
           continue;
         }
 
+        await PedidoHistorico.create({
+          npedido: requestId,
+          nestado: approvedEstadoId,
+          nutilizador: Number(utilizadorId),
+          data_estado: new Date(),
+          descricao: 'Badge especial atribuída automaticamente por trigger.',
+        }, { transaction });
+
         await sequelize.query(
           `
             INSERT INTO c_obtem_b (nutilizador, nbadge, npedido, pontos_obtidos, data_obtencao)
@@ -677,9 +686,25 @@ const autoRejectExpiredRequests = async () => {
       type: QueryTypes.UPDATE,
     },
   );
-};
 
-const EXPIRATION_NOTIFICATION_THRESHOLD_DAYS = 30;
+  await sequelize.query(
+    `
+      INSERT INTO pedido_historico (npedido, nestado, nutilizador, data_estado, descricao)
+      SELECT npedido, :rejectedId, NULL, NOW(), :defaultDescription
+      FROM pedidos
+      WHERE data_limite IS NOT NULL
+        AND data_limite <= CURRENT_DATE
+        AND estado = :rejectedId
+    `,
+    {
+      replacements: {
+        rejectedId,
+        defaultDescription: AUTO_REJECTION_NOTE,
+      },
+      type: QueryTypes.INSERT,
+    },
+  );
+};
 
 const sendAllExpirationNotifications = async () => {
   try {
@@ -2158,6 +2183,14 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
       },
     );
 
+    await PedidoHistorico.create({
+      npedido: Number(existingRequest.npedido),
+      nestado: nextEstadoId,
+      nutilizador: Number(utilizadorId),
+      data_estado: new Date(),
+      descricao: 'Candidatura submetida para validação.',
+    });
+
     // Send email confirmation of submission to TM
     try {
       const consultorInfo = await Account.findByPk(Number(utilizadorId), {
@@ -2193,7 +2226,18 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
     data_limite: new Date(Date.now() + REQUEST_EXPIRATION_MONTHS * 30 * 24 * 60 * 60 * 1000),
   });
 
-  return { status: 'candidatura_em_progresso', requestId: Number(createdRequest?.npedido) || null };
+  const newPedidoId = Number(createdRequest?.npedido);
+  if (Number.isInteger(newPedidoId) && newPedidoId > 0) {
+    await PedidoHistorico.create({
+      npedido: newPedidoId,
+      nestado: candidaturaEstadoId,
+      nutilizador: Number(utilizadorId),
+      data_estado: new Date(),
+      descricao: 'Candidatura criada.',
+    });
+  }
+
+  return { status: 'candidatura_em_progresso', requestId: newPedidoId || null };
 };
 
 const mapReminder = (reminder) => ({
