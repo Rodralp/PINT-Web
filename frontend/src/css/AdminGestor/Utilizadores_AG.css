@@ -155,6 +155,21 @@
   color: #b45309;
 }
 
+.ag-user-status.completo {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.ag-user-status.rejeitado {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.ag-user-status.sent {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
 .ag-users-actions {
   display: inline-flex;
   align-items: center;

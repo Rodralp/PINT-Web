@@ -271,12 +271,12 @@ PÁGINA PRINCIPAL - LAYOUT E COMPONENTES COMPARTILHADOS
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 92px;
   height: 26px;
   border-radius: var(--radius-pill);
-  padding: 0 var(--sp-3);
+  padding: 0 10px;
   font-size: var(--fs-xs);
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .status-badge.success {

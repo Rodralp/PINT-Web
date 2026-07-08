@@ -250,20 +250,21 @@ function HistoricoSLL() {
   };
 
   const renderStatusBadge = (status) => {
-    const statusClasses = {
-      completo: 'status-badge success',
-      'a-fazer': 'status-badge warning',
-      pendente: 'status-badge warning',
-      ativo: 'status-badge success',
-      inativo: 'status-badge danger',
-      rejeitado: 'status-badge danger',
+    const statusLabels = {
+      completo: t('badge_status_validated'),
+      'a-fazer': t('badge_status_pending'),
+      pendente: t('badge_status_pending'),
+      ativo: t('users_status_active'),
+      inativo: t('users_status_inactive'),
+      rejeitado: t('badge_status_rejected'),
+      sent: t('badge_status_in_progress'),
     };
     const normalizedStatus = String(status || '').trim().toLowerCase();
     const mappedStatus = ['pendente-tm', 'pendente-sll'].includes(normalizedStatus)
       ? 'pendente'
       : normalizedStatus;
-    const className = statusClasses[mappedStatus] || 'status-badge';
-    return <span className={className}>{mappedStatus || '-'}</span>;
+    const label = statusLabels[mappedStatus] || mappedStatus || '-';
+    return <span className={`ag-user-status ${mappedStatus}`}>{label}</span>;
   };
 
   return (
