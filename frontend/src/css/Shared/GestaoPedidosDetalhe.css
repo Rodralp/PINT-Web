@@ -81,7 +81,7 @@
 :is(.sll-order-badge-image, .tm-order-badge-image, .ag-order-badge-image, .badge-hero-image) {
   width: 170px;
   height: 150px;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 :is(.sll-order-hero-content, .tm-order-hero-content, .ag-order-hero-content, .badge-hero-content) {
@@ -262,7 +262,7 @@
 }
 
 :is(.sll-order-requirement-detail-image, .tm-order-requirement-detail-image, .ag-order-requirement-detail-image, .badge-requirement-detail-image) {
-  object-fit: contain;
+  object-fit: cover;
 }
 
 :is(.sll-order-requirement-detail-image, .tm-order-requirement-detail-image, .ag-order-requirement-detail-image) {

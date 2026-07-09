@@ -23,7 +23,7 @@
 
 .badge-image-composite-frame {
   z-index: 2;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
 }
 
