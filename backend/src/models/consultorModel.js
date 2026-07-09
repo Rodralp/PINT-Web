@@ -2516,7 +2516,7 @@ export const consultorModel = {
       const [obtainedRows, requestRows] = await Promise.all([
         sequelize.query(
           `
-            SELECT cb.nbadge
+            SELECT cb.nbadge, cb.data_obtencao
             FROM c_obtem_b AS cb
             INNER JOIN badge AS b ON b.nbadge = cb.nbadge
             WHERE cb.nutilizador = :utilizadorId
@@ -2541,7 +2541,7 @@ export const consultorModel = {
       ]);
 
       for (const row of obtainedRows) {
-        userObtainedMap.set(Number(row.nbadge), true);
+        userObtainedMap.set(Number(row.nbadge), row.data_obtencao);
       }
       for (const row of requestRows) {
         userRequestMap.set(Number(row.nbadge), row.estado);
@@ -2557,11 +2557,13 @@ export const consultorModel = {
 
       let stateId = 'candidatura_aberta';
       let status = 'visualizar';
+      let date = null;
 
       if (accountId) {
         if (userObtainedMap.has(badgeId)) {
           stateId = 'aprovado';
           status = 'obtido';
+          date = formatDate(userObtainedMap.get(badgeId));
         } else if (userRequestMap.has(badgeId)) {
           const estado = userRequestMap.get(badgeId);
           stateId = mapPedidoEstadoToMyBadgeState(estado);
@@ -2586,6 +2588,7 @@ export const consultorModel = {
         learningPathName: 'Jornada Técnica',
         serviceLineName: row.sline || 'Application Operations',
         validade: row.validade || null,
+        date,
       };
     });
 

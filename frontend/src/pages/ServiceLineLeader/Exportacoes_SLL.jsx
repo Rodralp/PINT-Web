@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import html2pdf from 'html2pdf.js';
-import { downloadHtmlAsPdf } from '../../utils/pdfExport.js';
+import { downloadHtmlAsPdf, resolveImageUrl, resolveBadgeFrameImage, renderMaskedBadge } from '../../utils/pdfExport.js';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowDownToLine,
@@ -343,61 +342,49 @@ const generateBadgesCSV = (badges) => {
   ].join('\n');
 };
 
-const generateBadgePagesPDF = (badges, userName) => {
+const generateBadgePagesPDF = async (badges, userName) => {
+  const renderedBadges = await Promise.all(
+    badges.map((badge) =>
+      renderMaskedBadge(resolveImageUrl(badge.badgeImage), badge.levelId || badge.level, 120)
+    )
+  );
+
   const html = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
       <title>Badges Export</title>
-      <style>
-        @media print { @page { size: A4 portrait; margin: 0; } body { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .no-print { display: none; } }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 40px; }
-        .page-break { page-break-after: always; }
-        .badge-card { background: white; border-radius: 24px; padding: 60px 80px; max-width: 600px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(0, 102, 255, 0.15); border: 4px solid #0066ff; position: relative; margin-bottom: 40px; }
-        .brand { font-size: 18px; font-weight: 700; color: #0066ff; letter-spacing: 2px; margin-bottom: 20px; text-transform: uppercase; }
-        .title { font-size: 28px; font-weight: 700; color: #495057; margin-bottom: 30px; }
-        .badge-container { margin: 30px 0 40px 0; display: flex; justify-content: center; align-items: center; }
-        .badge-image-simple { width: 120px; height: 120px; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.1)); }
-        .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #e9ecef; font-size: 16px; }
-        .detail-label { font-weight: 600; color: #495057; }
-        .detail-value { font-weight: 700; color: #0066ff; }
-        .text-light { font-size: 16px; color: #868e96; margin: 12px 0; }
-        .user-name { font-size: 22px; font-weight: 700; color: #343a40; margin: 8px 0; }
-        .area { font-size: 20px; font-weight: 700; color: #343a40; margin: 8px 0; }
-        .level { font-size: 16px; color: #868e96; margin: 8px 0; }
-        .date { font-size: 15px; color: #868e96; margin-top: 20px; }
-      </style>
     </head>
-    <body>
-      ${badges.map((badge, index) => `
-        <div class="badge-card ${index < badges.length - 1 ? 'page-break' : ''}">
-          <div class="brand">SOFTINSA</div>
-          <div class="title">Badge ${index + 1} de ${badges.length}</div>
-          <div class="badge-container">
-            <img src="${badge.badgeImage}" alt="${translateLevel(badge.levelId || badge.level)}" class="badge-image-simple" />
+    <body style="margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:20px;">
+      ${badges.map((badge, index) => {
+        const badgeDataUrl = renderedBadges[index];
+        return `
+        <div style="background:white;border-radius:24px;padding:60px 80px;max-width:600px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,102,255,0.15);border:4px solid #0066ff;position:relative;margin-bottom:40px;overflow:hidden;${index < badges.length - 1 ? 'page-break-after:always;' : ''}">
+          <div style="font-size:18px;font-weight:700;color:#0066ff;letter-spacing:2px;margin-bottom:30px;text-transform:uppercase;">SOFTINSA</div>
+          <div style="margin:0 auto 40px auto;display:flex;justify-content:center;align-items:center;width:120px;height:120px;">
+            <img src="${badgeDataUrl}" alt="Badge" style="width:120px;height:120px;object-fit:contain;" />
           </div>
-          <div class="detail-row">
-            <span class="detail-label">Área</span>
-            <span class="detail-value">${badge.area}</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #e9ecef;font-size:16px;">
+            <span style="font-weight:600;color:#495057;">Área</span>
+            <span style="font-weight:700;color:#0066ff;">${badge.area || ''}</span>
           </div>
-          <div class="detail-row">
-            <span class="detail-label">Nível</span>
-            <span class="detail-value">${translateLevel(badge.levelId || badge.level)}</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #e9ecef;font-size:16px;">
+            <span style="font-weight:600;color:#495057;">Nível</span>
+            <span style="font-weight:700;color:#0066ff;">${translateLevel(badge.levelId || badge.level)}</span>
           </div>
-          <div class="detail-row">
-            <span class="detail-label">Pontos</span>
-            <span class="detail-value">${badge.points}</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #e9ecef;font-size:16px;">
+            <span style="font-weight:600;color:#495057;">Pontos</span>
+            <span style="font-weight:700;color:#0066ff;">${badge.points || ''}</span>
           </div>
-          <div class="detail-row">
-            <span class="detail-label">Data</span>
-            <span class="detail-value">${badge.date}</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #e9ecef;font-size:16px;">
+            <span style="font-weight:600;color:#495057;">Data</span>
+            <span style="font-weight:700;color:#0066ff;">${badge.date || ''}</span>
           </div>
-          <div class="text-light">Atribuído a</div>
-          <div class="user-name">${userName}</div>
-        </div>
-      `).join('')}
+          <div style="font-size:16px;color:#868e96;margin:12px 0;">Atribuído a</div>
+          <div style="font-size:22px;font-weight:700;color:#343a40;margin:8px 0;">${userName}</div>
+        </div>`;
+      }).join('')}
     </body>
     </html>
   `;
@@ -411,49 +398,32 @@ const generateRequestsPDF = (requests) => {
     <head>
       <meta charset="UTF-8">
       <title>Pedidos de Badges</title>
-      <style>
-        @media print { @page { size: A4 landscape; margin: 20px; } body { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8f9fa; padding: 40px; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .header h1 { font-size: 28px; color: #343a40; margin-bottom: 8px; }
-        .header p { color: #868e96; font-size: 14px; }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        thead { background: #0066ff; color: white; }
-        th { padding: 14px 16px; text-align: left; font-weight: 600; font-size: 14px; }
-        td { padding: 12px 16px; border-bottom: 1px solid #e9ecef; font-size: 14px; color: #495057; }
-        tr:last-child td { border-bottom: none; }
-        .status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
-        .status.sent { background: #d1ecf1; color: #0c5460; }
-        .status.pending { background: #fff3cd; color: #856404; }
-        .status.rejected { background: #f8d7da; color: #721c24; }
-      </style>
     </head>
-    <body>
-      <div class="header">
-        <h1>Pedidos de Badges</h1>
-        <p>Data de exportação: ${new Date().toLocaleDateString('pt-PT')}</p>
+    <body style="margin:0;padding:20px;font-family:'Segoe UI',Arial,sans-serif;">
+      <div style="text-align:center;margin-bottom:30px;">
+        <h1 style="font-size:28px;color:#343a40;margin:0 0 8px 0;">Pedidos de Badges</h1>
+        <p style="color:#868e96;font-size:14px;margin:0;">Data de exportação: ${new Date().toLocaleDateString('pt-PT')}</p>
       </div>
-      <table>
+      <table style="width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);">
         <thead>
-          <tr>
-            <th>ID</th>
-            <th>Consultor</th>
-            <th>Badge</th>
-            <th>Nível</th>
-            <th>Data</th>
-            <th>Estado</th>
+          <tr style="background:#0066ff;color:white;">
+            <th style="padding:14px 16px;text-align:left;font-weight:600;font-size:14px;">ID</th>
+            <th style="padding:14px 16px;text-align:left;font-weight:600;font-size:14px;">Consultor</th>
+            <th style="padding:14px 16px;text-align:left;font-weight:600;font-size:14px;">Badge</th>
+            <th style="padding:14px 16px;text-align:left;font-weight:600;font-size:14px;">Nível</th>
+            <th style="padding:14px 16px;text-align:left;font-weight:600;font-size:14px;">Data</th>
+            <th style="padding:14px 16px;text-align:left;font-weight:600;font-size:14px;">Estado</th>
           </tr>
         </thead>
         <tbody>
           ${requests.map(req => `
             <tr>
-              <td>${req.id}</td>
-              <td>${req.consultant}</td>
-              <td>${req.badge}</td>
-              <td>${req.level}</td>
-              <td>${req.date}</td>
-              <td><span class="status ${req.status}">${req.status}</span></td>
+              <td style="padding:12px 16px;border-bottom:1px solid #e9ecef;font-size:14px;color:#495057;">${req.id}</td>
+              <td style="padding:12px 16px;border-bottom:1px solid #e9ecef;font-size:14px;color:#495057;">${req.consultant}</td>
+              <td style="padding:12px 16px;border-bottom:1px solid #e9ecef;font-size:14px;color:#495057;">${req.badge}</td>
+              <td style="padding:12px 16px;border-bottom:1px solid #e9ecef;font-size:14px;color:#495057;">${req.level}</td>
+              <td style="padding:12px 16px;border-bottom:1px solid #e9ecef;font-size:14px;color:#495057;">${req.date}</td>
+              <td style="padding:12px 16px;border-bottom:1px solid #e9ecef;font-size:14px;color:#495057;"><span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;text-transform:uppercase;background:${req.status === 'enviado' ? '#d1fae5' : req.status === 'pendente' ? '#fef3c7' : '#fee2e2'};color:${req.status === 'enviado' ? '#047857' : req.status === 'pendente' ? '#b45309' : '#b91c1c'};">${req.status === 'enviado' ? 'Aprovado' : req.status === 'pendente' ? 'Pendente' : 'Rejeitado'}</span></td>
             </tr>
           `).join('')}
         </tbody>
@@ -485,50 +455,34 @@ const generateConsultantsPDF = (consultants) => {
     <head>
       <meta charset="UTF-8">
       <title>Consultores</title>
-      <style>
-        @media print { @page { size: A4 landscape; margin: 20px; } body { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8f9fa; padding: 40px; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .header h1 { font-size: 28px; color: #343a40; margin-bottom: 8px; }
-        .header p { color: #868e96; font-size: 14px; }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        thead { background: #0066ff; color: white; }
-        th { padding: 14px 16px; text-align: left; font-weight: 600; font-size: 14px; }
-        td { padding: 12px 16px; border-bottom: 1px solid #e9ecef; font-size: 14px; color: #495057; }
-        tr:last-child td { border-bottom: none; }
-        .status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
-        .status.ativo { background: #d4edda; color: #155724; }
-        .status.inativo { background: #f8d7da; color: #721c24; }
-      </style>
     </head>
-    <body>
-      <div class="header">
-        <h1>Consultores</h1>
-        <p>Data de exportação: ${new Date().toLocaleDateString('pt-PT')}</p>
+    <body style="margin:0;padding:20px;font-family:'Segoe UI',Arial,sans-serif;">
+      <div style="text-align:center;margin-bottom:30px;">
+        <h1 style="font-size:28px;color:#343a40;margin:0 0 8px 0;">Consultores</h1>
+        <p style="color:#868e96;font-size:14px;margin:0;">Data de exportação: ${new Date().toLocaleDateString('pt-PT')}</p>
       </div>
-      <table>
+      <table style="width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);">
         <thead>
-          <tr>
-            <th>Ranking</th>
-            <th>Nome</th>
-            <th>Email</th>
-            <th>Pontos</th>
-            <th>Data de Entrada</th>
-            <th>Badges</th>
-            <th>Estado</th>
+          <tr style="background:#0066ff;color:white;">
+            <th style="padding:14px 16px;text-align:left;font-weight:600;font-size:14px;">Ranking</th>
+            <th style="padding:14px 16px;text-align:left;font-weight:600;font-size:14px;">Nome</th>
+            <th style="padding:14px 16px;text-align:left;font-weight:600;font-size:14px;">Email</th>
+            <th style="padding:14px 16px;text-align:left;font-weight:600;font-size:14px;">Pontos</th>
+            <th style="padding:14px 16px;text-align:left;font-weight:600;font-size:14px;">Data de Entrada</th>
+            <th style="padding:14px 16px;text-align:left;font-weight:600;font-size:14px;">Badges</th>
+            <th style="padding:14px 16px;text-align:left;font-weight:600;font-size:14px;">Estado</th>
           </tr>
         </thead>
         <tbody>
           ${consultants.map((c, index) => `
             <tr>
-              <td>${index + 1}</td>
-              <td>${c.name}</td>
-              <td>${c.email}</td>
-              <td>${c.points}</td>
-              <td>${c.joinedAt}</td>
-              <td>${c.badges}</td>
-              <td><span class="status ${c.status}">${c.status}</span></td>
+              <td style="padding:12px 16px;border-bottom:1px solid #e9ecef;font-size:14px;color:#495057;">${index + 1}</td>
+              <td style="padding:12px 16px;border-bottom:1px solid #e9ecef;font-size:14px;color:#495057;">${c.name}</td>
+              <td style="padding:12px 16px;border-bottom:1px solid #e9ecef;font-size:14px;color:#495057;">${c.email}</td>
+              <td style="padding:12px 16px;border-bottom:1px solid #e9ecef;font-size:14px;color:#495057;">${c.points}</td>
+              <td style="padding:12px 16px;border-bottom:1px solid #e9ecef;font-size:14px;color:#495057;">${c.joinedAt}</td>
+              <td style="padding:12px 16px;border-bottom:1px solid #e9ecef;font-size:14px;color:#495057;">${c.badges}</td>
+              <td style="padding:12px 16px;border-bottom:1px solid #e9ecef;font-size:14px;color:#495057;"><span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;text-transform:uppercase;background:${c.status === 'ativo' ? '#d4edda' : '#f8d7da'};color:${c.status === 'ativo' ? '#155724' : '#721c24'};">${c.status}</span></td>
             </tr>
           `).join('')}
         </tbody>
@@ -1016,14 +970,14 @@ function ExportacoesSLL() {
   };
 
   // Export handlers
-  const exportBadgesToPDF = () => {
+  const exportBadgesToPDF = async () => {
     const selected = badgeItems.filter((item) => selectedBadgeIds.includes(item.id));
     if (selected.length === 0) {
       alert(t('export_please_select_badge'));
       return;
     }
     try {
-      const htmlContent = generateBadgePagesPDF(selected, userName);
+      const htmlContent = await generateBadgePagesPDF(selected, userName);
       const date = new Date().toISOString().split('T')[0];
       downloadHtmlAsPdf(htmlContent, `badges-${date}.pdf`);
     } catch (error) {
@@ -1064,7 +1018,7 @@ function ExportacoesSLL() {
     try {
       const htmlContent = generateRequestsPDF(selected);
       const date = new Date().toISOString().split('T')[0];
-      downloadHtmlAsPdf(htmlContent, `pedidos-${date}.pdf`, { orientation: 'landscape' });
+      downloadHtmlAsPdf(htmlContent, `pedidos-${date}.pdf`, { orientation: 'portrait' });
     } catch (error) {
       console.error('Error generating requests PDF:', error);
       alert(t('export_error_request_pdf'));
@@ -1103,7 +1057,7 @@ function ExportacoesSLL() {
     try {
       const htmlContent = generateConsultantsPDF(selected);
       const date = new Date().toISOString().split('T')[0];
-      downloadHtmlAsPdf(htmlContent, `consultores-${date}.pdf`, { orientation: 'landscape' });
+      downloadHtmlAsPdf(htmlContent, `consultores-${date}.pdf`, { orientation: 'portrait' });
     } catch (error) {
       console.error('Error generating consultants PDF:', error);
       alert(t('export_error_consultant_pdf'));
@@ -1211,50 +1165,56 @@ function ExportacoesSLL() {
     const chartMax = step * 4;
     const ticks = [0, 1, 2, 3, 4].map((m) => step * m);
 
-    const pieGradient = total === 0 ? '#e2e8f0' : (() => {
-      let a = 0;
-      const segs = data.map((d, i) => {
-        const s = a;
-        a += (d.value / total) * 100;
-        return `${CHART_COLORS[i % CHART_COLORS.length]} ${s}% ${a}%`;
-      });
-      return `conic-gradient(${segs.join(', ')})`;
-    })();
-
     const barColumns = data.map((d, i) => {
       const pct = chartMax > 0 ? (d.value / chartMax) * 100 : 0;
       const color = CHART_COLORS[i % CHART_COLORS.length];
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0"><span style="font-size:10px;font-weight:700;color:#2f3747">${d.value}</span><div style="width:100%;height:130px;display:flex;align-items:flex-end;justify-content:center"><div style="width:70%;max-width:40px;height:${pct}%;background:${color};border-radius:4px 4px 0 0"></div></div><span style="font-size:9px;color:#64748b;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${d.name}</span></div>`;
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0"><span style="font-size:9px;font-weight:700;color:#2f3747">${d.value}</span><div style="width:100%;height:100px;display:flex;align-items:flex-end;justify-content:center"><div style="width:60%;max-width:32px;height:${pct}%;background:${color};border-radius:3px 3px 0 0"></div></div><span style="font-size:8px;color:#64748b;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%">${d.name}</span></div>`;
     }).join('');
 
     const legendItems = data.map((d, i) => {
       const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
       const color = CHART_COLORS[i % CHART_COLORS.length];
-      return `<div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#475569"><span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></span><span style="white-space:nowrap">${d.name}</span><span style="font-weight:700;color:#2f3747;margin-left:auto">${pct}%</span></div>`;
+      return `<div style="display:flex;align-items:center;gap:6px;font-size:10px;color:#475569"><span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span><span style="overflow:hidden;text-overflow:ellipsis;max-width:120px">${d.name}</span><span style="font-weight:700;color:#2f3747;flex-shrink:0">${pct}%</span></div>`;
     }).join('');
 
+    const radius = 48;
+    const circumference = 2 * Math.PI * radius;
+    let offset = 0;
+    const svgSegments = total === 0 ? '' : data.map((d, i) => {
+      const pct = d.value / total;
+      const segLen = pct * circumference;
+      const rest = circumference - segLen;
+      const color = CHART_COLORS[i % CHART_COLORS.length];
+      const seg = `<circle cx="60" cy="60" r="${radius}" fill="none" stroke="${color}" stroke-width="24" stroke-dasharray="${segLen} ${rest}" stroke-dashoffset="${-offset}" />`;
+      offset += segLen;
+      return seg;
+    }).join('');
+    const pieSvg = total === 0
+      ? '<div style="width:120px;height:120px;border-radius:50%;background:#e2e8f0;flex-shrink:0"></div>'
+      : `<svg width="120" height="120" viewBox="0 0 120 120" style="flex-shrink:0"><g transform="rotate(-90 60 60)">${svgSegments}</g></svg>`;
+
     return `
-      <div style="display:flex;gap:16px;margin-bottom:20px;page-break-inside:avoid">
-        <div style="flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px">
-          <h4 style="font-size:13px;font-weight:700;color:#2f3747;margin:0 0 10px">${title} — ${t('report_chart_bar')}</h4>
-          <div style="display:flex;align-items:flex-end;gap:4px;height:170px;padding-left:30px;position:relative">
-            <div style="position:absolute;left:0;top:0;bottom:0;width:26px;display:flex;flex-direction:column-reverse;justify-content:space-between;pointer-events:none">
-              ${ticks.map((tick) => `<span style="font-size:9px;color:#8892a4;line-height:1;text-align:right">${tick}</span>`).join('')}
+      <div style="display:flex;gap:12px;margin-bottom:16px;page-break-inside:avoid">
+        <div style="flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;min-width:0">
+          <h4 style="font-size:12px;font-weight:700;color:#2f3747;margin:0 0 8px">${title} — ${t('report_chart_bar')}</h4>
+          <div style="display:flex;align-items:flex-end;gap:3px;height:140px;padding-left:24px;position:relative">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:22px;display:flex;flex-direction:column-reverse;justify-content:space-between;pointer-events:none">
+              ${ticks.map((tick) => `<span style="font-size:8px;color:#8892a4;line-height:1;text-align:right">${tick}</span>`).join('')}
             </div>
             ${barColumns}
           </div>
         </div>
-        <div style="flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px">
-          <h4 style="font-size:13px;font-weight:700;color:#2f3747;margin:0 0 10px">${title} — ${t('report_chart_pie')}</h4>
-          <div style="display:flex;align-items:center;gap:16px;justify-content:center">
-            <div style="width:140px;height:140px;border-radius:50%;background:${pieGradient};flex-shrink:0"></div>
-            <div style="display:flex;flex-direction:column;gap:5px">${legendItems}</div>
+        <div style="flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;min-width:0">
+          <h4 style="font-size:12px;font-weight:700;color:#2f3747;margin:0 0 8px">${title} — ${t('report_chart_pie')}</h4>
+          <div style="display:flex;align-items:center;gap:12px;justify-content:center">
+            ${pieSvg}
+            <div style="display:flex;flex-direction:column;gap:4px;min-width:0">${legendItems}</div>
           </div>
         </div>
       </div>`;
   };
 
-  const exportReportToPDF = () => {
+  const exportReportToPDF = async () => {
     if (reportData.length === 0) return;
 
     const areaChartsHtml = reportAreaId === '' && reportNivelId !== 'especial'
@@ -1265,28 +1225,37 @@ function ExportacoesSLL() {
       : '';
 
     const summaryRowsHtml = reportSummary.map((row) => {
-      const detail = reportData.filter((r) => (r.areaNome || '-') === row.area);
-      const detailHtml = detail.map((r) => `<tr style="background:#f9fafb"><td style="padding-left:24px">${r.consultorNome || '-'}</td><td>${r.badgeNome || '-'}</td><td>${r.nivelNome || '-'}</td><td>${r.dataObtencao || '-'}</td><td>${r.pontosObtidos || r.badgePontos || 0}</td></tr>`).join('');
-      return `<tr><td><strong>${row.area}</strong></td><td>${row.totalBadges}</td><td>${new Intl.NumberFormat('pt-PT').format(row.totalPoints)}</td></tr>${detailHtml}`;
+      return `<tr><td style="padding:10px 14px;border-bottom:1px solid #e9ecef;font-size:13px;color:#495057;font-weight:600">${row.area}</td><td style="padding:10px 14px;border-bottom:1px solid #e9ecef;font-size:13px;color:#495057;text-align:center">${row.totalBadges}</td><td style="padding:10px 14px;border-bottom:1px solid #e9ecef;font-size:13px;color:#495057;text-align:right">${new Intl.NumberFormat('pt-PT').format(row.totalPoints)}</td></tr>`;
     }).join('');
 
-    const detailRowsHtml = reportData.map((r) => `<tr><td>${r.areaNome || '-'}</td><td>${r.consultorNome || '-'}</td><td>${r.consultorEmail || '-'}</td><td>${r.badgeNome || '-'}</td><td>${r.nivelNome || '-'}</td><td>${r.dataObtencao || '-'}</td><td>${r.pontosObtidos || r.badgePontos || 0}</td></tr>`).join('');
+    const detailRowsHtml = reportData.map((r) => `<tr><td style="padding:8px 10px;border-bottom:1px solid #e9ecef;font-size:12px;color:#495057">${r.areaNome || '-'}</td><td style="padding:8px 10px;border-bottom:1px solid #e9ecef;font-size:12px;color:#495057">${r.consultorNome || '-'}</td><td style="padding:8px 10px;border-bottom:1px solid #e9ecef;font-size:12px;color:#495057">${r.consultorEmail || '-'}</td><td style="padding:8px 10px;border-bottom:1px solid #e9ecef;font-size:12px;color:#495057">${r.badgeNome || '-'}</td><td style="padding:8px 10px;border-bottom:1px solid #e9ecef;font-size:12px;color:#495057">${r.nivelNome || '-'}</td><td style="padding:8px 10px;border-bottom:1px solid #e9ecef;font-size:12px;color:#495057;white-space:nowrap">${r.dataObtencao || '-'}</td><td style="padding:8px 10px;border-bottom:1px solid #e9ecef;font-size:12px;color:#495057;text-align:right">${r.pontosObtidos || r.badgePontos || 0}</td></tr>`).join('');
 
-    const container = document.createElement('div');
-    container.style.fontFamily = 'sans-serif';
-    container.style.fontSize = '12px';
-    container.innerHTML = `
-      <h1 style="font-size:20px;color:#2f3747;margin-bottom:4px">${t('export_tab_report')}</h1>
-      ${areaChartsHtml}
-      ${levelChartsHtml}
-      <h2 style="font-size:14px;color:#2f3747;margin:20px 0 8px">${t('report_summary_title')}</h2>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:16px"><thead><tr><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_col_area')}</th><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_total_badges')}</th><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_total_points')}</th></tr></thead><tbody>${summaryRowsHtml}</tbody></table>
-      <h2 style="font-size:14px;color:#2f3747;margin:20px 0 8px">${t('report_detail_title')}</h2>
-      <table style="width:100%;border-collapse:collapse"><thead><tr><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_col_area')}</th><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_col_consultant')}</th><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">Email</th><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_col_badge')}</th><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_col_level')}</th><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_col_date')}</th><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_col_points')}</th></tr></thead><tbody>${detailRowsHtml}</tbody></table>
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>${t('export_tab_report')}</title>
+      </head>
+      <body style="margin:0;padding:16px;font-family:'Segoe UI',Arial,sans-serif;font-size:12px;">
+        <div style="text-align:center;margin-bottom:24px;">
+          <h1 style="font-size:24px;color:#343a40;margin:0 0 6px 0;">${t('export_tab_report')}</h1>
+          <p style="color:#868e96;font-size:13px;margin:0;">${t('export_date_label')}: ${new Date().toLocaleDateString('pt-PT')}</p>
+        </div>
+        ${areaChartsHtml}
+        ${levelChartsHtml}
+        <div style="page-break-before:always"></div>
+        <h2 style="font-size:15px;color:#2f3747;margin:20px 0 10px;font-weight:700">${t('report_summary_title')}</h2>
+        <table style="width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);margin-bottom:20px"><thead><tr style="background:#0066ff;color:white;"><th style="padding:12px 14px;text-align:left;font-weight:600;font-size:13px;">${t('report_col_area')}</th><th style="padding:12px 14px;text-align:center;font-weight:600;font-size:13px;">${t('report_total_badges')}</th><th style="padding:12px 14px;text-align:right;font-weight:600;font-size:13px;">${t('report_total_points')}</th></tr></thead><tbody>${summaryRowsHtml}</tbody></table>
+        <div style="page-break-before:always"></div>
+        <h2 style="font-size:15px;color:#2f3747;margin:20px 0 10px;font-weight:700">${t('report_detail_title')}</h2>
+        <table style="width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05)"><thead><tr style="background:#0066ff;color:white;"><th style="padding:10px 10px;text-align:left;font-weight:600;font-size:12px;">${t('report_col_area')}</th><th style="padding:10px 10px;text-align:left;font-weight:600;font-size:12px;">${t('report_col_consultant')}</th><th style="padding:10px 10px;text-align:left;font-weight:600;font-size:12px;">Email</th><th style="padding:10px 10px;text-align:left;font-weight:600;font-size:12px;">${t('report_col_badge')}</th><th style="padding:10px 10px;text-align:left;font-weight:600;font-size:12px;">${t('report_col_level')}</th><th style="padding:10px 10px;text-align:left;font-weight:600;font-size:12px;">${t('report_col_date')}</th><th style="padding:10px 10px;text-align:right;font-weight:600;font-size:12px;">${t('report_col_points')}</th></tr></thead><tbody>${detailRowsHtml}</tbody></table>
+      </body>
+      </html>
     `;
 
     const filename = `relatorio-badges-${new Date().toISOString().split('T')[0]}.pdf`;
-    html2pdf().set({ margin: 10, filename, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } }).from(container).save();
+    await downloadHtmlAsPdf(html, filename, { orientation: 'portrait' });
   };
 
   const exportReportToExcel = () => {

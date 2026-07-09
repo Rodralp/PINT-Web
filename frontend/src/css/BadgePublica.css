@@ -91,7 +91,7 @@
 .bp-hero-image {
   width: 104px;
   height: 104px;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .bp-hero-content {
@@ -224,7 +224,7 @@
 .bp-requirement-detail-image {
   width: 132px;
   height: 76px;
-  object-fit: contain;
+  object-fit: cover;
   flex: 0 0 auto;
 }
 

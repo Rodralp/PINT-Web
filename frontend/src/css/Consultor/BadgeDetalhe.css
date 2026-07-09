@@ -392,7 +392,7 @@
 .badge-requirement-detail-image {
   width: 84px;
   height: 84px;
-  object-fit: contain;
+  object-fit: cover;
   flex: 0 0 auto;
 }
 
