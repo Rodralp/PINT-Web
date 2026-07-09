@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import html2pdf from 'html2pdf.js';
+import { downloadHtmlAsPdf } from '../../utils/pdfExport.js';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowDownToLine,
@@ -20,6 +22,7 @@ import BadgeImage from '../../components/BadgeImage';
 import { fetchManagedRequests } from '../../services/requestManagementService';
 import { fetchMyServiceLine, fetchHistoricoConsultoresSLL } from '../../services/serviceLineLeaderService';
 import { fetchCatalogBadges } from '../../services/consultorService';
+import { fetchBadgeAssignmentReport } from '../../services/reportService';
 import '../../css/ServiceLineLeader/Exportacoes_SLL.css';
 import '../../css/Consultor/CatalogoBadges_C.css';
 
@@ -27,6 +30,7 @@ const getTabs = (t) => [
   { id: 'pedidos', label: t('export_tab_requests') },
   { id: 'badges', label: t('export_tab_badges') },
   { id: 'consultores', label: t('export_tab_consultants') },
+  { id: 'relatorio', label: t('export_tab_report') },
 ];
 
 const getRequestStatusFilters = (t) => [
@@ -76,6 +80,7 @@ const tabDefaults = {
   pedidos: { filter: 'todos', sort: 'recentes' },
   badges: { filter: 'todos', sort: 'padrao' },
   consultores: { filter: 'todos', sort: 'points_desc' },
+  relatorio: { filter: 'todos', sort: 'padrao' },
 };
 
 const knownServiceLines = [];
@@ -88,7 +93,20 @@ const badgeLevels = [
   { id: 'senior', label: 'Sénior', points: 200, badgeImage: '/badges/Sénior.png' },
   { id: 'especialista', label: 'Especialista', points: 250, badgeImage: '/badges/Especialista.png' },
   { id: 'lider', label: 'Líder de Conhecimento', points: 300, badgeImage: '/badges/Líder de Conhecimento.png' },
+  { id: 'especial', label: 'Especial', points: 0, badgeImage: '/badges/Especial.png' },
 ];
+
+const ALL_LEVEL_NAMES = ['Nível Júnior', 'Nível Intermédio', 'Nível Sénior', 'Nível Especialista', 'Nível Lider de Conhecimento', 'Especial'];
+
+const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'];
+
+const buildBarChartScale = (data) => {
+  const maxVal = Math.max(...data.map((d) => d.value), 1);
+  const step = Math.max(1, Math.ceil(maxVal / 4));
+  const max = step * 4;
+  const ticks = [0, 1, 2, 3, 4].map((m) => step * m);
+  return { max, ticks };
+};
 
 const getRequestStatusMeta = (t) => ({
   enviado: { label: t('export_filter_sent'), className: 'sent' },
@@ -660,6 +678,15 @@ function ExportacoesSLL() {
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [page, setPage] = useState(1);
 
+  const [reportData, setReportData] = useState([]);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportAreaId, setReportAreaId] = useState('');
+  const [reportNivelId, setReportNivelId] = useState('');
+  const [reportDateFrom, setReportDateFrom] = useState('');
+  const [reportDateTo, setReportDateTo] = useState('');
+  const [expandedReportAreas, setExpandedReportAreas] = useState([]);
+  const [reportGenerated, setReportGenerated] = useState(false);
+
   const filterDropdownRef = useRef(null);
   const sortDropdownRef = useRef(null);
 
@@ -740,7 +767,8 @@ function ExportacoesSLL() {
         normalizedSearch.length === 0
         || item.area.toLowerCase().includes(normalizedSearch)
         || item.level.toLowerCase().includes(normalizedSearch);
-      const matchesLevel = activeFilter === 'todos' || item.levelId === activeFilter;
+      const matchesLevel = activeFilter === 'todos' || item.levelId === activeFilter
+        || (activeFilter === 'especial' && item.isSpecial);
 
       return matchesSearch && matchesLevel;
     });
@@ -996,10 +1024,8 @@ function ExportacoesSLL() {
     }
     try {
       const htmlContent = generateBadgePagesPDF(selected, userName);
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      setTimeout(() => printWindow.print(), 500);
+      const date = new Date().toISOString().split('T')[0];
+      downloadHtmlAsPdf(htmlContent, `badges-${date}.pdf`);
     } catch (error) {
       console.error('Error generating badge pages:', error);
       alert(t('export_error_badge_pages'));
@@ -1037,10 +1063,8 @@ function ExportacoesSLL() {
     }
     try {
       const htmlContent = generateRequestsPDF(selected);
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      setTimeout(() => printWindow.print(), 500);
+      const date = new Date().toISOString().split('T')[0];
+      downloadHtmlAsPdf(htmlContent, `pedidos-${date}.pdf`, { orientation: 'landscape' });
     } catch (error) {
       console.error('Error generating requests PDF:', error);
       alert(t('export_error_request_pdf'));
@@ -1078,10 +1102,8 @@ function ExportacoesSLL() {
     }
     try {
       const htmlContent = generateConsultantsPDF(selected);
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      setTimeout(() => printWindow.print(), 500);
+      const date = new Date().toISOString().split('T')[0];
+      downloadHtmlAsPdf(htmlContent, `consultores-${date}.pdf`, { orientation: 'landscape' });
     } catch (error) {
       console.error('Error generating consultants PDF:', error);
       alert(t('export_error_consultant_pdf'));
@@ -1109,6 +1131,179 @@ function ExportacoesSLL() {
       console.error('Error generating consultants CSV:', error);
       alert(t('export_error_consultant_csv'));
     }
+  };
+
+  const generateReport = async () => {
+    try {
+      setReportLoading(true);
+      const data = await fetchBadgeAssignmentReport({
+        areaId: reportAreaId,
+        nivelId: reportNivelId,
+        serviceLineId: currentServiceLine,
+        dateFrom: reportDateFrom,
+        dateTo: reportDateTo,
+      });
+      setReportData(Array.isArray(data) ? data : []);
+      setExpandedReportAreas([]);
+      setReportGenerated(true);
+    } catch (err) {
+      console.error('Error generating report:', err);
+      setReportData([]);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const reportSummary = useMemo(() => {
+    const map = {};
+    reportData.forEach((row) => {
+      const key = row.areaNome || '-';
+      if (!map[key]) {
+        map[key] = { area: key, totalBadges: 0, totalPoints: 0 };
+      }
+      map[key].totalBadges += 1;
+      map[key].totalPoints += Number(row.pontosObtidos || row.badgePontos || 0);
+    });
+    return Object.values(map).sort((a, b) => a.area.localeCompare(b.area));
+  }, [reportData]);
+
+  const toggleReportArea = (area) => {
+    setExpandedReportAreas((prev) => prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]);
+  };
+
+  const chartByArea = useMemo(() => {
+    const map = {};
+    badgeItems.filter((b) => !b.isSpecial).forEach((b) => {
+      if (b.area) map[b.area] = 0;
+    });
+    reportData.forEach((r) => {
+      if (!r.areaNome) return;
+      map[r.areaNome] = (map[r.areaNome] || 0) + 1;
+    });
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  }, [reportData, badgeItems]);
+
+  const chartByLevel = useMemo(() => {
+    const map = {};
+    ALL_LEVEL_NAMES.forEach((name) => { map[name] = 0; });
+    reportData.forEach((r) => {
+      const key = r.nivelNome || '-';
+      map[key] = (map[key] || 0) + 1;
+    });
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  }, [reportData]);
+
+  const buildPieGradient = (data, total) => {
+    if (total === 0) return 'conic-gradient(#e2e8f0 0% 100%)';
+    let acc = 0;
+    const segments = data.map((d, i) => {
+      const start = acc;
+      acc += (d.value / total) * 100;
+      return `${CHART_COLORS[i % CHART_COLORS.length]} ${start}% ${acc}%`;
+    });
+    return `conic-gradient(${segments.join(', ')})`;
+  };
+
+  const buildChartSectionHtml = (data, title) => {
+    const total = data.reduce((s, d) => s + d.value, 0);
+    const maxVal = Math.max(...data.map((d) => d.value), 1);
+    const step = Math.max(1, Math.ceil(maxVal / 4));
+    const chartMax = step * 4;
+    const ticks = [0, 1, 2, 3, 4].map((m) => step * m);
+
+    const pieGradient = total === 0 ? '#e2e8f0' : (() => {
+      let a = 0;
+      const segs = data.map((d, i) => {
+        const s = a;
+        a += (d.value / total) * 100;
+        return `${CHART_COLORS[i % CHART_COLORS.length]} ${s}% ${a}%`;
+      });
+      return `conic-gradient(${segs.join(', ')})`;
+    })();
+
+    const barColumns = data.map((d, i) => {
+      const pct = chartMax > 0 ? (d.value / chartMax) * 100 : 0;
+      const color = CHART_COLORS[i % CHART_COLORS.length];
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0"><span style="font-size:10px;font-weight:700;color:#2f3747">${d.value}</span><div style="width:100%;height:130px;display:flex;align-items:flex-end;justify-content:center"><div style="width:70%;max-width:40px;height:${pct}%;background:${color};border-radius:4px 4px 0 0"></div></div><span style="font-size:9px;color:#64748b;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${d.name}</span></div>`;
+    }).join('');
+
+    const legendItems = data.map((d, i) => {
+      const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+      const color = CHART_COLORS[i % CHART_COLORS.length];
+      return `<div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#475569"><span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></span><span style="white-space:nowrap">${d.name}</span><span style="font-weight:700;color:#2f3747;margin-left:auto">${pct}%</span></div>`;
+    }).join('');
+
+    return `
+      <div style="display:flex;gap:16px;margin-bottom:20px;page-break-inside:avoid">
+        <div style="flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px">
+          <h4 style="font-size:13px;font-weight:700;color:#2f3747;margin:0 0 10px">${title} — ${t('report_chart_bar')}</h4>
+          <div style="display:flex;align-items:flex-end;gap:4px;height:170px;padding-left:30px;position:relative">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:26px;display:flex;flex-direction:column-reverse;justify-content:space-between;pointer-events:none">
+              ${ticks.map((tick) => `<span style="font-size:9px;color:#8892a4;line-height:1;text-align:right">${tick}</span>`).join('')}
+            </div>
+            ${barColumns}
+          </div>
+        </div>
+        <div style="flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px">
+          <h4 style="font-size:13px;font-weight:700;color:#2f3747;margin:0 0 10px">${title} — ${t('report_chart_pie')}</h4>
+          <div style="display:flex;align-items:center;gap:16px;justify-content:center">
+            <div style="width:140px;height:140px;border-radius:50%;background:${pieGradient};flex-shrink:0"></div>
+            <div style="display:flex;flex-direction:column;gap:5px">${legendItems}</div>
+          </div>
+        </div>
+      </div>`;
+  };
+
+  const exportReportToPDF = () => {
+    if (reportData.length === 0) return;
+
+    const areaChartsHtml = reportAreaId === '' && reportNivelId !== 'especial'
+      ? buildChartSectionHtml(chartByArea, t('report_chart_by_area'))
+      : '';
+    const levelChartsHtml = reportNivelId === ''
+      ? buildChartSectionHtml(chartByLevel, t('report_chart_by_level'))
+      : '';
+
+    const summaryRowsHtml = reportSummary.map((row) => {
+      const detail = reportData.filter((r) => (r.areaNome || '-') === row.area);
+      const detailHtml = detail.map((r) => `<tr style="background:#f9fafb"><td style="padding-left:24px">${r.consultorNome || '-'}</td><td>${r.badgeNome || '-'}</td><td>${r.nivelNome || '-'}</td><td>${r.dataObtencao || '-'}</td><td>${r.pontosObtidos || r.badgePontos || 0}</td></tr>`).join('');
+      return `<tr><td><strong>${row.area}</strong></td><td>${row.totalBadges}</td><td>${new Intl.NumberFormat('pt-PT').format(row.totalPoints)}</td></tr>${detailHtml}`;
+    }).join('');
+
+    const detailRowsHtml = reportData.map((r) => `<tr><td>${r.areaNome || '-'}</td><td>${r.consultorNome || '-'}</td><td>${r.consultorEmail || '-'}</td><td>${r.badgeNome || '-'}</td><td>${r.nivelNome || '-'}</td><td>${r.dataObtencao || '-'}</td><td>${r.pontosObtidos || r.badgePontos || 0}</td></tr>`).join('');
+
+    const container = document.createElement('div');
+    container.style.fontFamily = 'sans-serif';
+    container.style.fontSize = '12px';
+    container.innerHTML = `
+      <h1 style="font-size:20px;color:#2f3747;margin-bottom:4px">${t('export_tab_report')}</h1>
+      ${areaChartsHtml}
+      ${levelChartsHtml}
+      <h2 style="font-size:14px;color:#2f3747;margin:20px 0 8px">${t('report_summary_title')}</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:16px"><thead><tr><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_col_area')}</th><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_total_badges')}</th><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_total_points')}</th></tr></thead><tbody>${summaryRowsHtml}</tbody></table>
+      <h2 style="font-size:14px;color:#2f3747;margin:20px 0 8px">${t('report_detail_title')}</h2>
+      <table style="width:100%;border-collapse:collapse"><thead><tr><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_col_area')}</th><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_col_consultant')}</th><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">Email</th><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_col_badge')}</th><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_col_level')}</th><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_col_date')}</th><th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f3f8ff;font-weight:700">${t('report_col_points')}</th></tr></thead><tbody>${detailRowsHtml}</tbody></table>
+    `;
+
+    const filename = `relatorio-badges-${new Date().toISOString().split('T')[0]}.pdf`;
+    html2pdf().set({ margin: 10, filename, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } }).from(container).save();
+  };
+
+  const exportReportToExcel = () => {
+    if (reportData.length === 0) return;
+    const BOM = '\uFEFF';
+    const headers = [t('report_col_area'), t('report_col_consultant'), 'Email', t('report_col_badge'), t('report_col_level'), t('report_col_date'), t('report_col_points')];
+    const rows = reportData.map((r) => [r.areaNome || '-', r.consultorNome || '-', r.consultorEmail || '-', r.badgeNome || '-', r.nivelNome || '-', r.dataObtencao || '-', r.pontosObtidos || r.badgePontos || 0]);
+    const csv = BOM + [headers.join(';'), ...rows.map((row) => row.join(';'))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `relatorio-badges-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   if (loading) {
@@ -1164,6 +1359,7 @@ function ExportacoesSLL() {
 
         <section className="shell tm-export-shell">
 
+          {activeTab !== 'relatorio' && (
           <div className="toolbar tm-export-toolbar">
             <label className="search-wrap tm-export-search" htmlFor="tm-export-search-input">
               <Search size={20} />
@@ -1245,6 +1441,7 @@ function ExportacoesSLL() {
               )}
             </div>
           </div>
+          )}
 
           <p className="tm-export-scope-note">
             {t('export_scope_note')} <strong>{currentServiceLine}</strong>
@@ -1515,6 +1712,222 @@ function ExportacoesSLL() {
                   </tbody>
                 </table>
               </div>
+            </>
+          )}
+
+          {activeTab === 'relatorio' && (
+            <>
+              <div className="tm-export-section-head">
+                <h2>{t('export_tab_report')}</h2>
+                <div className="tm-export-section-actions">
+                  <button type="button" className="tm-export-btn secondary" onClick={exportReportToPDF} disabled={reportData.length === 0}>
+                    <FileDown size={16} /> {t('export_pdf')}
+                  </button>
+                  <button type="button" className="tm-export-btn primary" onClick={exportReportToExcel} disabled={reportData.length === 0}>
+                    <ArrowDownToLine size={16} /> {t('export_excel')}
+                  </button>
+                </div>
+              </div>
+
+              <div className="tm-export-report-filters" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>{t('report_filter_area')}</label>
+                  <select value={reportAreaId} onChange={(e) => { setReportAreaId(e.target.value); setReportGenerated(false); }} disabled={reportNivelId === 'especial'} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #dbe6f2', fontSize: 13, opacity: reportNivelId === 'especial' ? 0.5 : 1 }}>
+                    <option value="">{t('export_filter_all')}</option>
+                    {[...new Set(badgeItems.filter((b) => !b.isSpecial).map((b) => b.area).filter(Boolean))].sort().map((area) => (
+                      <option key={area} value={area}>{area}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>{t('report_filter_level')}</label>
+                  <select value={reportNivelId} onChange={(e) => { setReportNivelId(e.target.value); if (e.target.value === 'especial') setReportAreaId(''); setReportGenerated(false); }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #dbe6f2', fontSize: 13 }}>
+                    <option value="">{t('export_filter_all')}</option>
+                    {badgeLevels.map((l) => (
+                      <option key={l.id} value={l.id}>{l.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>{t('report_filter_date_from')}</label>
+                  <input type="date" value={reportDateFrom} onChange={(e) => { setReportDateFrom(e.target.value); setReportGenerated(false); }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #dbe6f2', fontSize: 13 }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>{t('report_filter_date_to')}</label>
+                  <input type="date" value={reportDateTo} onChange={(e) => { setReportDateTo(e.target.value); setReportGenerated(false); }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #dbe6f2', fontSize: 13 }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <button type="button" className="tm-export-btn primary" onClick={generateReport} disabled={reportLoading}>
+                    {reportLoading ? '...' : t('report_generate')}
+                  </button>
+                </div>
+              </div>
+
+              {reportLoading && <LoadingSpinner />}
+
+              {!reportLoading && reportGenerated && reportData.length > 0 && (
+                <>
+                  {(() => {
+                    const totalArea = chartByArea.reduce((s, d) => s + d.value, 0);
+                    const areaScale = buildBarChartScale(chartByArea);
+                    const totalLevel = chartByLevel.reduce((s, d) => s + d.value, 0);
+                    const levelScale = buildBarChartScale(chartByLevel);
+                    return (
+                      <div className="report-chart-grid">
+                        {reportAreaId === '' && reportNivelId !== 'especial' && (
+                          <>
+                            <div className="report-chart-card">
+                              <h4>{t('report_chart_by_area')}</h4>
+                              <div className="report-bar-chart">
+                                <div className="report-bar-chart-y-axis">
+                                  {areaScale.ticks.map((tick) => (
+                                    <span key={tick} className="report-bar-chart-y-tick">{tick}</span>
+                                  ))}
+                                </div>
+                                {chartByArea.map((d, i) => (
+                                  <div key={d.name} className="report-bar-column">
+                                    <span className="report-bar-value">{d.value}</span>
+                                    <div className="report-bar-track">
+                                      <div className="report-bar" style={{ height: `${(d.value / areaScale.max) * 100}%`, background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                                    </div>
+                                    <span className="report-bar-label" title={d.name}>{d.name}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="report-chart-card">
+                              <h4>{t('report_chart_by_area')}</h4>
+                              <div className="report-pie-wrap">
+                                <div className="report-pie" style={{ background: buildPieGradient(chartByArea, totalArea) }} />
+                                <div className="report-pie-legend">
+                                  {chartByArea.map((d, i) => (
+                                    <div key={d.name} className="report-pie-legend-item">
+                                      <span className="report-pie-legend-dot" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                                      <span className="report-pie-legend-name">{d.name}</span>
+                                      <span className="report-pie-legend-pct">{totalArea > 0 ? Math.round((d.value / totalArea) * 100) : 0}%</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                        {reportNivelId === '' && (
+                          <>
+                            <div className="report-chart-card">
+                              <h4>{t('report_chart_by_level')}</h4>
+                              <div className="report-bar-chart">
+                                <div className="report-bar-chart-y-axis">
+                                  {levelScale.ticks.map((tick) => (
+                                    <span key={tick} className="report-bar-chart-y-tick">{tick}</span>
+                                  ))}
+                                </div>
+                                {chartByLevel.map((d, i) => (
+                                  <div key={d.name} className="report-bar-column">
+                                    <span className="report-bar-value">{d.value}</span>
+                                    <div className="report-bar-track">
+                                      <div className="report-bar" style={{ height: `${(d.value / levelScale.max) * 100}%`, background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                                    </div>
+                                    <span className="report-bar-label" title={d.name}>{d.name}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="report-chart-card">
+                              <h4>{t('report_chart_by_level')}</h4>
+                              <div className="report-pie-wrap">
+                                <div className="report-pie" style={{ background: buildPieGradient(chartByLevel, totalLevel) }} />
+                                <div className="report-pie-legend">
+                                  {chartByLevel.map((d, i) => (
+                                    <div key={d.name} className="report-pie-legend-item">
+                                      <span className="report-pie-legend-dot" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                                      <span className="report-pie-legend-name">{d.name}</span>
+                                      <span className="report-pie-legend-pct">{totalLevel > 0 ? Math.round((d.value / totalLevel) * 100) : 0}%</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>{t('report_summary_title')}</h3>
+                  <div className="tm-export-table-wrap" style={{ marginBottom: 20 }}>
+                    <table className="table orders-table">
+                      <thead>
+                        <tr>
+                          <th>{t('report_col_area')}</th>
+                          <th>{t('report_total_badges')}</th>
+                          <th>{t('report_total_points')}</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reportSummary.map((row) => (
+                          <React.Fragment key={row.area}>
+                            <tr>
+                              <td><strong>{row.area}</strong></td>
+                              <td>{row.totalBadges}</td>
+                              <td>{new Intl.NumberFormat('pt-PT').format(row.totalPoints)}</td>
+                              <td>
+                                <button type="button" className="tm-export-btn secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => toggleReportArea(row.area)}>
+                                  {expandedReportAreas.includes(row.area) ? '▾' : '▸'} {t('report_detail_title')}
+                                </button>
+                              </td>
+                            </tr>
+                            {expandedReportAreas.includes(row.area) && reportData.filter((r) => (r.areaNome || '-') === row.area).map((r, idx) => (
+                              <tr key={idx} style={{ background: '#f9fafb' }}>
+                                <td style={{ paddingLeft: 24 }}>{r.consultorNome}</td>
+                                <td>{r.badgeNome}</td>
+                                <td>{r.nivelNome}</td>
+                                <td>{r.dataObtencao}</td>
+                                <td>{r.pontosObtidos || r.badgePontos || 0}</td>
+                              </tr>
+                            ))}
+                          </React.Fragment>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>{t('report_detail_title')}</h3>
+                  <div className="tm-export-table-wrap">
+                    <table className="table orders-table">
+                      <thead>
+                        <tr>
+                          <th>{t('report_col_area')}</th>
+                          <th>{t('report_col_consultant')}</th>
+                          <th>Email</th>
+                          <th>{t('report_col_badge')}</th>
+                          <th>{t('report_col_level')}</th>
+                          <th>{t('report_col_date')}</th>
+                          <th>{t('report_col_points')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reportData.map((r, idx) => (
+                          <tr key={idx}>
+                            <td>{r.areaNome || '-'}</td>
+                            <td>{r.consultorNome}</td>
+                            <td>{r.consultorEmail}</td>
+                            <td>{r.badgeNome}</td>
+                            <td>{r.nivelNome || '-'}</td>
+                            <td>{r.dataObtencao}</td>
+                            <td>{r.pontosObtidos || r.badgePontos || 0}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+
+              {!reportLoading && reportData.length === 0 && reportAreaId === '' && reportDateFrom === '' && reportDateTo === '' && (
+                <p style={{ color: '#8892a4', textAlign: 'center', padding: 40 }}>{t('report_no_data')}</p>
+              )}
             </>
           )}
 

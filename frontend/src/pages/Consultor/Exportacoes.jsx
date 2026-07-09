@@ -8,6 +8,7 @@ import Pagination from '../../components/Pagination';
 import { fetchCatalogBadges } from '../../services/consultorService';
 import '../../css/Consultor/Exportacoes_C.css';
 import '../../css/Consultor/CatalogoBadges_C.css';
+import { downloadHtmlAsPdf } from '../../utils/pdfExport.js';
 
 const SPECIAL_BADGE_TYPE = 'special';
 
@@ -428,12 +429,8 @@ function Exportacoes() {
 
     try {
       const htmlContent = generateBadgePagesPDF(selectedBadges, userName);
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      setTimeout(() => {
-        printWindow.print();
-      }, 500);
+      const date = new Date().toISOString().split('T')[0];
+      downloadHtmlAsPdf(htmlContent, `badges-${date}.pdf`);
     } catch (error) {
       console.error('Error generating badge pages:', error);
       alert('Erro ao gerar páginas das badges. Por favor, tente novamente.');
@@ -472,12 +469,8 @@ function Exportacoes() {
 
     try {
       const htmlContent = generateProfessionalCertificatePDF(selectedCertificate, userName);
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      setTimeout(() => {
-        printWindow.print();
-      }, 500);
+      const date = new Date().toISOString().split('T')[0];
+      downloadHtmlAsPdf(htmlContent, `certificado-${date}.pdf`, { orientation: 'landscape' });
     } catch (error) {
       console.error('Error generating certificate:', error);
       alert('Erro ao gerar certificado. Por favor, tente novamente.');
