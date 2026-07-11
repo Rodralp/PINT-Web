@@ -11,6 +11,9 @@ import { Evidencia } from './sql/Evidencia.js';
 import { Motivo } from './sql/Motivo.js';
 import { Tipo } from './sql/Tipo.js';
 import { Vitrine } from './sql/Vitrine.js';
+import { Nivel } from './sql/Nivel.js';
+import { NivelContemBadge } from './sql/NivelContemBadge.js';
+import { PedidoHistorico } from './sql/PedidoHistorico.js';
 import { sequelize } from '../config/database.js';
 import { adminBadgeModel } from './adminBadgeModel.js';
 const { loadBadgeImagesBatch } = adminBadgeModel;
@@ -591,6 +594,14 @@ export const syncSpecialBadgesForConsultor = async (utilizadorId) => {
           continue;
         }
 
+        await PedidoHistorico.create({
+          npedido: requestId,
+          nestado: approvedEstadoId,
+          nutilizador: Number(utilizadorId),
+          data_estado: new Date(),
+          descricao: 'Badge especial atribuída automaticamente por trigger.',
+        }, { transaction });
+
         await sequelize.query(
           `
             INSERT INTO c_obtem_b (nutilizador, nbadge, npedido, pontos_obtidos, data_obtencao)
@@ -675,9 +686,25 @@ const autoRejectExpiredRequests = async () => {
       type: QueryTypes.UPDATE,
     },
   );
-};
 
-const EXPIRATION_NOTIFICATION_THRESHOLD_DAYS = 30;
+  await sequelize.query(
+    `
+      INSERT INTO pedido_historico (npedido, nestado, nutilizador, data_estado, descricao)
+      SELECT npedido, :rejectedId, NULL, NOW(), :defaultDescription
+      FROM pedidos
+      WHERE data_limite IS NOT NULL
+        AND data_limite <= CURRENT_DATE
+        AND estado = :rejectedId
+    `,
+    {
+      replacements: {
+        rejectedId,
+        defaultDescription: AUTO_REJECTION_NOTE,
+      },
+      type: QueryTypes.INSERT,
+    },
+  );
+};
 
 const sendAllExpirationNotifications = async () => {
   try {
@@ -977,15 +1004,10 @@ const buildProfileData = async (accountId) => {
   const parsedAccountId = Number(accountId);
 
   if (!Number.isInteger(parsedAccountId) || parsedAccountId <= 0) {
-    return clone(profileData);
+    throw new Error('Invalid accountId');
   }
 
-  try {
-    return await _buildProfileDataInner(parsedAccountId);
-  } catch (error) {
-    console.error('❌ buildProfileData error, returning defaults:', error.message);
-    return clone(profileData);
-  }
+  return _buildProfileDataInner(parsedAccountId);
 };
 
 const _buildProfileDataInner = async (parsedAccountId) => {
@@ -1060,139 +1082,155 @@ const _buildProfileDataInner = async (parsedAccountId) => {
   );
 
   if (!row) {
-    return clone(profileData);
+    throw new Error('User not found');
   }
-  // compute per-service-line aggregates for this user (badges and points)
-  const serviceLineRows = await sequelize.query(
-    `
-      SELECT
-        COALESCE(sl.sline, 'Application Operations') AS serviceLine,
-        COUNT(DISTINCT b.nbadge) AS badges,
-        SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) AS points
-      FROM c_obtem_b AS cb
-      INNER JOIN badge AS b
-        ON b.nbadge = cb.nbadge
-      LEFT JOIN b_pertence_sl AS bps
-        ON bps.nbadge = b.nbadge
-      LEFT JOIN service_line AS sl
-        ON sl.nsline = bps.nsline
-      WHERE cb.nutilizador = :accountId
-      GROUP BY COALESCE(sl.sline, 'Application Operations')
-      ORDER BY COUNT(DISTINCT b.nbadge) DESC, SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) DESC
-    `,
-    {
-      replacements: { accountId: parsedAccountId },
-      type: QueryTypes.SELECT,
-    },
-  );
+  let serviceLineStats = [];
+  try {
+    const serviceLineRows = await sequelize.query(
+      `
+        SELECT
+          COALESCE(sl.sline, 'Application Operations') AS serviceLine,
+          COUNT(DISTINCT b.nbadge) AS badges,
+          SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) AS points
+        FROM c_obtem_b AS cb
+        INNER JOIN badge AS b
+          ON b.nbadge = cb.nbadge
+        LEFT JOIN b_pertence_sl AS bps
+          ON bps.nbadge = b.nbadge
+        LEFT JOIN service_line AS sl
+          ON sl.nsline = bps.nsline
+        WHERE cb.nutilizador = :accountId
+        GROUP BY COALESCE(sl.sline, 'Application Operations')
+        ORDER BY COUNT(DISTINCT b.nbadge) DESC, SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) DESC
+      `,
+      {
+        replacements: { accountId: parsedAccountId },
+        type: QueryTypes.SELECT,
+      },
+    );
+    serviceLineStats = (serviceLineRows || []).map((r) => ({
+      serviceLine: r.serviceline || r.serviceLine || 'Application Operations',
+      badges: Number(r.badges) || 0,
+      points: Number(r.points) || 0,
+    }));
+  } catch (e) {
+    console.error('Profile: failed to load service line stats:', e.message);
+  }
 
-  const serviceLineStats = (serviceLineRows || []).map((r) => ({
-    serviceLine: r.serviceline || r.serviceLine || 'Application Operations',
-    badges: Number(r.badges) || 0,
-    points: Number(r.points) || 0,
-  }));
+  let certificationsItems = [];
+  try {
+    const certRows = await sequelize.query(
+      `
+        SELECT DISTINCT ON (cb.nbadge)
+          cb.nbadge,
+          b.b_nome,
+          n.nivel,
+          t.tipo
+        FROM c_obtem_b AS cb
+        INNER JOIN badge AS b
+          ON b.nbadge = cb.nbadge
+        LEFT JOIN nivel_contem_b AS ncb
+          ON ncb.nbadge = b.nbadge
+        LEFT JOIN nivel AS n
+          ON n.nnivel = ncb.nnivel
+        LEFT JOIN tipo AS t
+          ON t.ntipo = b.ntipo
+        WHERE cb.nutilizador = :accountId
+        ORDER BY cb.nbadge, cb.data_obtencao DESC
+        LIMIT 5
+      `,
+      {
+        replacements: { accountId: parsedAccountId },
+        type: QueryTypes.SELECT,
+      },
+    );
+    certificationsItems = (certRows || []).map((r) => {
+      const template = typeof resolveBadgeTemplate === 'function'
+        ? resolveBadgeTemplate(r.nivel, 0, r.tipo)
+        : { levelKey: 'badge_level_specialist' };
+      return {
+        title: r.b_nome || r.nivel || 'Badge',
+        levelKey: template.levelKey || 'badge_level_specialist',
+      };
+    });
+  } catch (e) {
+    console.error('Profile: failed to load certifications:', e.message);
+  }
 
-  // Build a lightweight certifications list from recently obtained badges
-  const certRows = await sequelize.query(
-    `
-      SELECT DISTINCT ON (cb.nbadge)
-        cb.nbadge,
-        b.b_nome,
-        n.nivel,
-        t.tipo
-      FROM c_obtem_b AS cb
-      INNER JOIN badge AS b
-        ON b.nbadge = cb.nbadge
-      LEFT JOIN nivel_contem_b AS ncb
-        ON ncb.nbadge = b.nbadge
-      LEFT JOIN nivel AS n
-        ON n.nnivel = ncb.nnivel
-      LEFT JOIN tipo AS t
-        ON t.ntipo = b.ntipo
-      WHERE cb.nutilizador = :accountId
-      ORDER BY cb.nbadge, cb.data_obtencao DESC
-      LIMIT 5
-    `,
-    {
-      replacements: { accountId: parsedAccountId },
-      type: QueryTypes.SELECT,
-    },
-  );
+  let requestCount = 0;
+  try {
+    requestCount = await Pedido.count({
+      where: { nutilizador: parsedAccountId },
+    });
+  } catch (e) {
+    console.error('Profile: failed to count requests:', e.message);
+  }
 
-  const certificationsItems = (certRows || []).map((r) => {
-    const template = typeof resolveBadgeTemplate === 'function'
-      ? resolveBadgeTemplate(r.nivel, 0, r.tipo)
-      : { levelKey: 'badge_level_specialist' };
-
-    return {
-      title: r.b_nome || r.nivel || 'Badge',
-      levelKey: template.levelKey || 'badge_level_specialist',
-    };
-  });
-
-  // Fetch request count for this user
-  const requestCount = await Pedido.count({
-    where: { nutilizador: parsedAccountId },
-  });
-
-  // Fetch recent activity from pedidos and logs
-  const activityRows = await sequelize.query(
-    `
-      SELECT
-        p.npedido AS id,
-        CASE 
-          WHEN e.estado = 'candidatura_em_progresso' THEN 'Candidatura submetida para ' || b.b_nome
-          WHEN e.estado IN ('pendente-tm', 'pendente-sll') THEN 'Candidatura em validação: ' || b.b_nome
-          WHEN e.estado = 'aprovado' THEN 'Badge aprovada: ' || b.b_nome
-          WHEN e.estado = 'rejeitado' THEN 'Candidatura rejeitada: ' || b.b_nome
-          WHEN e.estado = 'evidencias_insuficientes' THEN 'Evidências insuficientes: ' || b.b_nome
-          ELSE 'Atividade em badge'
-        END AS description,
-        p.data_submissao AS activity_date,
-        'badge' AS activity_type
-      FROM pedidos AS p
-      INNER JOIN badge AS b ON p.nbadge = b.nbadge
-      LEFT JOIN estado AS e ON p.estado = e.nestado
-      WHERE p.nutilizador = :accountId
-      ORDER BY p.data_submissao DESC
-      LIMIT 5
-    `,
-    {
-      replacements: { accountId: parsedAccountId },
-      type: QueryTypes.SELECT,
-    },
-  );
-
-  const activityItems = (activityRows || []).map((row) => ({
-    type: row.activity_type || 'badge',
-    description: row.description || 'Nova atividade',
-    date: formatDate(row.activity_date),
-    icon: 'award',
-    color: 'gold',
-  }));
-
-  const streakRows = await sequelize.query(
-    `
-      SELECT DISTINCT activity_date
-      FROM (
-        SELECT DATE(p.data_submissao) AS activity_date
+  let activityItems = [];
+  try {
+    const activityRows = await sequelize.query(
+      `
+        SELECT
+          p.npedido AS id,
+          CASE 
+            WHEN e.estado = 'candidatura_em_progresso' THEN 'Candidatura submetida para ' || b.b_nome
+            WHEN e.estado IN ('pendente-tm', 'pendente-sll') THEN 'Candidatura em validação: ' || b.b_nome
+            WHEN e.estado = 'aprovado' THEN 'Badge aprovada: ' || b.b_nome
+            WHEN e.estado = 'rejeitado' THEN 'Candidatura rejeitada: ' || b.b_nome
+            WHEN e.estado = 'evidencias_insuficientes' THEN 'Evidências insuficientes: ' || b.b_nome
+            ELSE 'Atividade em badge'
+          END AS description,
+          p.data_submissao AS activity_date,
+          'badge' AS activity_type
         FROM pedidos AS p
+        INNER JOIN badge AS b ON p.nbadge = b.nbadge
+        LEFT JOIN estado AS e ON p.estado = e.nestado
         WHERE p.nutilizador = :accountId
-        UNION
-        SELECT DATE(l.data_log) AS activity_date
-        FROM logs AS l
-        WHERE l.nutilizador = :accountId
-      ) AS activity_days
-      WHERE activity_date IS NOT NULL
-      ORDER BY activity_date DESC
-    `,
-    {
-      replacements: { accountId: parsedAccountId },
-      type: QueryTypes.SELECT,
-    },
-  );
+        ORDER BY p.data_submissao DESC
+        LIMIT 5
+      `,
+      {
+        replacements: { accountId: parsedAccountId },
+        type: QueryTypes.SELECT,
+      },
+    );
+    activityItems = (activityRows || []).map((row) => ({
+      type: row.activity_type || 'badge',
+      description: row.description || 'Nova atividade',
+      date: formatDate(row.activity_date),
+      icon: 'award',
+      color: 'gold',
+    }));
+  } catch (e) {
+    console.error('Profile: failed to load activity:', e.message);
+  }
 
-  const streakDays = calculateConsecutiveDayStreak((streakRows || []).map((row) => row.activity_date));
+  let streakDays = 0;
+  try {
+    const streakRows = await sequelize.query(
+      `
+        SELECT DISTINCT activity_date
+        FROM (
+          SELECT DATE(p.data_submissao) AS activity_date
+          FROM pedidos AS p
+          WHERE p.nutilizador = :accountId
+          UNION
+          SELECT DATE(l.data_log) AS activity_date
+          FROM logs AS l
+          WHERE l.nutilizador = :accountId
+        ) AS activity_days
+        WHERE activity_date IS NOT NULL
+        ORDER BY activity_date DESC
+      `,
+      {
+        replacements: { accountId: parsedAccountId },
+        type: QueryTypes.SELECT,
+      },
+    );
+    streakDays = calculateConsecutiveDayStreak((streakRows || []).map((row) => row.activity_date));
+  } catch (e) {
+    console.error('Profile: failed to load streak:', e.message);
+  }
 
   let avatar = null;
   try {
@@ -1242,7 +1280,7 @@ const _buildProfileDataInner = async (parsedAccountId) => {
       subtitleKey: 'badge_level_specialist',
       accent: 'yellow',
     })),
-    activityItems: activityItems.length > 0 ? activityItems : clone(profileData.activityItems),
+    activityItems: activityItems.length > 0 ? activityItems : [],
     certificationsItems: certificationsItems.length > 0 ? certificationsItems : clone(profileData.certificationsItems || []),
     user: {
       id: Number(row.id),
@@ -2145,6 +2183,14 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
       },
     );
 
+    await PedidoHistorico.create({
+      npedido: Number(existingRequest.npedido),
+      nestado: nextEstadoId,
+      nutilizador: Number(utilizadorId),
+      data_estado: new Date(),
+      descricao: 'Candidatura submetida para validação.',
+    });
+
     // Send email confirmation of submission to TM
     try {
       const consultorInfo = await Account.findByPk(Number(utilizadorId), {
@@ -2180,7 +2226,18 @@ const requestBadgeAcquisition = async (accountId, badgeId) => {
     data_limite: new Date(Date.now() + REQUEST_EXPIRATION_MONTHS * 30 * 24 * 60 * 60 * 1000),
   });
 
-  return { status: 'candidatura_em_progresso', requestId: Number(createdRequest?.npedido) || null };
+  const newPedidoId = Number(createdRequest?.npedido);
+  if (Number.isInteger(newPedidoId) && newPedidoId > 0) {
+    await PedidoHistorico.create({
+      npedido: newPedidoId,
+      nestado: candidaturaEstadoId,
+      nutilizador: Number(utilizadorId),
+      data_estado: new Date(),
+      descricao: 'Candidatura criada.',
+    });
+  }
+
+  return { status: 'candidatura_em_progresso', requestId: newPedidoId || null };
 };
 
 const mapReminder = (reminder) => ({
@@ -2459,7 +2516,7 @@ export const consultorModel = {
       const [obtainedRows, requestRows] = await Promise.all([
         sequelize.query(
           `
-            SELECT cb.nbadge
+            SELECT cb.nbadge, cb.data_obtencao
             FROM c_obtem_b AS cb
             INNER JOIN badge AS b ON b.nbadge = cb.nbadge
             WHERE cb.nutilizador = :utilizadorId
@@ -2484,7 +2541,7 @@ export const consultorModel = {
       ]);
 
       for (const row of obtainedRows) {
-        userObtainedMap.set(Number(row.nbadge), true);
+        userObtainedMap.set(Number(row.nbadge), row.data_obtencao);
       }
       for (const row of requestRows) {
         userRequestMap.set(Number(row.nbadge), row.estado);
@@ -2500,11 +2557,13 @@ export const consultorModel = {
 
       let stateId = 'candidatura_aberta';
       let status = 'visualizar';
+      let date = null;
 
       if (accountId) {
         if (userObtainedMap.has(badgeId)) {
           stateId = 'aprovado';
           status = 'obtido';
+          date = formatDate(userObtainedMap.get(badgeId));
         } else if (userRequestMap.has(badgeId)) {
           const estado = userRequestMap.get(badgeId);
           stateId = mapPedidoEstadoToMyBadgeState(estado);
@@ -2529,6 +2588,7 @@ export const consultorModel = {
         learningPathName: 'Jornada Técnica',
         serviceLineName: row.sline || 'Application Operations',
         validade: row.validade || null,
+        date,
       };
     });
 
@@ -2677,11 +2737,9 @@ export const consultorModel = {
       model: Badge,
       as: 'badge',
       attributes: ['b_nome', 'b_descricao', 'pontos', 'imagem', 'validade'],
-      include: [{
-        model: Tipo,
-        as: 'tipo',
-        attributes: ['tipo'],
-      }],
+      include: [
+        { model: Tipo, as: 'tipo', attributes: ['tipo'] },
+      ],
     }],
     attributes: ['nbadge', 'ordem'],
     order: [['ordem', 'ASC'], ['nbadge', 'ASC']],
@@ -2689,20 +2747,44 @@ export const consultorModel = {
     nest: true,
   });
 
-    const badgeIds = rows.map((r) => Number(r.nbadge)).filter(Boolean);
-    const imageMap = await loadBadgeImagesBatch(badgeIds);
+    const badgeIds = [...new Set(rows.map((r) => Number(r.nbadge)).filter(Boolean))];
+    const [imageMap, nivelMap] = await Promise.all([
+      loadBadgeImagesBatch(badgeIds),
+      badgeIds.length > 0
+        ? NivelContemBadge.findAll({
+            where: { nbadge: badgeIds },
+            attributes: ['nbadge', 'nnivel'],
+            raw: true,
+          }).then(async (links) => {
+            const nnivels = [...new Set(links.map((l) => Number(l.nnivel)).filter(Boolean))];
+            if (nnivels.length === 0) return {};
+            const niveis = await Nivel.findAll({ where: { nnivel: nnivels }, attributes: ['nnivel', 'nivel'], raw: true });
+            const lookup = {};
+            for (const n of niveis) lookup[n.nnivel] = n.nivel;
+            const map = {};
+            for (const link of links) {
+              if (!map[link.nbadge]) map[link.nbadge] = lookup[link.nnivel] || null;
+            }
+            return map;
+          }).catch(() => ({}))
+        : Promise.resolve({}),
+    ]);
 
     return rows.map((row) => {
       const nbadge = Number(row.nbadge);
+      const nivelName = nivelMap[nbadge] || null;
+      const typeName = row.badge?.tipo?.tipo || null;
+      const isSpecial = isSpecialTypeName(typeName);
+      const template = resolveBadgeTemplate(nivelName, 0, typeName);
       return {
         nbadge,
         ordem: Number(row.ordem) || 0,
         b_nome: row.badge?.b_nome,
         pontos: Number(row.badge?.pontos) || 0,
-        imagem: imageMap[nbadge] || row.badge?.imagem || null,
+        imagem: resolveBadgeImage(imageMap[nbadge] || row.badge?.imagem, template.badgeImage, isSpecial),
         validade: row.badge?.validade || null,
-        tipo: row.badge?.tipo?.tipo || null,
-        nivel: null,
+        tipo: typeName,
+        nivel: nivelName,
       };
     });
   },

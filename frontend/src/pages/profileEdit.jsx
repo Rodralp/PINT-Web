@@ -84,7 +84,7 @@ export default function ProfileEdit() {
             return found || {
               badgeDbId: v.nbadge,
               name: v.b_nome || 'Badge',
-              badgeImage: v.imagem || '/badges/default.png',
+              badgeImage: v.imagem,
               points: v.pontos || 0,
               levelKey: v.tipo === 'Especial' ? 'special' : (normalizeLevelId(v.nivel) || undefined),
               typeId: v.tipo === 'Especial' ? 'special' : (normalizeLevelId(v.nivel) ? `badge_level_${normalizeLevelId(v.nivel)}` : undefined),
