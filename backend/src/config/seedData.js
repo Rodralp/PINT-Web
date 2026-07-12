@@ -862,10 +862,7 @@ const seedBadgeRequirements = async (transaction) => {
 };
 
 export const seedDatabase = async () => {
-  const [accountsCount] = await Promise.all([Account.count()]);
-  if (accountsCount > 0) return;
-
-  const remindersCount = await Reminder.count();
+  const [accountsCount, remindersCount] = await Promise.all([Account.count(), Reminder.count()]);
 
   if (accountsCount === 0) {
     await Account.bulkCreate(defaultAccounts);

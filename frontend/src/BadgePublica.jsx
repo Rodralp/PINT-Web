@@ -211,7 +211,7 @@ function BadgePublica() {
             </p>
 
             <section className="bp-requirements-card">
-              <h3>{t('requirements')}</h3>
+              <h3>Requisitos</h3>
               {requirements.length === 0 ? (
                 <p className="bp-requirements-empty">Sem requisitos definidos para este badge.</p>
               ) : (
