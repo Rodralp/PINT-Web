@@ -394,7 +394,7 @@ function Profile() {
             </div>
 
             <div className="vitrine-grid">
-              {(vitrineItems.length > 0 ? vitrineItems : badgeItems.slice(0, 8)).map((badge) => (
+              {vitrineItems.map((badge) => (
                 <div key={badge.id} className="vitrine-item" title={badge.name || badge.area}>
                   <BadgeImage
                     className="vitrine-badge-image"
@@ -408,8 +408,8 @@ function Profile() {
                   <span className="vitrine-badge-name">{badge.name || badge.area}</span>
                 </div>
               ))}
-              {vitrineItems.length === 0 && badgeItems.length === 0 && (
-                <p className="badge-admin-muted">{t('no_certifications') || 'Nenhum badge obtido.'}</p>
+              {vitrineItems.length === 0 && (
+                <p className="badge-admin-muted">{t('vitrine_empty') || 'Nenhuma badge na vitrine.'}</p>
               )}
             </div>
           </section>
@@ -485,7 +485,8 @@ function Profile() {
         isOpen={isCertificationsModalOpen}
         onClose={() => setIsCertificationsModalOpen(false)}
         title="Vitrine"
-        items={vitrineItems.length > 0 ? vitrineItems : badgeItems}
+        items={vitrineItems}
+        emptyMessage={t('vitrine_empty') || 'Nenhuma badge na vitrine.'}
         renderItem={(badge) => (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 48, height: 48, flexShrink: 0 }}>
