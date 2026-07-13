@@ -1014,6 +1014,7 @@ const applyDecision = async ({ role, actorUtilizadorId, request, decision, comme
           message: `O pedido da badge ${badgeName} para ${consultorName} foi aprovado.`,
           consultorIds: [consultorId],
           serviceLineId,
+          notifyActor: true,
         });
       }
 
@@ -1025,6 +1026,7 @@ const applyDecision = async ({ role, actorUtilizadorId, request, decision, comme
           message: `O pedido da badge ${badgeName} para ${consultorName} foi rejeitado.`,
           consultorIds: [consultorId],
           serviceLineId,
+          notifyActor: true,
         });
       }
     } catch (error) {

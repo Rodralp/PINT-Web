@@ -590,6 +590,7 @@ export const communicationModel = {
     serviceLineId = null,
     broadcastConsultors = false,
     broadcastSll = false,
+    notifyActor = false,
   }) {
     const normalizedEventKey = String(eventKey || '').trim();
     if (!normalizedEventKey) {
@@ -638,6 +639,10 @@ export const communicationModel = {
             ? await listActiveUserIdsByRole('consultor', transaction)
             : [];
         consultorRecipients.forEach((id) => recipientSet.add(id));
+      }
+
+      if (notifyActor) {
+        recipientSet.add(parsedActorId);
       }
 
       const recipients = Array.from(recipientSet);

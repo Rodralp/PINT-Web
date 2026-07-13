@@ -93,7 +93,7 @@ export default function ProfileEdit() {
           })
           setVitrine(ordered)
         } else {
-          setVitrine(obtained.slice(0, 6))
+          setVitrine([])
         }
 
         try {

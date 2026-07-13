@@ -620,6 +620,27 @@ export const syncSpecialBadgesForConsultor = async (utilizadorId) => {
   });
 };
 
+export const syncSpecialBadgesForAllConsultors = async () => {
+  const consultorRows = await Account.findAll({
+    where: {
+      status: 'ativo',
+      permissoes: { [Op.iLike]: '%consultor%' },
+    },
+    attributes: ['id'],
+    raw: true,
+  });
+
+  const ids = consultorRows.map((r) => Number(r.id)).filter((id) => Number.isInteger(id) && id > 0);
+
+  for (const id of ids) {
+    try {
+      await syncSpecialBadgesForConsultor(id);
+    } catch (error) {
+      console.error('Failed to sync special badges for consultor', id, error);
+    }
+  }
+};
+
 const getUtilizadorIdByAccountId = async (accountId) => {
   const user = await Account.findByPk(Number(accountId), { attributes: ['id'] });
   return user?.id ? Number(user.id) : null;
@@ -2780,6 +2801,7 @@ export const consultorModel = {
   },
 
   sendAllExpirationNotifications,
+  syncSpecialBadgesForAllConsultors,
   resolveBadgeImage,
   resolveBadgeTemplate,
   isSpecialTypeName,

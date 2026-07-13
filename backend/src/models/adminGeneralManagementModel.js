@@ -43,18 +43,18 @@ const defaultNotificationRows = [
   },
   {
     event: 'Pedido aprovado',
-    admin: true,
-    sll: true,
-    tl: true,
+    admin: false,
+    sll: false,
+    tl: false,
     consultor: true,
     email: true,
     webApp: true,
   },
   {
     event: 'Pedido rejeitado',
-    admin: true,
-    sll: true,
-    tl: true,
+    admin: false,
+    sll: false,
+    tl: false,
     consultor: true,
     email: true,
     webApp: true,
@@ -216,6 +216,30 @@ const ensureNotificationDefaults = async (transaction) => {
     );
 
     existingEvents.add(eventKey);
+  }
+
+  for (const item of defaultNotificationRows) {
+    const eventKey = normalizeEventKey(item.event);
+    if (!existingEvents.has(eventKey)) {
+      continue;
+    }
+
+    if (item.event === 'Pedido aprovado' || item.event === 'Pedido rejeitado') {
+      await ConfigNotificacao.update(
+        {
+          admin: item.admin,
+          sll: item.sll,
+          tl: item.tl,
+          consultor: item.consultor,
+          email: item.email,
+          web_app: item.webApp,
+        },
+        {
+          where: { evento: { [Op.iLike]: item.event } },
+          transaction,
+        },
+      );
+    }
   }
 };
 
