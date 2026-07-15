@@ -431,6 +431,7 @@ function HistoricoSLL() {
                       <tr>
                         <th>{t('header_badge')}</th>
                          <th>{t('header_area')}</th>
+                         <th>Descrição</th>
                          <th>{t('header_level')}</th>
                          <th>{t('header_actions')}</th>
                       </tr>
@@ -445,6 +446,7 @@ function HistoricoSLL() {
                         <tr key={item.id}>
                           <td><strong>{item.name}</strong></td>
                           <td>{item.area || '-'}</td>
+                          <td>{item.description || '-'}</td>
                           <td>{normalizeLevelTitle(item.level)}</td>
                           <td>
                             <div className="historico-actions-group">
@@ -651,6 +653,11 @@ function HistoricoSLL() {
                         <div className="modal-section">
                           <div className="modal-info">
                             <h3>{modalData.badge.name}</h3>
+                            {modalData.badge.description && (
+                              <p style={{ fontSize: '13px', color: '#64748B', margin: '4px 0 8px' }}>
+                                {modalData.badge.description}
+                              </p>
+                            )}
                             <p><strong>{t('header_area')}:</strong> {modalData.badge.areaName || '-'}</p>
                              <p><strong>{t('header_service_line')}:</strong> {modalData.badge.serviceLineName || '-'}</p>
                              <p><strong>{t('header_level')}:</strong> {normalizeLevelTitle(modalData.badge.level)}</p>

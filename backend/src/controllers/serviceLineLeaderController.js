@@ -334,6 +334,7 @@ export const getHistoricoBadgesSLL = async (req, res) => {
         SELECT
           b.nbadge AS id,
           b.b_nome AS name,
+          b.b_descricao AS description,
           a.area,
           n.nivel AS level
         FROM badge b
@@ -672,6 +673,7 @@ export const getDetalhesBadgeSLL = async (req, res) => {
         SELECT
           b.nbadge AS id,
           b.b_nome AS name,
+          b.b_descricao AS description,
           lvl.area AS "areaName",
           sl.sline AS "serviceLineName",
           lvl.nivel AS level,

@@ -132,12 +132,13 @@ function PerfilPublico() {
 									const typeId = resolvedLevelId
 										? (resolvedLevelId === 'special' ? 'special' : `badge_level_${resolvedLevelId}`)
 										: undefined;
-									return {
-										id: `vitrine-${v.nbadge}`,
-										badgeDbId: v.nbadge,
-										name: v.b_nome || 'Badge',
-										badgeImage: v.imagem || null,
-										points: v.pontos || 0,
+								return {
+									id: `vitrine-${v.nbadge}`,
+									badgeDbId: v.nbadge,
+									name: v.b_nome || 'Badge',
+									description: v.b_descricao || '',
+									badgeImage: v.imagem || null,
+									points: v.pontos || 0,
 										isSpecial,
 										levelKey: resolvedLevelId || undefined,
 										typeId,
@@ -330,6 +331,11 @@ function PerfilPublico() {
 											/>
 										</div>
 										<span className="pp-vitrine-badge-name">{badge.name}</span>
+										{badge.description && (
+											<span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', textAlign: 'center', marginTop: '2px' }}>
+												{badge.description}
+											</span>
+										)}
 									</div>
 								))}
 								</div>

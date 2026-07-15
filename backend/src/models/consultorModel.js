@@ -1329,7 +1329,8 @@ const buildLearningPaths = async (accountId) => {
         a.a_desc,
         n.nnivel,
         n.nivel,
-        nb.nbadge
+        nb.nbadge,
+        b.b_descricao
       FROM learning_path AS lp
       INNER JOIN service_line AS sl
         ON sl.nlpath = lp.nlpath
@@ -1475,6 +1476,7 @@ const buildLearningPaths = async (accountId) => {
         subtitle: `Nivel ${area.levels.length + 1}`,
         ...template,
         badgeDbId,
+        description: row.b_descricao || '',
         requestId: requestMeta.requestId,
         requirements,
         status: requestMeta.status,
@@ -1509,6 +1511,7 @@ const buildMyBadges = async (accountId) => {
         SELECT DISTINCT ON (cb.nbadge)
           cb.nbadge,
           b.b_nome,
+          b.b_descricao,
           a.area,
           n.nivel,
           b.imagem,
@@ -1545,6 +1548,7 @@ const buildMyBadges = async (accountId) => {
           p.data_submissao,
           e.estado,
           b.b_nome,
+          b.b_descricao,
           b.imagem,
           b.pontos AS badge_pontos,
           t.tipo,
@@ -1663,6 +1667,7 @@ const buildMyBadges = async (accountId) => {
       id: `badge-${badgeId}`,
       badgeDbId: badgeId,
       name: row.b_nome || row.area || 'Badge',
+      description: row.b_descricao || '',
       area: row.area || row.b_nome || 'Badge',
       stateId: 'aprovado',
       status: 'obtido',
@@ -1712,6 +1717,7 @@ const buildMyBadges = async (accountId) => {
       badgeDbId: badgeId,
       requestId,
       name: row.b_nome || row.area || 'Badge',
+      description: row.b_descricao || '',
       area: row.area || row.b_nome || 'Badge',
       stateId: mapPedidoEstadoToMyBadgeState(row.estado),
       status: mapPedidoEstadoToMyRequestStatus(row.estado),
@@ -2478,6 +2484,7 @@ const getPedidoDetail = async (accountId, pedidoId) => {
   return {
     id: parsedPedidoId,
     badge: row.b_nome || row.area_nome || 'Badge',
+    badgeDescription: row.b_descricao || '',
     levelLabel: `Nível ${levelTitle}`,
     area: row.lpath_nome || 'Jornada Técnica',
     path: row.sline_nome || 'Service Line',
@@ -2798,6 +2805,7 @@ export const consultorModel = {
         nbadge,
         ordem: Number(row.ordem) || 0,
         b_nome: row.badge?.b_nome,
+        b_descricao: row.badge?.b_descricao || '',
         pontos: Number(row.badge?.pontos) || 0,
         imagem: resolveBadgeImage(imageMap[nbadge] || row.badge?.imagem, template.badgeImage, isSpecial),
         validade: row.badge?.validade || null,

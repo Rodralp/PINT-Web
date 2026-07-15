@@ -36,6 +36,7 @@ const defaultBadgeDetails = {
   points: 0,
   badgeImage: '',
   date: '',
+  description: '',
 };
 
 const normalizeBadgeStatus = (badge) => {
@@ -539,6 +540,12 @@ function BadgeDetalhe() {
                 </span>
               )}
             </div>
+
+            {badge.description && (
+              <p className="badge-description" style={{ marginTop: '12px', color: '#64748B', fontSize: '14px', lineHeight: '1.5' }}>
+                {badge.description}
+              </p>
+            )}
 
             {hasStatusBanner && statusMeta && (
               <div className={`badge-status-banner ${statusMeta.className}`}>

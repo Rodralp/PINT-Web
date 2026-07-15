@@ -239,6 +239,12 @@ function PedidoTM() {
                   </span>
                 </div>
 
+                {request.badgeDescription && (
+                  <p style={{ marginTop: '12px', color: '#64748B', fontSize: '14px', lineHeight: '1.5' }}>
+                    {request.badgeDescription}
+                  </p>
+                )}
+
                 <div className={`tm-order-status-banner ${currentStatus.className}`}>
                   <StatusIcon size={18} />
                   <span>{currentStatus.label}</span>
