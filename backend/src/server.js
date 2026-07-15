@@ -24,6 +24,14 @@ const startServer = async () => {
     await syncDatabase();
     await seedDatabase();
 
+    // Ensure notification event defaults exist in config_notificacao
+    try {
+      const { adminGeneralManagementModel } = await import('./models/adminGeneralManagementModel.js');
+      await adminGeneralManagementModel.ensureNotificationDefaults();
+    } catch (notifError) {
+      console.error('Failed to ensure notification defaults:', notifError);
+    }
+
     if (emailConfig.auth.user && emailConfig.auth.pass) {
       try {
         const transporter = nodemailer.createTransport({
