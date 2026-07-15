@@ -217,6 +217,12 @@ function BadgeDetalheSLL() {
             <h2>{badgeTitle}</h2>
             <p>{levelLabel}</p>
 
+            {badge.description && (
+              <p style={{ marginTop: '8px', color: '#64748B', fontSize: '14px', lineHeight: '1.5' }}>
+                {badge.description}
+              </p>
+            )}
+
             <div className="badge-hero-meta">
               <span>
                 <Trophy size={16} />

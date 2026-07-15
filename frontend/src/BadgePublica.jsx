@@ -15,6 +15,7 @@ const defaultBadgeDetails = {
   points: 0,
   badgeImage: '',
   date: '',
+  description: '',
 };
 
 const resolveBadgeDbId = (routeBadgeId, badgeState) => {
@@ -203,6 +204,12 @@ function BadgePublica() {
                     {requirements.length} requisitos
                   </span>
                 </div>
+
+                {badge.description && (
+                  <p style={{ marginTop: '12px', color: '#64748B', fontSize: '14px', lineHeight: '1.5' }}>
+                    {badge.description}
+                  </p>
+                )}
               </div>
             </section>
 

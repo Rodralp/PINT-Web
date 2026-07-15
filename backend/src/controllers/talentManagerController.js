@@ -160,6 +160,7 @@ export const getHistoricoBadges = async (req, res) => {
         SELECT
           b.nbadge AS id,
           b.b_nome AS name,
+          b.b_descricao AS description,
           lvl.area,
           COALESCE(lvl.service_line_name, slmeta.service_line_name, '-') AS "serviceLine",
           lvl.nivel AS level,
@@ -500,6 +501,7 @@ export const getDetalhesBadgeTM = async (req, res) => {
         SELECT
           b.nbadge AS id,
           b.b_nome AS name,
+          b.b_descricao AS description,
           lvl.area AS "areaName",
           COALESCE(lvl.service_line_name, slmeta.service_line_name, '-') AS "serviceLineName",
           lvl.nivel AS level,
