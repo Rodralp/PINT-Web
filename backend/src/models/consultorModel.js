@@ -1849,6 +1849,7 @@ const buildPreferenceAreas = async (accountId) => {
           ON sl.nsline = a.nsline
         LEFT JOIN b_pertence_a AS bpa
           ON bpa.narea = a.narea
+        WHERE a.is_active = TRUE
         GROUP BY a.narea, a.area, a.a_desc, sl.sline
         ORDER BY LOWER(a.area) ASC, a.narea ASC
       `,
