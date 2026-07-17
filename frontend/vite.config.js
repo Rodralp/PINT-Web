@@ -8,15 +8,21 @@ function apkMimePlugin() {
     name: 'apk-mime',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (req.url === '/app.apk') {
-          const filePath = path.resolve(__dirname, 'public', 'app.apk')
-          const stat = fs.statSync(filePath)
-          res.writeHead(200, {
-            'Content-Type': 'application/vnd.android.package-archive',
-            'Content-Length': stat.size,
-          })
-          fs.createReadStream(filePath).pipe(res)
-          return
+        if (req.url === '/Plataforma%20Softinsa.apk') {
+          const filePath = path.resolve(__dirname, 'public', 'Plataforma Softinsa.apk')
+          try {
+            const stat = fs.statSync(filePath)
+            res.writeHead(200, {
+              'Content-Type': 'application/vnd.android.package-archive',
+              'Content-Length': stat.size,
+            })
+            fs.createReadStream(filePath).pipe(res)
+            return
+          } catch {
+            res.writeHead(404)
+            res.end('Not found')
+            return
+          }
         }
         next()
       })

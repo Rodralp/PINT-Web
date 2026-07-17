@@ -395,7 +395,7 @@ const mapRoleOrder = (role) => {
 
 const shouldRoleReviewRequest = (role, estadoNome) => {
   if (role === 'admin-gestor') {
-    return isManagedWorkflowState(estadoNome);
+    return isPendingTmState(estadoNome) || isPendingSllState(estadoNome);
   }
 
   if (role === 'talent-manager') {
@@ -880,8 +880,8 @@ const applyDecision = async ({ role, actorUtilizadorId, request, decision, comme
     throw error;
   }
 
-  if (role === 'admin-gestor' && !isManagedWorkflowState(currentEstado)) {
-    const error = new Error('Request is not in a managed workflow state for admin review.');
+  if (role === 'admin-gestor' && !isPendingTmState(currentEstado) && !isPendingSllState(currentEstado)) {
+    const error = new Error('Request is not in a pending state for admin review.');
     error.statusCode = 409;
     throw error;
   }

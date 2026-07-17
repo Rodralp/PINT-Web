@@ -250,6 +250,17 @@
   border-bottom: none;
 }
 
+.tm-export-table th.sortable {
+  cursor: pointer;
+}
+
+.ag-orders-sort-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
 .tm-export-checkbox {
   width: 16px;
   height: 16px;

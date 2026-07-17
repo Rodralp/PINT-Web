@@ -289,11 +289,6 @@ function GaleriaPublica() {
                     </div>
 
                     <div className="catalog-card-title">{item.name || item.area || 'Badge'}</div>
-                    {item.description && (
-                      <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '4px', lineHeight: '1.4' }}>
-                        {item.description}
-                      </div>
-                    )}
                     <div className="catalog-card-level">{item.levelKey ? t(item.levelKey) : item.levelLabel}</div>
 
                     <div className="catalog-card-meta">
@@ -330,7 +325,6 @@ function GaleriaPublica() {
                     </div>
 
                     <div className="catalog-card-title gp-consultor-name">{consultor.name}</div>
-                    <div className="catalog-card-level gp-consultor-email">{consultor.email}</div>
 
                     <div className="catalog-card-meta gp-consultor-footer">
                       <div className="catalog-meta-row">

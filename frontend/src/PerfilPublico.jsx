@@ -5,7 +5,6 @@ import {
 	Calendar,
 	Crown,
 	Flame,
-	Mail,
 	MapPin,
 	Star,
 	Trophy,
@@ -228,7 +227,6 @@ function PerfilPublico() {
 								<p>{consultor.serviceLine}</p>
 
 								<div className="pp-profile-meta">
-									<span><Mail size={16} /> {consultor.email}</span>
 									{consultor.location && <span><MapPin size={16} /> {consultor.location}</span>}
 									{consultor.joined && <span><Calendar size={16} /> Joined {consultor.joined}</span>}
 								</div>
