@@ -1116,11 +1116,14 @@ const _buildProfileDataInner = async (parsedAccountId) => {
         FROM c_obtem_b AS cb
         INNER JOIN badge AS b
           ON b.nbadge = cb.nbadge
+        LEFT JOIN tipo AS t
+          ON t.ntipo = b.ntipo
         LEFT JOIN b_pertence_sl AS bps
           ON bps.nbadge = b.nbadge
         LEFT JOIN service_line AS sl
           ON sl.nsline = bps.nsline
         WHERE cb.nutilizador = :accountId
+          AND LOWER(COALESCE(t.tipo, '')) != 'especial'
         GROUP BY COALESCE(sl.sline, 'Application Operations')
         ORDER BY COUNT(DISTINCT b.nbadge) DESC, SUM(COALESCE(NULLIF(cb.pontos_obtidos, 0), NULLIF(b.pontos, 0), 0)) DESC
       `,
