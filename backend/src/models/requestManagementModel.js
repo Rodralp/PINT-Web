@@ -142,6 +142,14 @@ const badgeLevelTemplates = [
   },
 ];
 
+const resolveBadgeImage = (customImage, fallbackImage) => {
+  const normalizedCustomImage = String(customImage || '').trim();
+  if (normalizedCustomImage) {
+    return normalizedCustomImage;
+  }
+  return fallbackImage || '/badges/badge-not-found.svg';
+};
+
 const resolveLevelTemplate = (levelName) => {
   const normalized = String(levelName || '').trim().toLowerCase();
 
@@ -562,6 +570,7 @@ const fetchRequestRows = async ({ role, actorUtilizadorId, requestId = null }) =
         b.b_descricao AS badge_descricao,
         b.validade AS badge_validade,
         COALESCE(NULLIF(b.pontos, 0), 0) AS badge_pontos,
+        b.imagem AS badge_imagem,
         n.nivel AS nivel_nome,
         a.area AS area_nome,
         sl.sline AS service_line_nome,
@@ -612,6 +621,7 @@ const fetchRequestRows = async ({ role, actorUtilizadorId, requestId = null }) =
         b.b_descricao AS badge_descricao,
         b.validade AS badge_validade,
         COALESCE(NULLIF(b.pontos, 0), 0) AS badge_pontos,
+        b.imagem AS badge_imagem,
         n.nivel AS nivel_nome,
         a.area AS area_nome,
         sl.sline AS service_line_nome,
@@ -669,7 +679,7 @@ const mapRequestListItem = (row, role) => {
     status,
     tableStatus: mapTableStatus(status),
     points: Number(row.badge_pontos) > 0 ? Number(row.badge_pontos) : levelTemplate.points,
-    badgeImage: levelTemplate.badgeImage,
+    badgeImage: resolveBadgeImage(row.badge_imagem, levelTemplate.badgeImage),
   };
 };
 
