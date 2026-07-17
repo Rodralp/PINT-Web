@@ -1,20 +1,16 @@
 import 'dotenv/config';
 
 const {
-  EMAIL_HOST = 'smtp.gmail.com',
-  EMAIL_PORT = '587',
-  EMAIL_USER = '',
-  EMAIL_PASS = '',
-  EMAIL_FROM = '',
+  MJ_API_KEY = '',
+  MJ_API_SECRET = '',
+  MJ_SENDER_EMAIL = '',
+  FRONTEND_URL = '',
 } = globalThis.process?.env ?? {};
 
 export const emailConfig = {
-  host: EMAIL_HOST,
-  port: Number(EMAIL_PORT),
-  secure: Number(EMAIL_PORT) === 465,
-  auth: {
-    user: EMAIL_USER,
-    pass: EMAIL_PASS,
-  },
-  from: EMAIL_FROM || EMAIL_USER,
+  mailjetApiKey: MJ_API_KEY,
+  mailjetApiSecret: MJ_API_SECRET,
+  senderEmail: MJ_SENDER_EMAIL,
+  senderName: 'PINT',
+  frontendUrl: FRONTEND_URL || 'http://localhost:5173',
 };

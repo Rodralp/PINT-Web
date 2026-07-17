@@ -1,5 +1,4 @@
 import app from './app.js';
-import nodemailer from 'nodemailer';
 import { connectToDatabase, syncDatabase } from './config/database.js';
 import { seedDatabase } from './config/seedData.js';
 import { emailConfig } from './config/email.js';
@@ -32,21 +31,10 @@ const startServer = async () => {
       console.error('Failed to ensure notification defaults:', notifError);
     }
 
-    if (emailConfig.auth.user && emailConfig.auth.pass) {
-      try {
-        const transporter = nodemailer.createTransport({
-          host: emailConfig.host,
-          port: emailConfig.port,
-          secure: emailConfig.secure,
-          auth: emailConfig.auth,
-        });
-        await transporter.verify();
-        console.log('SMTP connection verified successfully.');
-      } catch (emailError) {
-        console.warn('SMTP verification failed. Emails may not be sent.', emailError?.message || emailError);
-      }
+    if (emailConfig.mailjetApiKey && emailConfig.mailjetApiSecret && emailConfig.senderEmail) {
+      console.log(`Email configured: Mailjet API ready (sender: ${emailConfig.senderEmail}).`);
     } else {
-      console.warn('Email not configured (EMAIL_USER/EMAIL_PASS missing). Email features disabled.');
+      console.warn('Email not configured (MJ_API_KEY/MJ_API_SECRET/MJ_SENDER_EMAIL missing). Email features disabled.');
     }
 
     const { requestManagementModel } = await import('./models/requestManagementModel.js');
